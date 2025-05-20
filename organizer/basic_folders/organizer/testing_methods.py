@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-import sys, inspect
+import sys
+import inspect
 from contextlib import redirect_stdout, redirect_stderr
 from io import StringIO
 import traceback
@@ -16,9 +17,9 @@ import clapshot_grpc.proto.clapshot as clap
 
 import organizer
 from organizer.config import PATH_COOKIE_NAME
-from organizer.database.models import DbFolder, DbUser, DbMediaFile
+from organizer.database.models import DbFolder, DbUser, DbMediaFile, DbSharedFolder
 from organizer.database.operations import db_get_or_create_user_root_folder
-from organizer.helpers.folders import FoldersHelper
+from organizer.helpers.folders import SHARED_FOLDER_TOKEN_COOKIE_NAME
 
 
 async def list_tests_impl(oi: organizer.OrganizerInbound) -> org.ListTestsResponse:
@@ -343,6 +344,650 @@ async def org_test__cmd_from_client__trash_folder(oi: organizer.OrganizerInbound
     assert len(flds) == 0, "Folder should have been deleted"
 
 
+async def org_test__cmd_from_client__share_folder(oi: organizer.OrganizerInbound):
+    """
+    cmd_from_client() -- Test the 'share_folder' client command.
+    """
+    # Create test session and folder
+    ses, root_fld = await _create_test_folder_and_session(oi)
+
+    # Create a subfolder to share
+    with oi.db_new_session() as dbs:
+        subfolder = await oi.folders_helper.create_folder(dbs, ses, root_fld, "Shared Folder")
+        subfolder_id = subfolder.id
+        dbs.commit()
+
+    # Mock the client_show_user_message method to verify sharing confirmation message
+    orig_show_message = oi.srv.client_show_user_message
+    try:
+        message_received = False
+
+        async def mock_show_message(req: org.ClientShowUserMessageRequest) -> clap.Empty:
+            nonlocal message_received
+            if req.msg and "Folder shared" in req.msg.message:
+                message_received = True
+            return await orig_show_message(req)
+
+        setattr(oi.srv, "client_show_user_message", mock_show_message)
+
+        # Set server_info.url_base for URL generation
+        oi.server_info = oi.server_info or org.ServerInfo()
+        oi.server_info.url_base = "http://test.example.com"
+
+        # Execute share command
+        await oi.cmd_from_client(org.CmdFromClientRequest(
+            ses=ses,
+            cmd="share_folder",
+            args=json.dumps({"id": subfolder_id})
+        ))
+
+        # Verify share was created in database
+        with oi.db_new_session() as dbs:
+            share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == subfolder_id).one_or_none()
+            assert share is not None, "Share should have been created"
+            # Verify owner through folder ownership
+            owner = await oi.folders_helper.get_folder_owner(dbs, subfolder_id)
+            assert owner and owner.id == ses.user.id, "Share should be owned by correct user"
+            assert message_received, "Share confirmation message should have been sent"
+
+    finally:
+        # Restore original method
+        setattr(oi.srv, "client_show_user_message", orig_show_message)
+
+
+async def org_test__cmd_from_client__revoke_share(oi: organizer.OrganizerInbound):
+    """
+    cmd_from_client() -- Test the 'revoke_share' client command.
+    """
+    # Create test session and folder
+    ses, root_fld = await _create_test_folder_and_session(oi)
+
+    # Create a subfolder
+    with oi.db_new_session() as dbs:
+        subfolder = await oi.folders_helper.create_folder(dbs, ses, root_fld, "Shared Folder")
+        subfolder_id = subfolder.id
+        dbs.commit()
+
+    # Create share manually
+    with oi.db_new_session() as dbs:
+        share_token = await oi.folders_helper.generate_share_token()
+        share = DbSharedFolder(
+            folder_id=subfolder_id,
+            share_token=share_token
+        )
+        dbs.add(share)
+        dbs.commit()
+
+        # Verify share exists
+        assert dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == subfolder_id).one_or_none() is not None
+
+    # Execute revoke command
+    await oi.cmd_from_client(org.CmdFromClientRequest(
+        ses=ses,
+        cmd="revoke_share",
+        args=json.dumps({"id": subfolder_id})
+    ))
+
+    # Verify share was removed
+    with oi.db_new_session() as dbs:
+        share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == subfolder_id).one_or_none()
+        assert share is None, "Share should have been removed"
+
+
+async def org_test__navigate_shared_url(oi: organizer.OrganizerInbound):
+    """
+    Test navigating to a shared folder URL.
+    """
+    # Create owner session and folder
+    owner_ses, root_fld = await _create_test_folder_and_session(oi)
+
+    # Create a subfolder with some content
+    subfolder = await oi.folders_helper.create_folder(oi.db_new_session(), owner_ses, root_fld, "Shared Folder")
+    inner_folder = await oi.folders_helper.create_folder(oi.db_new_session(), owner_ses, subfolder, "Inner Folder")
+
+    # Create share for subfolder
+    share_token = None
+    with oi.db_new_session() as dbs:
+        share_token = await oi.folders_helper.generate_share_token()
+        share = DbSharedFolder(
+            folder_id=subfolder.id,
+            share_token=share_token
+        )
+        dbs.add(share)
+        dbs.commit()
+
+    # Create second user
+    with oi.db_new_session() as dbs:
+        recipient_user_id = "share.recipient"
+        dbs.add(DbUser(id=recipient_user_id, name="Share Recipient"))
+        dbs.commit()
+
+    recipient_ses = org.UserSessionData(
+        sid="recipient_sid",
+        user=clap.UserInfo(id=recipient_user_id, name="Share Recipient"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Navigate to the shared URL
+    result = await organizer.navigate_page_impl(oi, org.NavigatePageRequest(
+        ses=recipient_ses,
+        page_id=f"shared.{share_token}"
+    ))
+
+    # Verify response contains the shared folder content
+    assert isinstance(result, org.ClientShowPageRequest), "Result should be a ClientShowPageRequest"
+
+    # Check if SHARED_FOLDER_ENTRY_COOKIE is set in recipient's session
+    assert SHARED_FOLDER_TOKEN_COOKIE_NAME in recipient_ses.cookies, "Shared folder entry cookie should be set"
+    assert recipient_ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] == share_token, "Cookie should contain share token"
+
+    # Verify recipient can fetch contents via cookie
+    folder_contents = await oi.folders_helper.fetch_folder_contents(subfolder, recipient_ses)
+    assert len(folder_contents) == 1, "Should have access to inner folder"
+    assert folder_contents[0].id == inner_folder.id, "Should see the inner folder"
+
+
+async def org_test__shared_folder_permissions(oi: organizer.OrganizerInbound):
+    """
+    Test permission boundaries for shared folders.
+    """
+    # Create owner session and folder hierarchy
+    owner_ses, root_fld = await _create_test_folder_and_session(oi)
+    owner_subfolder = await oi.folders_helper.create_folder(oi.db_new_session(), owner_ses, root_fld, "Shared Folder")
+    owner_inner = await oi.folders_helper.create_folder(oi.db_new_session(), owner_ses, owner_subfolder, "Inner Folder")
+
+    # Create another folder outside the shared path
+    owner_other = await oi.folders_helper.create_folder(oi.db_new_session(), owner_ses, root_fld, "Not Shared")
+
+    # Create share for owner_subfolder
+    share_token = None
+    with oi.db_new_session() as dbs:
+        share_token = await oi.folders_helper.generate_share_token()
+        share = DbSharedFolder(
+            folder_id=owner_subfolder.id,
+            share_token=share_token
+        )
+        dbs.add(share)
+        dbs.commit()
+
+    # Create recipient user
+    with oi.db_new_session() as dbs:
+        recipient_user_id = "perm.recipient"
+        dbs.add(DbUser(id=recipient_user_id, name="Permission Test Recipient"))
+        dbs.commit()
+
+    recipient_ses = org.UserSessionData(
+        sid="recipient_sid",
+        user=clap.UserInfo(id=recipient_user_id, name="Permission Test Recipient"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Set up the shared folder session
+    recipient_ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] = share_token
+
+    # Test 1: Recipient can access shared folder and its subfolder
+    assert await oi.folders_helper.check_shared_folder_access(owner_subfolder.id, recipient_ses) is not None
+    assert await oi.folders_helper.check_shared_folder_access(owner_inner.id, recipient_ses) is not None
+
+    # Test 2: Recipient cannot access folders outside shared subtree
+    assert await oi.folders_helper.check_shared_folder_access(owner_other.id, recipient_ses) is None
+    assert await oi.folders_helper.check_shared_folder_access(root_fld.id, recipient_ses) is None
+
+    # Test 3: Recipient cannot modify shared folder
+    try:
+        with oi.db_new_session() as dbs:
+            await oi.folders_helper.create_folder(dbs, recipient_ses, owner_subfolder, "Test Create")
+        assert False, "Should not be able to create folder"
+    except GRPCError as e:
+        assert e.status == GrpcStatus.PERMISSION_DENIED
+
+    # Test 4: Recipient cannot trash shared folder
+    try:
+        with oi.db_new_session() as dbs:
+            await oi.folders_helper.trash_folder_recursive(dbs, owner_inner.id, recipient_ses)
+        assert False, "Should not be able to trash folder"
+    except GRPCError as e:
+        assert e.status == GrpcStatus.PERMISSION_DENIED
+
+
+async def org_test__authorization_bypass_attempts(oi: organizer.OrganizerInbound):
+    """
+    Test authorization bypass attempts - non-owners trying to share/revoke folders.
+    """
+    # Create owner user and folder structure
+    with oi.db_new_session() as dbs:
+        owner_user_id = "owner.user"
+        dbs.add(DbUser(id=owner_user_id, name="Owner User"))
+        dbs.commit()
+
+    owner_ses = org.UserSessionData(
+        sid="owner_sid",
+        user=clap.UserInfo(id=owner_user_id, name="Owner User"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Create owner's root folder and target folder
+    with oi.db_new_session() as dbs:
+        owner_root = await db_get_or_create_user_root_folder(dbs, owner_ses.user, oi.srv, oi.log)
+        target_folder = await oi.folders_helper.create_folder(dbs, owner_ses, owner_root, "Target Folder")
+        target_folder_id = target_folder.id
+        dbs.commit()
+
+    # Create attacker user (different from owner)
+    with oi.db_new_session() as dbs:
+        attacker_user_id = "attacker.user"
+        dbs.add(DbUser(id=attacker_user_id, name="Attacker User"))
+        dbs.commit()
+
+    attacker_ses = org.UserSessionData(
+        sid="attacker_sid",
+        user=clap.UserInfo(id=attacker_user_id, name="Attacker User"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Test 1: Non-owner trying to share another user's folder
+    # Note: cmd_from_client catches PERMISSION_DENIED and shows user message instead of raising
+    await oi.cmd_from_client(org.CmdFromClientRequest(
+        ses=attacker_ses,
+        cmd="share_folder",
+        args=json.dumps({"id": target_folder_id})
+    ))
+
+    # Verify no share was created
+    with oi.db_new_session() as dbs:
+        share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == target_folder_id).one_or_none()
+        assert share is None, "No share should have been created by unauthorized user"
+
+    # Create a legitimate share by the owner
+    await oi.cmd_from_client(org.CmdFromClientRequest(
+        ses=owner_ses,
+        cmd="share_folder",
+        args=json.dumps({"id": target_folder_id})
+    ))
+
+    # Verify share was created
+    with oi.db_new_session() as dbs:
+        share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == target_folder_id).one_or_none()
+        assert share is not None, "Share should have been created by owner"
+
+    # Test 2: Non-owner trying to revoke another user's share
+    # Note: cmd_from_client catches PERMISSION_DENIED and shows user message instead of raising
+    await oi.cmd_from_client(org.CmdFromClientRequest(
+        ses=attacker_ses,
+        cmd="revoke_share",
+        args=json.dumps({"id": target_folder_id})
+    ))
+
+    # Verify share still exists
+    with oi.db_new_session() as dbs:
+        share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == target_folder_id).one_or_none()
+        assert share is not None, "Share should still exist after unauthorized revoke attempt"
+
+
+async def org_test__shared_folder_path_traversal(oi: organizer.OrganizerInbound):
+    """
+    Test path traversal attempts - accessing folders outside shared subtree via cookie manipulation.
+    """
+    from organizer.helpers.folders import SHARED_FOLDER_TOKEN_COOKIE_NAME
+    # Create owner session with folder hierarchy
+    owner_ses, owner_root = await _create_test_folder_and_session(oi)
+
+    with oi.db_new_session() as dbs:
+        # Create folders: root -> shared_folder -> inner_folder
+        #                 root -> private_folder
+        shared_folder = await oi.folders_helper.create_folder(dbs, owner_ses, owner_root, "Shared Folder")
+        inner_folder = await oi.folders_helper.create_folder(dbs, owner_ses, shared_folder, "Inner Folder")
+        private_folder = await oi.folders_helper.create_folder(dbs, owner_ses, owner_root, "Private Folder")
+
+        shared_folder_id = shared_folder.id
+        inner_folder_id = inner_folder.id
+        private_folder_id = private_folder.id
+        owner_root_id = owner_root.id
+        dbs.commit()
+
+    # Create share for shared_folder only
+    with oi.db_new_session() as dbs:
+        share_token = await oi.folders_helper.generate_share_token()
+        share = DbSharedFolder(
+            folder_id=shared_folder_id,
+            share_token=share_token
+        )
+        dbs.add(share)
+        dbs.commit()
+
+    # Create attacker user
+    with oi.db_new_session() as dbs:
+        attacker_user_id = "traversal.attacker"
+        dbs.add(DbUser(id=attacker_user_id, name="Traversal Attacker"))
+        dbs.commit()
+
+    attacker_ses = org.UserSessionData(
+        sid="traversal_sid",
+        user=clap.UserInfo(id=attacker_user_id, name="Traversal Attacker"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Set up legitimate shared access
+    attacker_ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] = share_token
+
+    # Test 1: Attacker should have access to shared subtree
+    assert await oi.folders_helper.check_shared_folder_access(shared_folder_id, attacker_ses) is not None
+    assert await oi.folders_helper.check_shared_folder_access(inner_folder_id, attacker_ses) is not None
+
+    # Test 2: Attacker should NOT have access to private folders
+    assert await oi.folders_helper.check_shared_folder_access(private_folder_id, attacker_ses) is None
+    assert await oi.folders_helper.check_shared_folder_access(owner_root_id, attacker_ses) is None
+
+    # Test 3: Cookie manipulation attempt - manually set shared entry to private folder
+    from organizer.helpers.folders import SHARED_FOLDER_TOKEN_COOKIE_NAME
+    attacker_ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] = str(private_folder_id)
+
+    # Should still not have access to private folder (cookie validation should prevent this)
+    assert await oi.folders_helper.check_shared_folder_access(private_folder_id, attacker_ses) is None
+
+    # Test 4: Try to fetch contents of private folder - should fail
+    try:
+        with oi.db_new_session() as dbs:
+            private_folder_obj = dbs.query(DbFolder).filter(DbFolder.id == private_folder_id).one()
+            await oi.folders_helper.fetch_folder_contents(private_folder_obj, attacker_ses)
+        assert False, "Should not be able to fetch private folder contents"
+    except GRPCError as e:
+        assert e.status == GrpcStatus.PERMISSION_DENIED, f"Expected PERMISSION_DENIED, got {e.status}"
+
+
+async def org_test__shared_folder_move_operations(oi: organizer.OrganizerInbound):
+    """
+    Test moving shared folders and their impact on sharing integrity.
+    """
+    # Create owner user and folder structure
+    with oi.db_new_session() as dbs:
+        owner_user_id = "move.owner"
+        dbs.add(DbUser(id=owner_user_id, name="Move Test Owner"))
+        dbs.commit()
+
+    owner_ses = org.UserSessionData(
+        sid="move_owner_sid",
+        user=clap.UserInfo(id=owner_user_id, name="Move Test Owner"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Create folder hierarchy: root -> parent_folder -> shared_folder -> inner_folder
+    #                          root -> destination_folder
+    with oi.db_new_session() as dbs:
+        owner_root = await db_get_or_create_user_root_folder(dbs, owner_ses.user, oi.srv, oi.log)
+        parent_folder = await oi.folders_helper.create_folder(dbs, owner_ses, owner_root, "Parent Folder")
+        shared_folder = await oi.folders_helper.create_folder(dbs, owner_ses, parent_folder, "Shared Folder")
+        inner_folder = await oi.folders_helper.create_folder(dbs, owner_ses, shared_folder, "Inner Folder")
+        destination_folder = await oi.folders_helper.create_folder(dbs, owner_ses, owner_root, "Destination Folder")
+
+        shared_folder_id = shared_folder.id
+        inner_folder_id = inner_folder.id
+        destination_folder_id = destination_folder.id
+        dbs.commit()
+
+    # Create share for shared_folder
+    with oi.db_new_session() as dbs:
+        share_token = await oi.folders_helper.generate_share_token()
+        share = DbSharedFolder(
+            folder_id=shared_folder_id,
+            share_token=share_token,
+        )
+        dbs.add(share)
+        dbs.commit()
+
+    # Create recipient user with shared access
+    with oi.db_new_session() as dbs:
+        recipient_user_id = "move.recipient"
+        dbs.add(DbUser(id=recipient_user_id, name="Move Test Recipient"))
+        dbs.commit()
+
+    recipient_ses = org.UserSessionData(
+        sid="move_recipient_sid",
+        user=clap.UserInfo(id=recipient_user_id, name="Move Test Recipient"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Set up shared access for recipient
+    recipient_ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] = share_token
+
+    # Test 1: Verify recipient has access before move
+    assert await oi.folders_helper.check_shared_folder_access(shared_folder_id, recipient_ses) is not None
+    assert await oi.folders_helper.check_shared_folder_access(inner_folder_id, recipient_ses) is not None
+
+    # Test 2: Move shared folder to destination (owner action)
+    await oi.move_to_folder(org.MoveToFolderRequest(
+        ses=owner_ses,
+        dst_folder_id=str(destination_folder_id),
+        ids=[clap.FolderItemId(folder_id=str(shared_folder_id))],
+        listing_data={}
+    ))
+
+    # Test 3: Verify share still exists and is functional after move
+    with oi.db_new_session() as dbs:
+        share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == shared_folder_id).one_or_none()
+        assert share is not None, "Share should still exist after folder move"
+        assert share.share_token == share_token, "Share token should be unchanged"
+
+    # Test 4: Verify recipient still has access after move
+    assert await oi.folders_helper.check_shared_folder_access(shared_folder_id, recipient_ses) is not None
+    assert await oi.folders_helper.check_shared_folder_access(inner_folder_id, recipient_ses) is not None
+
+    # Test 5: Verify recipient can still fetch folder contents
+    with oi.db_new_session() as dbs:
+        shared_folder_obj = dbs.query(DbFolder).filter(DbFolder.id == shared_folder_id).one()
+        contents = await oi.folders_helper.fetch_folder_contents(shared_folder_obj, recipient_ses)
+        assert len(contents) == 1, "Should still see inner folder after move"
+        assert contents[0].id == inner_folder_id, "Should still see the correct inner folder"
+
+    # Test 6: Non-owner cannot move shared folder
+    try:
+        await oi.move_to_folder(org.MoveToFolderRequest(
+            ses=recipient_ses,
+            dst_folder_id=str(destination_folder_id),
+            ids=[clap.FolderItemId(folder_id=str(shared_folder_id))],
+            listing_data={}
+        ))
+        assert False, "Recipient should not be able to move shared folder"
+    except GRPCError as e:
+        assert e.status == GrpcStatus.ABORTED, f"Expected ABORTED (error handled), got {e.status}"
+
+
+async def org_test__shared_folder_rename_operations(oi: organizer.OrganizerInbound):
+    """
+    Test renaming shared folders while sharing is active.
+    """
+    # Create owner user and folder
+    with oi.db_new_session() as dbs:
+        owner_user_id = "rename.owner"
+        dbs.add(DbUser(id=owner_user_id, name="Rename Test Owner"))
+        dbs.commit()
+
+    owner_ses = org.UserSessionData(
+        sid="rename_owner_sid",
+        user=clap.UserInfo(id=owner_user_id, name="Rename Test Owner"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Create shared folder
+    with oi.db_new_session() as dbs:
+        owner_root = await db_get_or_create_user_root_folder(dbs, owner_ses.user, oi.srv, oi.log)
+        shared_folder = await oi.folders_helper.create_folder(dbs, owner_ses, owner_root, "Original Name")
+        shared_folder_id = shared_folder.id
+        dbs.commit()
+
+    # Create share
+    with oi.db_new_session() as dbs:
+        share_token = await oi.folders_helper.generate_share_token()
+        share = DbSharedFolder(
+            folder_id=shared_folder_id,
+            share_token=share_token,
+        )
+        dbs.add(share)
+        dbs.commit()
+
+    # Create recipient user with shared access
+    with oi.db_new_session() as dbs:
+        recipient_user_id = "rename.recipient"
+        dbs.add(DbUser(id=recipient_user_id, name="Rename Test Recipient"))
+        dbs.commit()
+
+    recipient_ses = org.UserSessionData(
+        sid="rename_recipient_sid",
+        user=clap.UserInfo(id=recipient_user_id, name="Rename Test Recipient"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Set up shared access for recipient
+    recipient_ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] = share_token
+
+    # Test 1: Owner can rename shared folder
+    await oi.cmd_from_client(org.CmdFromClientRequest(
+        ses=owner_ses,
+        cmd="rename_folder",
+        args=json.dumps({"id": shared_folder_id, "new_name": "Renamed Shared Folder"})
+    ))
+
+    # Test 2: Verify folder was renamed
+    with oi.db_new_session() as dbs:
+        folder = dbs.query(DbFolder).filter(DbFolder.id == shared_folder_id).one()
+        assert folder.title == "Renamed Shared Folder", "Folder should be renamed"
+
+    # Test 3: Verify share still exists and is functional after rename
+    with oi.db_new_session() as dbs:
+        share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == shared_folder_id).one_or_none()
+        assert share is not None, "Share should still exist after folder rename"
+        assert share.share_token == share_token, "Share token should be unchanged"
+
+    # Test 4: Verify recipient still has access after rename
+    assert await oi.folders_helper.check_shared_folder_access(shared_folder_id, recipient_ses) is not None
+
+    # Test 5: Recipient cannot rename shared folder (read-only access)
+    await oi.cmd_from_client(org.CmdFromClientRequest(
+        ses=recipient_ses,
+        cmd="rename_folder",
+        args=json.dumps({"id": shared_folder_id, "new_name": "Unauthorized Rename"})
+    ))
+
+    # Test 6: Verify folder name was NOT changed by recipient
+    with oi.db_new_session() as dbs:
+        folder = dbs.query(DbFolder).filter(DbFolder.id == shared_folder_id).one()
+        assert folder.title == "Renamed Shared Folder", "Folder name should not be changed by recipient"
+
+
+async def org_test__move_content_into_shared_folders(oi: organizer.OrganizerInbound):
+    """
+    Test moving content into and out of shared folders with permission validation.
+    """
+    # Create owner user and complex folder structure
+    with oi.db_new_session() as dbs:
+        owner_user_id = "content.owner"
+        dbs.add(DbUser(id=owner_user_id, name="Content Test Owner"))
+        dbs.commit()
+
+    owner_ses = org.UserSessionData(
+        sid="content_owner_sid",
+        user=clap.UserInfo(id=owner_user_id, name="Content Test Owner"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Create folder structure
+    with oi.db_new_session() as dbs:
+        owner_root = await db_get_or_create_user_root_folder(dbs, owner_ses.user, oi.srv, oi.log)
+        shared_folder = await oi.folders_helper.create_folder(dbs, owner_ses, owner_root, "Shared Container")
+        private_folder = await oi.folders_helper.create_folder(dbs, owner_ses, owner_root, "Private Folder")
+        moveable_folder = await oi.folders_helper.create_folder(dbs, owner_ses, private_folder, "Moveable Folder")
+
+        shared_folder_id = shared_folder.id
+        private_folder_id = private_folder.id
+        moveable_folder_id = moveable_folder.id
+        dbs.commit()
+
+    # Create share for shared_folder
+    with oi.db_new_session() as dbs:
+        share_token = await oi.folders_helper.generate_share_token()
+        share = DbSharedFolder(
+            folder_id=shared_folder_id,
+            share_token=share_token,
+        )
+        dbs.add(share)
+        dbs.commit()
+
+    # Create recipient user
+    with oi.db_new_session() as dbs:
+        recipient_user_id = "content.recipient"
+        dbs.add(DbUser(id=recipient_user_id, name="Content Test Recipient"))
+        dbs.commit()
+
+    recipient_ses = org.UserSessionData(
+        sid="content_recipient_sid",
+        user=clap.UserInfo(id=recipient_user_id, name="Content Test Recipient"),
+        is_admin=False,
+        cookies={}
+    )
+
+    # Set up shared access for recipient
+    recipient_ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] = share_token
+
+    # Test 1: Owner can move content into shared folder
+    await oi.move_to_folder(org.MoveToFolderRequest(
+        ses=owner_ses,
+        dst_folder_id=str(shared_folder_id),
+        ids=[clap.FolderItemId(folder_id=str(moveable_folder_id))],
+        listing_data={}
+    ))
+
+    # Test 2: Verify folder was moved into shared space
+    with oi.db_new_session() as dbs:
+        shared_folder_obj = dbs.query(DbFolder).filter(DbFolder.id == shared_folder_id).one()
+        contents = await oi.folders_helper.fetch_folder_contents(shared_folder_obj, owner_ses)
+        assert len(contents) == 1, "Shared folder should contain moved folder"
+        assert contents[0].id == moveable_folder_id, "Should contain the moved folder"
+
+    # Test 3: Recipient can now see the moved content (inherited shared access)
+    assert await oi.folders_helper.check_shared_folder_access(moveable_folder_id, recipient_ses) is not None
+
+    # Test 4: Recipient cannot move content out of shared folder
+    try:
+        await oi.move_to_folder(org.MoveToFolderRequest(
+            ses=recipient_ses,
+            dst_folder_id=str(private_folder_id),
+            ids=[clap.FolderItemId(folder_id=str(moveable_folder_id))],
+            listing_data={}
+        ))
+        assert False, "Recipient should not be able to move content out of shared folder"
+    except GRPCError as e:
+        assert e.status == GrpcStatus.ABORTED, f"Expected ABORTED (error handled), got {e.status}"
+
+    # Test 5: Recipient cannot move content into shared folder
+    # Create another folder for testing
+    with oi.db_new_session() as dbs:
+        private_folder_obj = dbs.query(DbFolder).filter(DbFolder.id == private_folder_id).one()
+        test_folder = await oi.folders_helper.create_folder(dbs, owner_ses, private_folder_obj, "Test Folder")
+        test_folder_id = test_folder.id
+        dbs.commit()
+
+    try:
+        await oi.move_to_folder(org.MoveToFolderRequest(
+            ses=recipient_ses,
+            dst_folder_id=str(shared_folder_id),
+            ids=[clap.FolderItemId(folder_id=str(test_folder_id))],
+            listing_data={}
+        ))
+        assert False, "Recipient should not be able to move content into shared folder"
+    except GRPCError as e:
+        assert e.status == GrpcStatus.ABORTED, f"Expected ABORTED (error handled), got {e.status}"
+
+
 async def org_test__admin_owner_transfer(oi: organizer.OrganizerInbound):
     """
     Test move_to_folder() as an admin -- Admin can move any folder or media file to any user's folder.
@@ -437,3 +1082,13 @@ async def org_test__admin_owner_transfer(oi: organizer.OrganizerInbound):
     new_owners = await oi.srv.db_get_media_files(org.DbGetMediaFilesRequest(all=clap.Empty()))
     for v in new_owners.items:
         assert media_owners[v.id] == v.user_id
+
+
+# TODO: JavaScript action validation testing?
+# Consider adding validation for generated JavaScript code in actiondefs.py to catch:
+# - Syntax errors in generated JavaScript snippets
+# - Undefined variable access (e.g., _action_args.folder vs _action_args.listing_data)
+# - Missing null checks and API contract violations
+# - Common popup action bugs like accessing wrong data structures
+# Potential approaches: Python AST analysis of JS strings, or external validation tool
+# Would have caught the folder sharing bug (_action_args.folder?.id vs _action_args.listing_data?.folder_id)

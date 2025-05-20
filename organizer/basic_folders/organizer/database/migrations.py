@@ -121,4 +121,35 @@ ALL_MIGRATIONS: list[MigrationEntry] = [
                 CREATE INDEX bf_folder_items_subfolder_id ON bf_folder_items(subfolder_id);
                 '''),
     ),
+    
+    MigrationEntry(
+        metadata = org.Migration(
+            uuid="add_folder_sharing_2024-05-20_1200",
+            version="0003_add_folder_sharing",
+            dependencies=[
+                org.MigrationDependency(
+                    name="clapshot.server",
+                    min_ver="20240522163000",
+                    max_ver="20240602173200"
+                ),
+                org.MigrationDependency(
+                    name="clapshot.organizer.basic_folders",
+                    min_ver="0002_media_file_renamed",
+                    max_ver="0002_media_file_renamed"
+                )
+            ],
+            description="Add support for sharing folders with other users"
+        ),
+        up_sql= dedent('''
+                CREATE TABLE bf_shared_folders (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    folder_id INTEGER NOT NULL REFERENCES bf_folders(id) ON UPDATE CASCADE ON DELETE CASCADE,
+                    share_token VARCHAR(64) NOT NULL UNIQUE,
+                    created DATETIME DEFAULT (CURRENT_TIMESTAMP) NOT NULL
+                );
+
+                CREATE INDEX bf_shared_folders_folder_id ON bf_shared_folders(folder_id);
+                CREATE INDEX bf_shared_folders_share_token ON bf_shared_folders(share_token);
+                '''),
+    ),
 ]

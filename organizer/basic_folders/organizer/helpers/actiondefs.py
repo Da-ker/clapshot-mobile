@@ -13,6 +13,9 @@ class ActiondefsHelper:
             "new_folder": self.make_new_folder_action(),
             "move_to_parent": self.make_move_to_parent_action(),
             "on_media_file_added": self.make_on_media_file_added_action(),
+            "share_folder": self.make_share_folder_action(),
+            "copy_shared_link": self.make_copy_shared_link_action(),
+            "revoke_share": self.make_revoke_share_action(),
         }
 
     def make_new_folder_action(self) -> clap.ActionDef:
@@ -66,5 +69,79 @@ class ActiondefsHelper:
                         alert(msg); console.error(msg);
                     } else {
                         clapshot.moveToFolder(folderId, [{mediaFileId: mfid}], listingData);
+                    }
+                """).strip()))
+
+    def make_share_folder_action(self) -> clap.ActionDef:
+        return clap.ActionDef(
+            ui_props=clap.ActionUiProps(
+                label="Share folder",
+                icon=clap.Icon(fa_class=clap.IconFaClass(classes="fa fa-share-nodes", color=None)),
+                key_shortcut=None,
+                natural_desc="Create a shareable link to this folder"),
+            action=clap.ScriptCall(
+                lang=clap.ScriptCallLang.JAVASCRIPT,
+                code=dedent("""
+                    var folder = _action_args.selected_items?.[0]?.folder;
+                    var folderId = folder?.id || null;
+                    if (!folderId) {
+                        alert("No folder selected to share");
+                        return;
+                    }
+                    clapshot.callOrganizer("share_folder", {id: folderId});
+                """).strip()))
+
+    def make_revoke_share_action(self) -> clap.ActionDef:
+        return clap.ActionDef(
+            ui_props=clap.ActionUiProps(
+                label="Stop sharing",
+                icon=clap.Icon(fa_class=clap.IconFaClass(classes="fa fa-link-slash", color=None)),
+                key_shortcut=None,
+                natural_desc="Revoke the shared link for this folder"),
+            action=clap.ScriptCall(
+                lang=clap.ScriptCallLang.JAVASCRIPT,
+                code=dedent("""
+                    var folder = _action_args.selected_items?.[0]?.folder;
+                    var folderId = folder?.id || null;
+                    if (!folderId) {
+                        alert("No folder selected to unshare");
+                        return;
+                    }
+                    if (confirm("Are you sure you want to revoke the shared link for this folder?")) {
+                        clapshot.callOrganizer("revoke_share", {id: folderId});
+                    }
+                """).strip()))
+
+    def make_copy_shared_link_action(self) -> clap.ActionDef:
+        return clap.ActionDef(
+            ui_props=clap.ActionUiProps(
+                label="Copy URL",
+                icon=clap.Icon(fa_class=clap.IconFaClass(classes="fa fa-copy", color=None)),
+                key_shortcut=None,
+                natural_desc="Copy the shared link to clipboard"),
+            action=clap.ScriptCall(
+                lang=clap.ScriptCallLang.JAVASCRIPT,
+                code=dedent("""
+                    var folder = _action_args.selected_items?.[0]?.folder;
+                    var folderId = folder?.id || null;
+                    var sharedFolderTokens = JSON.parse(_action_args.listing_data?.shared_folder_tokens || '{}');
+                    var shareToken = sharedFolderTokens[folderId];
+
+                    if (!shareToken) {
+                        alert("No shared link available for this folder");
+                        return;
+                    }
+
+                    // Construct the share URL using the current page's origin
+                    var shareUrl = window.location.origin + "/?p=shared." + shareToken;
+
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(shareUrl).then(function() {
+                            alert('Shared link copied to clipboard!\\n\\nNOTE: Sharing a folder reveals direct links to all files currently in it, effectively giving recipient PERMANENT access to them, even if remove the folder share later.');
+                        }).catch(function() {
+                            prompt('Copy this shared link:', shareUrl);
+                        });
+                    } else {
+                        prompt('Copy this shared link:', shareUrl);
                     }
                 """).strip()))

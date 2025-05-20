@@ -38,6 +38,17 @@ class DbFolderItems(Base):
     __table_args__ = (constraint_enum, constraint_self_ref)
 
 
+class DbSharedFolder(Base):
+    __tablename__ = "bf_shared_folders"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(ForeignKey("bf_folders.id", ondelete="CASCADE", onupdate="CASCADE"))
+    share_token: Mapped[str] = mapped_column(unique=True)
+    created: Mapped[datetime] = mapped_column(insert_default=sqlalchemy.func.now())
+    
+    # Relationship to the folder
+    folder: Mapped[DbFolder] = relationship("DbFolder", foreign_keys=[folder_id])
+
+
 class DbSchemaMigrations(Base):
     __tablename__ = "__bf_schema_migrations"
     version: Mapped[str] = mapped_column(primary_key=True)

@@ -1,11 +1,13 @@
 from datetime import datetime
 import json
+import secrets
 from typing import List, Optional, Tuple
 
 from grpclib import GRPCError
 from grpclib.const import Status as GrpcStatus
 
 import sqlalchemy
+from sqlalchemy import orm
 from sqlalchemy.orm import Session
 
 import clapshot_grpc.proto.clapshot as clap
@@ -13,27 +15,127 @@ import clapshot_grpc.proto.clapshot.organizer as org
 from clapshot_grpc.utilities import try_send_user_message
 
 from organizer.config import PATH_COOKIE_NAME
-from organizer.database.models import DbFolder, DbFolderItems, DbMediaFile
+from organizer.database.models import DbFolder, DbFolderItems, DbMediaFile, DbSharedFolder, DbUser
 from organizer.database.operations import db_get_or_create_user_root_folder
 from organizer.helpers import media_type_to_vis_icon
 
+# Cookie name for tracking the shared folder entry point
+SHARED_FOLDER_TOKEN_COOKIE_NAME = "shared_folder_token"
+
 
 class FoldersHelper:
-    def __init__(self, db_new_session: sqlalchemy.orm.sessionmaker, srv: org.OrganizerOutboundStub, log):
+    def __init__(self, db_new_session: orm.sessionmaker, srv: org.OrganizerOutboundStub, log):
         self.db_new_session = db_new_session
         self.srv = srv
         self.log = log
+
+    async def check_shared_folder_access(self, folder_id: int, ses: org.UserSessionData) -> Optional[str]:
+        """
+        Check if a user has shared access to a folder.
+        Returns the share token if the user has access, None otherwise.
+        """
+        # If user already owns the folder or is admin, no need to check for shared access
+        with self.db_new_session() as dbs:
+            folder = dbs.query(DbFolder).filter(DbFolder.id == folder_id).one_or_none()
+            if not folder:
+                return None
+
+            if folder.user_id == ses.user.id or ses.is_admin:
+                return None  # User already has natural access
+
+            # Check for shared access via cookie
+            share_token = ses.cookies.get(SHARED_FOLDER_TOKEN_COOKIE_NAME)
+            if not share_token:
+                return None
+
+            # Verify it exists and is valid
+            shared_folder = dbs.query(DbSharedFolder).filter(DbSharedFolder.share_token == share_token).one_or_none()
+            if not shared_folder:
+                # Invalid share, clear the cookie
+                ses.cookies.pop(SHARED_FOLDER_TOKEN_COOKIE_NAME, None)
+                await self.srv.client_set_cookies(org.ClientSetCookiesRequest(
+                    cookies=ses.cookies,
+                    sid=ses.sid
+                ))
+                return None
+
+            # Check if the requested folder is within the shared subtree
+            if await self.is_folder_in_subtree(dbs, folder_id, shared_folder.folder_id):
+                return share_token
+
+        return None
+
+    async def is_folder_in_subtree(self, dbs: Session, folder_id: int, root_id: int) -> bool:
+        """
+        Check if a folder is within a subtree rooted at root_id.
+        Uses breadth-first search to find the path.
+        """
+        if folder_id == root_id:
+            return True
+
+        # BFS to find if folder_id is in the subtree of root_id
+        queue = [root_id]
+        visited = set()
+
+        while queue:
+            current = queue.pop(0)
+            if current in visited:
+                continue
+
+            visited.add(current)
+
+            # Get all subfolders of the current folder
+            subfolder_items = dbs.query(DbFolderItems).filter(
+                DbFolderItems.folder_id == current,
+                DbFolderItems.subfolder_id != None      # noqa: E711
+            ).all()
+
+            subfolder_ids = [item.subfolder_id for item in subfolder_items if item.subfolder_id is not None]
+
+            if folder_id in subfolder_ids:
+                return True
+
+            queue.extend(subfolder_ids)
+
+        return False
+
+    async def get_folder_ancestors(self, dbs: Session, folder_id: int) -> List[int]:
+        """
+        Get the ancestor folders of a given folder, ordered from root to the given folder.
+        """
+        ancestors: List[int] = []
+        current_id: int|None = folder_id
+        visited = set()
+
+        while current_id and current_id not in visited:
+            visited.add(current_id)
+            ancestors.insert(0, current_id)
+
+            # Find parent of current folder
+            parent_item = dbs.query(DbFolderItems).filter(
+                DbFolderItems.subfolder_id == current_id
+            ).one_or_none()
+
+            if not parent_item:
+                break
+
+            current_id = parent_item.folder_id
+
+        return ancestors
+
+    async def generate_share_token(self) -> str:
+        """Generate a secure random token for folder sharing"""
+        return secrets.token_urlsafe(32)
 
     async def get_current_folder_path(self, ses: org.UserSessionData, cookie_override: Optional[str]=None) -> List[DbFolder]:
         """
         Get current folder path from cookies & DB.
 
-        If the cookie is malformed, it will be replaced with an empty one.
-        Returned list will always contain at least one item (root folder).
+        Returns a homogeneous ownership path - either all user-owned OR all shared-accessible.
+        Never mixes different ownership contexts in breadcrumbs.
 
         If cookie_override is set, it will be used instead of the cookie from session.
         """
-        res: List[DbFolder] = []
         ck = ses.cookies or {}
         with self.db_new_session() as dbs:
             try:
@@ -42,40 +144,79 @@ class FoldersHelper:
 
                     folders_unordered = dbs.query(DbFolder).filter(DbFolder.id.in_(folder_ids)).all()
                     if len(folders_unordered) == len(folder_ids):
-                        # Reorder the folders to match the order in the cookie, and return
+                        # Reorder the folders to match the order in the cookie
                         folders_by_id = {f.id: f for f in folders_unordered}
-                        return [folders_by_id[id] for id in folder_ids if id in folders_by_id]
+                        path_folders = [folders_by_id[id] for id in folder_ids if id in folders_by_id]
+                        
+                        # Validate ownership consistency
+                        if path_folders and await self._validate_path_ownership_consistency(path_folders, ses):
+                            return path_folders
+                        else:
+                            self.log.warning("Mixed ownership in folder path. Clearing path cookie.")
+                            await self._clear_path_cookie(ses)
                     else:
                         self.log.warning("Some unknown folder IDs in folder_path cookie. Clearing it.")
-                        await self.srv.client_set_cookies(org.ClientSetCookiesRequest(cookies={PATH_COOKIE_NAME: ''}, sid=ses.sid))
-                        if err := await try_send_user_message(self.srv,
-                                org.ClientShowUserMessageRequest(
-                                    sid=ses.sid,
-                                    msg=clap.UserMessage(
-                                        message="Some unknown folder IDs in folder_path cookie. Clearing it.",
-                                        user_id=ses.user.id,
-                                        type=clap.UserMessageType.ERROR))):
-                            self.log.error(f"Error calling client_show_user_message(): {err}")
+                        await self._clear_path_cookie(ses)
 
-                self.log.debug("No folder_path cookie found. Returning empty folder path.")
-                res = []
+                self.log.debug("No valid folder_path cookie found. Returning user root folder.")
+                
             except json.JSONDecodeError as e:
-                self.log.error(f"Failed to parse folder_path cookie: {e}. Falling back to empty folder path.")
-                res = []
+                self.log.error(f"Failed to parse folder_path cookie: {e}. Falling back to user root.")
 
-            # Make sure root folder is always in the path
+            # Add user root folder as fallback
             user_root = await db_get_or_create_user_root_folder(dbs, ses.user, self.srv, self.log)
-            if not res or res[0].id != user_root.id:
-                res.insert(0, user_root)
+            return [user_root]
 
-        return res
+    async def _validate_path_ownership_consistency(self, path_folders: List[DbFolder], ses: org.UserSessionData) -> bool:
+        """
+        Validate that all folders in path have consistent ownership/access rights.
+        Returns True if path is valid, False if mixed ownership detected.
+        """
+        if not path_folders:
+            return True
+            
+        first_folder = path_folders[0]
+        
+        # Check if user has natural ownership of first folder
+        user_owns_first = first_folder.user_id == ses.user.id or ses.is_admin
+        
+        if user_owns_first:
+            # If user owns the first folder, they should own ALL folders in path
+            # This handles the case where user navigates to their own folders while having a share token
+            return all(f.user_id == ses.user.id or ses.is_admin for f in path_folders)
+        else:
+            # User doesn't own the first folder - check if they have shared access to entire path
+            share_token = ses.cookies.get(SHARED_FOLDER_TOKEN_COOKIE_NAME)
+            if not share_token:
+                return False  # No shared access but trying to access non-owned folder
+                
+            with self.db_new_session() as dbs:
+                shared_folder = dbs.query(DbSharedFolder).filter(DbSharedFolder.share_token == share_token).one_or_none()
+                if not shared_folder:
+                    return False
+                    
+                # All folders must be within the shared folder's subtree
+                for folder in path_folders:
+                    if not await self.is_folder_in_subtree(dbs, folder.id, shared_folder.folder_id):
+                        return False
+                return True
+
+    async def _clear_path_cookie(self, ses: org.UserSessionData):
+        """Clear path cookie and send update to client."""
+        ses.cookies.pop(PATH_COOKIE_NAME, None)
+        await self.srv.client_set_cookies(org.ClientSetCookiesRequest(cookies=ses.cookies, sid=ses.sid))
 
     async def fetch_folder_contents(self, folder: DbFolder, ses: org.UserSessionData) -> List[DbMediaFile | DbFolder]:
         """
         Fetch the contents of a folder from the database, sorted by the specified criteria.
         """
-        if folder.user_id != ses.user.id and not ses.is_admin:
-            raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot fetch contents of another user's folder")
+        # Check for natural access first (ownership or admin)
+        has_natural_access = folder.user_id == ses.user.id or ses.is_admin
+
+        # If no natural access, check for shared access
+        if not has_natural_access:
+            if not await self.check_shared_folder_access(folder.id, ses):
+                raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot fetch contents of another user's folder")
 
         with self.db_new_session() as dbs:
             folder_items = dbs.query(DbFolderItems).filter(DbFolderItems.folder_id == folder.id).all()
@@ -120,8 +261,16 @@ class FoldersHelper:
         fld = dbs.query(DbFolder).filter(DbFolder.id == folder_id).one_or_none()
         if not fld:
             raise GRPCError(GrpcStatus.NOT_FOUND, f"Folder ID '{folder_id}' not found")
+
+        # Only allow trashing by the owner or an admin
         if fld.user_id != ses.user.id and not ses.is_admin:
-            raise GRPCError(GrpcStatus.PERMISSION_DENIED, f"Cannot trash another user's folder")
+            raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot trash another user's folder")
+
+        # Check if the folder is currently being shared
+        shared = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == folder_id).first()
+        if shared:
+            # First delete the share
+            dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == folder_id).delete()
 
         folder_items = dbs.query(DbFolderItems).filter(DbFolderItems.folder_id == folder_id).all()
         media_ids = [it.media_file_id for it in folder_items if it.media_file_id]
@@ -145,15 +294,37 @@ class FoldersHelper:
         """
         pv_items = await self.preview_items_for_folder(fld, ses)
 
+        # Determine if this folder is shared
+        is_shared = False
+        with self.db_new_session() as dbs:
+            is_shared = await self.is_folder_shared(dbs, fld.id)
+
+        # Determine if the user is the owner or admin
+        is_owner = (fld.user_id == ses.user.id) or ses.is_admin
+
+        # Add visual indicator for shared folders
+        title = fld.title or "<UNNAMED>"
+        if is_shared:
+            title = f"🔗 {title}"  # Add link icon before title to indicate shared folder
+
+        # Customize popup actions based on ownership and sharing status
+        folder_actions = popup_actions.copy()
+        if is_owner:
+            if is_shared:
+                folder_actions.append("revoke_share")
+                folder_actions.append("copy_shared_link")
+            else:
+                folder_actions.append("share_folder")
+
         return clap.PageItemFolderListingItem(
             folder = clap.PageItemFolderListingFolder(
                 id = str(fld.id),
-                title = fld.title or "<UNNAMED>",
+                title = title,
                 preview_items = pv_items),
             open_action = clap.ScriptCall(
                 lang = clap.ScriptCallLang.JAVASCRIPT,
                 code = f'clapshot.callOrganizer("open_folder", {{id: {fld.id}}});'),
-            popup_actions = popup_actions)
+            popup_actions = folder_actions)
 
     async def preview_items_for_folder(self, fld: DbFolder, ses: org.UserSessionData) -> List[clap.PageItemFolderListingItem]:
         """
@@ -165,6 +336,7 @@ class FoldersHelper:
         media_files = [item for item in contained_items if isinstance(item, DbMediaFile)][:4]
         folders = [item for item in contained_items if isinstance(item, DbFolder)][:4]
 
+        media_by_id = {}
         if media_files:
             media_details = await self.srv.db_get_media_files(org.DbGetMediaFilesRequest(ids=org.IdList(ids=[v.id for v in media_files])))
             media_by_id = {v.id: v for v in media_details.items}
@@ -190,6 +362,8 @@ class FoldersHelper:
         Create a new folder in the parent folder.
         """
         assert parent_folder is not None, "Cannot create root folders with this function"
+
+        # Only allow folder creation by owner or admin
         if parent_folder.user_id != ses.user.id and not ses.is_admin:
             raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot create folder in another user's folder")
         if len(new_folder_name) > 255:
@@ -210,3 +384,135 @@ class FoldersHelper:
             max_sort_order = dbs.query(sqlalchemy.func.max(DbFolderItems.sort_order)).filter(DbFolderItems.folder_id == parent_folder.id).scalar() or 0
             dbs.add(DbFolderItems(folder_id=parent_folder.id, subfolder_id=new_folder.id, sort_order=max_sort_order+1))
             return new_folder
+
+    async def get_folder_owner(self, dbs: Session, folder_id: int) -> Optional[DbUser]:
+        """
+        Get the owner of a folder by its ID.
+        Returns the DbUser object if found, None otherwise.
+        """
+        folder = dbs.query(DbFolder).filter(DbFolder.id == folder_id).one_or_none()
+        if not folder:
+            return None
+        return dbs.query(DbUser).filter(DbUser.id == folder.user_id).one_or_none()
+
+    async def create_folder_share(self, dbs: Session, folder_id: int, ses: org.UserSessionData) -> DbSharedFolder:
+        """
+        Create a shareable link for a folder.
+        Returns the created DbSharedFolder object.
+        """
+        # Check if folder exists
+        folder = dbs.query(DbFolder).filter(DbFolder.id == folder_id).one_or_none()
+        if not folder:
+            raise GRPCError(GrpcStatus.NOT_FOUND, f"Folder ID '{folder_id}' not found")
+
+        # Only folder owner or admin can create a share
+        if folder.user_id != ses.user.id and not ses.is_admin:
+            raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Only the folder owner can create shares")
+
+        # Check if sharing already exists
+        existing_share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == folder_id).one_or_none()
+        if existing_share:
+            return existing_share
+
+        # Generate a secure token
+        share_token = await self.generate_share_token()
+
+        # Create the share
+        share = DbSharedFolder(
+            folder_id=folder_id,
+            share_token=share_token
+        )
+
+        dbs.add(share)
+        dbs.flush()
+
+        return share
+
+    async def revoke_folder_share(self, dbs: Session, folder_id: int, ses: org.UserSessionData) -> bool:
+        """
+        Revoke sharing for a folder.
+        Returns True if a share was revoked, False if no share existed.
+        """
+        # Check if folder exists
+        folder = dbs.query(DbFolder).filter(DbFolder.id == folder_id).one_or_none()
+        if not folder:
+            raise GRPCError(GrpcStatus.NOT_FOUND, f"Folder ID '{folder_id}' not found")
+
+        # Only folder owner or admin can revoke sharing
+        if folder.user_id != ses.user.id and not ses.is_admin:
+            raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Only the folder owner can revoke sharing")
+
+        # Delete the share
+        deleted = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == folder_id).delete()
+
+        return deleted > 0
+
+    async def get_share_by_token(self, dbs: Session, token: str) -> Optional[DbSharedFolder]:
+        """
+        Get a shared folder by its token.
+        Returns the DbSharedFolder object if found, None otherwise.
+        """
+        return dbs.query(DbSharedFolder).filter(DbSharedFolder.share_token == token).one_or_none()
+
+
+    async def is_folder_shared(self, dbs: Session, folder_id: int) -> bool:
+        """
+        Check if a folder is currently shared.
+        """
+        share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == folder_id).one_or_none()
+        return share is not None
+
+    async def get_shared_folder_breadcrumb_info(self, ses: org.UserSessionData, folder_path: List[DbFolder]) -> Optional[Tuple[str, str]]:
+        """
+        Get shared folder breadcrumb information if the user is viewing a shared folder.
+
+        Returns:
+            Optional tuple of (folder_title, owner_name) if viewing a shared folder, None otherwise
+        """
+        share_token = ses.cookies.get(SHARED_FOLDER_TOKEN_COOKIE_NAME)
+        if not share_token or not folder_path:
+            return None
+
+        # Check if current user has natural access to the folder
+        current_folder = folder_path[0]
+        if current_folder.user_id == ses.user.id or ses.is_admin:
+            return None  # User owns the folder => "natural access" (not accessing via share link)
+
+        with self.db_new_session() as dbs:
+            shared_folder = dbs.query(DbSharedFolder).filter(DbSharedFolder.share_token == share_token).one_or_none()
+            if not shared_folder:
+                return None
+
+            # Check if we're in the shared folder's subtree
+            if current_folder.id != shared_folder.folder_id and not await self.is_folder_in_subtree(dbs, current_folder.id, shared_folder.folder_id):
+                return None
+
+            owner = await self.get_folder_owner(dbs, shared_folder.folder_id)
+            if not owner:
+                return None # Owner not found, cannot provide breadcrumb info
+
+            folder_title = current_folder.title or "UNNAMED"
+            owner_name = owner.name or owner.id
+            return (folder_title, owner_name)
+
+    def get_shared_folder_tokens(self, folder_items: List[DbFolder]) -> dict[str, str]:
+        """
+        Get share tokens for a list of folders.
+
+        Args:
+            folder_items: List of folder objects to check for shares
+
+        Returns:
+            Dictionary mapping folder_id (as string) to share_token
+        """
+        shared_folder_tokens: dict[str, str] = {}
+        if not folder_items:
+            return shared_folder_tokens
+
+        with self.db_new_session() as dbs:
+            for folder_item in folder_items:
+                share = dbs.query(DbSharedFolder).filter(DbSharedFolder.folder_id == folder_item.id).one_or_none()
+                if share:
+                    shared_folder_tokens[str(folder_item.id)] = share.share_token
+
+        return shared_folder_tokens

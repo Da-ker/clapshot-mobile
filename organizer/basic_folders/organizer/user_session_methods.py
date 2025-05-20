@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from base64 import b64decode
 import json
+from typing import Optional
 from grpclib import GRPCError
-import grpclib
-import grpclib.client
 from grpclib.const import Status as GrpcStatus
 
 import clapshot_grpc.proto.clapshot as clap
 import clapshot_grpc.proto.clapshot.organizer as org
 from clapshot_grpc.utilities import try_send_user_message, parse_json_dict
 
-from organizer.config import MODULE_NAME, PATH_COOKIE_NAME, VERSION
+from organizer.config import PATH_COOKIE_NAME
+from organizer.helpers.folders import SHARED_FOLDER_TOKEN_COOKIE_NAME
 from organizer.utils import uri_arg_to_folder_path
 
 from .database.models import DbFolder
@@ -45,17 +44,44 @@ async def navigate_page_impl(oi: organizer.OrganizerInbound, req: org.NavigatePa
     """
     ses = req.ses
 
-    cookie_override = None
-    try:
-        cookie_override = json.dumps(uri_arg_to_folder_path(req.page_id or ""))
-    except ValueError as e:
-        oi.log.warning(f"Invalid folder path URI from client: '{req.page_id}'")
+    # First, check if this is a shared folder link
+    if req.page_id and req.page_id.startswith("shared."):
+        share_token = req.page_id.split(".", 1)[1]
+        with oi.db_new_session() as dbs:
+            if share := await oi.folders_helper.get_share_by_token(dbs, share_token):
+                req.page_id = str(share.folder_id)  # Replace token with folder ID for further processing
+                ses.cookies[PATH_COOKIE_NAME] = json.dumps([share.folder_id])   # Use it as a new folder path root
+                await oi.srv.client_set_cookies(org.ClientSetCookiesRequest(cookies=ses.cookies, sid=ses.sid))
 
-    if req.page_id is None:
+                # If current user is not the owner of the shared folder, store token in a cookie
+                owner = await oi.folders_helper.get_folder_owner(dbs, share.folder_id)
+                if owner and owner.id != ses.user.id:
+                    ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] = share_token
+                    await oi.srv.client_set_cookies(org.ClientSetCookiesRequest(cookies=ses.cookies, sid=ses.sid))
+            else:
+                # Token not found? Reset session.
+                await try_send_user_message(oi.srv,
+                    org.ClientShowUserMessageRequest(sid=ses.sid,
+                        msg=clap.UserMessage(
+                            message="This shared folder link is invalid or has been revoked",
+                            type=clap.UserMessageType.ERROR)))
+                ses.cookies.pop(SHARED_FOLDER_TOKEN_COOKIE_NAME, None)
+                ses.cookies.pop(PATH_COOKIE_NAME, None)
+                await oi.srv.client_set_cookies(org.ClientSetCookiesRequest(cookies=ses.cookies, sid=ses.sid))
+                return await oi.pages_helper.construct_navi_page(ses, None)
+
+    # Normal folder navigation
+    cookie_override: Optional[str] = None
+    if req.page_id:
+        try:
+            cookie_override = json.dumps(uri_arg_to_folder_path(req.page_id))
+        except ValueError:
+            oi.log.warning(f"Invalid folder path URI from client: '{req.page_id}'")
+    else:
         # When OrganizerInbound.navigate_page() is called without a page_id, it means the user has opened the main page
         # without an URL parameter => we need to clear the folder_path cookie so other handlers don't push the wrong view.
-        if ses.cookies.pop(PATH_COOKIE_NAME, None):
-            await oi.srv.client_set_cookies(org.ClientSetCookiesRequest(cookies=ses.cookies, sid=ses.sid))
+        ses.cookies.pop(PATH_COOKIE_NAME, None)
+        await oi.srv.client_set_cookies(org.ClientSetCookiesRequest(cookies=ses.cookies, sid=ses.sid))
 
     return await oi.pages_helper.construct_navi_page(ses, cookie_override)
 
@@ -126,8 +152,8 @@ async def cmd_from_client_impl(oi: organizer.OrganizerInbound, cmd: org.CmdFromC
                     fld = dbs.query(DbFolder).filter(DbFolder.id == folder_id).one_or_none()
                     if not fld:
                         raise GRPCError(GrpcStatus.NOT_FOUND, f"Folder ID '{args['id']}' not found")
-                    if fld.user_id not in (cmd.ses.user.id,"admin"):
-                        raise GRPCError(GrpcStatus.PERMISSION_DENIED, f"Cannot rename another user's folder")
+                    if fld.user_id != cmd.ses.user.id and not cmd.ses.is_admin:
+                        raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot rename another user's folder")
                     fld.title = args["new_name"]
 
             oi.log.debug(f"Renamed folder '{fld.id}' to '{fld.title}'")
@@ -153,6 +179,65 @@ async def cmd_from_client_impl(oi: organizer.OrganizerInbound, cmd: org.CmdFromC
 
             page = await oi.pages_helper.construct_navi_page(cmd.ses, None)
             await oi.srv.client_show_page(page)
+
+        elif cmd.cmd == "share_folder":
+            args = parse_json_dict(cmd.args)
+            if not args or not args.get("id"):
+                raise GRPCError(GrpcStatus.INVALID_ARGUMENT, "share_folder command missing 'id' argument")
+
+            folder_id = int(args["id"])
+
+            with oi.db_new_session() as dbs:
+                shared = await oi.folders_helper.create_folder_share(dbs, folder_id, cmd.ses)
+                folder_title = str(shared.folder.title)
+                dbs.commit()
+
+                # Generate shareable URL using server_url_base from server_info
+                if not oi.server_info or not oi.server_info.url_base:
+                    raise GRPCError(GrpcStatus.FAILED_PRECONDITION, "Server URL base not configured - cannot generate shareable URLs")
+
+            # Update UI after transaction commit
+            navi_page = await oi.pages_helper.construct_navi_page(cmd.ses, None)
+            await oi.srv.client_show_page(navi_page)
+
+            # Show message with share URL
+            await try_send_user_message(oi.srv,
+                org.ClientShowUserMessageRequest(sid=cmd.ses.sid,
+                    msg=clap.UserMessage(
+                        message="Folder shared. Use popup/'Copy URL' to get a link.",
+                        details= f"Folder sharing token created for '{folder_title}'.",
+                        type=clap.UserMessageType.OK)))
+
+        elif cmd.cmd == "revoke_share":
+            # Parse arguments
+            args = parse_json_dict(cmd.args)
+            if not args or not args.get("id"):
+                raise GRPCError(GrpcStatus.INVALID_ARGUMENT, "revoke_share command missing 'id' argument")
+
+            folder_id = int(args["id"])
+
+            with oi.db_new_session() as dbs:
+                # Revoke the share
+                revoked = await oi.folders_helper.revoke_folder_share(dbs, folder_id, cmd.ses)
+                dbs.commit()
+
+            # Update UI after transaction commit
+            navi_page = await oi.pages_helper.construct_navi_page(cmd.ses, None)
+            await oi.srv.client_show_page(navi_page)
+
+            # Show success message
+            if revoked:
+                await try_send_user_message(oi.srv,
+                    org.ClientShowUserMessageRequest(sid=cmd.ses.sid,
+                        msg=clap.UserMessage(
+                            message="Folder sharing has been revoked",
+                            type=clap.UserMessageType.OK)))
+            else:
+                await try_send_user_message(oi.srv,
+                    org.ClientShowUserMessageRequest(sid=cmd.ses.sid,
+                        msg=clap.UserMessage(
+                            message="This folder is not currently shared",
+                            type=clap.UserMessageType.ERROR)))
 
         else:
             raise GRPCError(GrpcStatus.INVALID_ARGUMENT, f"Unknown organizer command: {cmd.cmd}")

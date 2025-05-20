@@ -1,6 +1,5 @@
 import json
 from logging import Logger
-import traceback
 
 from grpclib import GRPCError
 from grpclib.const import Status as GrpcStatus
@@ -12,9 +11,7 @@ from clapshot_grpc.errors import organizer_grpc_handler
 from clapshot_grpc.connect import connect_back_to_server, open_database
 
 import sqlalchemy
-import sqlalchemy.exc
-
-from functools import wraps
+from sqlalchemy import orm
 
 from organizer.config import VERSION, MODULE_NAME
 
@@ -39,28 +36,29 @@ except ImportError:
 class OrganizerInbound(org.OrganizerInboundBase):
     srv: org.OrganizerOutboundStub  # connection back to Clapshot server
     log: Logger
-    db: sqlalchemy.Engine
-    db_new_session: sqlalchemy.orm.sessionmaker     # callable session factory
+    db: sqlalchemy.Engine|None
+    db_new_session: orm.sessionmaker     # callable session factory
 
     def __init__(self, logger, debug):
         self.db = None
         self.log = logger
         self.debug = debug
+        self.server_info = None  # Will be set during handshake
 
 
     # Migration methods
 
     @override
     @organizer_grpc_handler
-    async def check_migrations(self, request: org.CheckMigrationsRequest) -> org.CheckMigrationsResponse:
+    async def check_migrations(self, check_migrations_request: org.CheckMigrationsRequest) -> org.CheckMigrationsResponse:
         assert self.db is None, "Database already open. Called after handshake?"
-        return await check_migrations_impl(request, self.log)
+        return await check_migrations_impl(check_migrations_request, self.log)
 
     @override
     @organizer_grpc_handler
-    async def apply_migration(self, request: org.ApplyMigrationRequest) -> org.ApplyMigrationResponse:
+    async def apply_migration(self, apply_migration_request: org.ApplyMigrationRequest) -> org.ApplyMigrationResponse:
         assert self.db is None, "Database already open, cannot to apply migration. Called after handshake?"
-        return await apply_migration_impl(request, self.log)
+        return await apply_migration_impl(apply_migration_request, self.log)
 
     @override
     async def handshake(self, server_info: org.ServerInfo) -> clap.Empty:
@@ -69,6 +67,7 @@ class OrganizerInbound(org.OrganizerInboundBase):
         We must connect back to it and send handshake to establish a bidirectional connection.
         """
         self.log.debug(f"Got handshake. Server info: {json.dumps(server_info.to_dict())}")
+        self.server_info = server_info
 
         srv_dep = org.OrganizerDependency(name="clapshot.server", min_ver=org.SemanticVersionNumber(major=0, minor=6, patch=0))
         self.srv = await connect_back_to_server(server_info, MODULE_NAME, VERSION.split("."), "Basic folders for the UI", [srv_dep], self.log)
@@ -88,22 +87,22 @@ class OrganizerInbound(org.OrganizerInboundBase):
 
     @override
     @organizer_grpc_handler
-    async def on_start_user_session(self, request: org.OnStartUserSessionRequest) -> org.OnStartUserSessionResponse:
-        return await on_start_user_session_impl(self, request)
+    async def on_start_user_session(self, on_start_user_session_request: org.OnStartUserSessionRequest) -> org.OnStartUserSessionResponse:
+        return await on_start_user_session_impl(self, on_start_user_session_request)
 
     @override
     @organizer_grpc_handler
-    async def navigate_page(self, request: org.NavigatePageRequest) -> org.ClientShowPageRequest:
-        return await navigate_page_impl(self, request)
+    async def navigate_page(self, navigate_page_request: org.NavigatePageRequest) -> org.ClientShowPageRequest:
+        return await navigate_page_impl(self, navigate_page_request)
 
     @override
     @organizer_grpc_handler
-    async def cmd_from_client(self, request: org.CmdFromClientRequest) -> clap.Empty:
-        return await cmd_from_client_impl(self, request)
+    async def cmd_from_client(self, cmd_from_client_request: org.CmdFromClientRequest) -> clap.Empty:
+        return await cmd_from_client_impl(self, cmd_from_client_request)
 
     @override
     @organizer_grpc_handler
-    async def authz_user_action(self, request: org.AuthzUserActionRequest) -> org.AuthzResponse:
+    async def authz_user_action(self, authz_user_action_request: org.AuthzUserActionRequest) -> org.AuthzResponse:
         raise GRPCError(GrpcStatus.UNIMPLEMENTED)   # = let Clapshot server decide
 
 
@@ -111,23 +110,23 @@ class OrganizerInbound(org.OrganizerInboundBase):
 
     @override
     @organizer_grpc_handler
-    async def move_to_folder(self, request: org.MoveToFolderRequest) -> clap.Empty:
-        return await move_to_folder_impl(self, request)
+    async def move_to_folder(self, move_to_folder_request: org.MoveToFolderRequest) -> clap.Empty:
+        return await move_to_folder_impl(self, move_to_folder_request)
 
     @override
     @organizer_grpc_handler
-    async def reorder_items(self, request: org.ReorderItemsRequest) -> clap.Empty:
-        return await reorder_items_impl(self, request)
+    async def reorder_items(self, reorder_items_request: org.ReorderItemsRequest) -> clap.Empty:
+        return await reorder_items_impl(self, reorder_items_request)
 
 
     # Testing methods
 
     @override
     @organizer_grpc_handler
-    async def list_tests(self, request: clap.Empty) -> org.ListTestsResponse:
+    async def list_tests(self, clapshot_empty: clap.Empty) -> org.ListTestsResponse:
         return await list_tests_impl(self)
 
     @override
     @organizer_grpc_handler
-    async def run_test(self, request: org.RunTestRequest) -> org.RunTestResponse:
-        return await run_test_impl(self, request)
+    async def run_test(self, run_test_request: org.RunTestRequest) -> org.RunTestResponse:
+        return await run_test_impl(self, run_test_request)

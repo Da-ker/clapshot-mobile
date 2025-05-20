@@ -1,18 +1,63 @@
 # "Basic Folders" Organizer plugin for Clapshot
 
-Implements a basic folder tree for users to organize their videos into.
+Extends Clapshot Server's simple media file listing into a folder-based organization system with sharing capabilities.
 Also serves as an example implementation and a test bench for the Clapshot Organizer API.
 
 Written in Python (due to popularity), but Organizers can be implemented in any language that supports gRPC.
 
-Technically, it:
+## Core Features
 
-- Adds to SQlite `bf_folders` and `bf_folder_items` tables, and links them to the Clapshot Server's `videos` and `users` tables with foreign keys:
-  - `bf_folders` describes the folders
-  - `bf_folder_items` lists which videos or (sub)folders are in which folder
-- Auto-creates home folders to all users who currently don't have them, and adds `bf_folder_items` entries to it for any danglig video objects
-- Intercepts Clapshot Client's requests for a navigation page, and instead of simple video listing (like Server does by default), shows navigable folders. In addition to the DB-baacked folders, it shows virtual folders for admins to manage other users' videos.
-- Posts the Client some Javascript callbacks for folder and video UI items, so that users can create, rename, reorder and trash both videos and folders using popup menus and drag-and-drop.
+### Personal Media Organization
+- **Hierarchical folder structure**: Create nested folders to organize media files
+- **Auto-created home folders**: Each user gets a personal "Home" folder automatically
+- **Mixed content support**: Folders can contain videos, audio, images, and subfolders
+- **Drag-and-drop interface**: Intuitive moving of files and folders between locations
+- **Visual navigation**: Breadcrumb trails and thumbnail previews
+- **Custom sorting**: Rearrange folder contents in your preferred order
+- **Orphan media management**: Unorganized files are automatically placed in your home folder
+
+### Folder Sharing (New in 0.6.2)
+- **Secure sharing URLs**: Share folders with others via secret URLs
+- **Read-only access**: Recipients can view and comment on shared content but not modify or upload files
+- **Recursive sharing**: Sharing includes all subfolders and content within the shared folder
+- **Owner controls**: Only folder owners can create or revoke sharing access
+- **Visual indicators**: Shared folders display with a 🔗 link icon for easy identification
+
+### Administrative Tools
+- **User management**: Admins can view and manage all users' folder structures
+- **Cross-user operations**: Move content between any users' folders
+- **Ownership transfer**: Content ownership transfers automatically when moved between users
+- **Database integrity checks**: Automatic detection and repair of folder inconsistencies
+
+### Interactive User Interface
+- **Context menus**: Right-click popup menus for folder and file operations
+- **Multi-select support**: Shift-click to select multiple items for batch operations
+- **Upload integration**: Upload files directly into specific folders
+- **Responsive design**: Works seamlessly across different screen sizes
+
+## Technical Implementation
+
+The plugin extends Clapshot with three additional database tables:
+
+- **`bf_folders`**: Stores folder metadata (ID, title, owner, creation time)
+- **`bf_folder_items`**: Junction table linking folders to contents (media files or subfolders)
+- **`bf_shared_folders`**: Manages folder sharing (tokens, permissions, creation info)
+
+All tables use foreign keys to maintain referential integrity with Clapshot Server's `videos` and `users` tables.
+
+### Integration Features
+- **gRPC communication**: Bidirectional communication with Clapshot Server
+- **Client-side scripting**: Injects JavaScript for interactive UI behaviors
+- **Database sharing**: Uses server's SQLite database with additional plugin tables
+- **Session management**: Integrates with server's user authentication system
+- **Callback system**: Registers custom actions for client-side folder operations
+
+### Security & Robustness
+- **Permission validation**: All operations verify user ownership and access rights
+- **Transaction safety**: Database transactions ensure data consistency
+- **Error recovery**: Graceful handling of database inconsistencies with automatic repair
+- **Path traversal protection**: Prevents unauthorized access to folders outside shared trees
+- **Loop detection**: Prevents infinite folder loops that could break navigation
 
 This demonstrates how you can create arbitrary UI folder hierarchies, inject custom HTML + JS code to the Client's navigation window, and how to extend the database schema to store custom plugin data.
 

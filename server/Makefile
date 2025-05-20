@@ -20,6 +20,10 @@ DEV_VERSION=$(shell (git rev-parse --short HEAD || date +"%Y-%m-%d" || echo "dev
 SERVER_CMD=target/debug/clapshot-server
 DEV_DATADIR=DEV_DATADIR
 
+DEFAULT_USER ?= admin
+
+
+
 default: ${SERVER_CMD}
 
 ${DEV_DATADIR}:
@@ -102,7 +106,7 @@ test:
 
 run-local: ${SERVER_CMD} ${DEV_DATADIR}
 	(cd ../organizer; make)
-	${SERVER_CMD} --url-base http://127.0.0.1:8095/ --port 8095 --data-dir ${DEV_DATADIR} --migrate --cors '*' --org-cmd "${PLUGIN_BIN}" -d --default-user "admin"
+	${SERVER_CMD} --url-base http://127.0.0.1:8095/ --port 8095 --data-dir ${DEV_DATADIR} --migrate --cors '*' --org-cmd "${PLUGIN_BIN}" -d --default-user "${DEFAULT_USER}"
 
 run-docker: docker
 	docker run --rm -it -p 127.0.0.1:8095:8095 --mount type=bind,source="$$(pwd)"/${DEV_DATADIR},target=/app/server/${DEV_DATADIR}  ${DOCKER_IMG_NAME}:latest

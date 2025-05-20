@@ -9,6 +9,7 @@ import clapshot_grpc.proto.clapshot as clap
 import clapshot_grpc.proto.clapshot.organizer as org
 
 import sqlalchemy
+from sqlalchemy import orm
 from .database.models import DbFolder, DbFolderItems,DbMediaFile
 
 import organizer
@@ -44,7 +45,7 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
                 if fld_to_move.id == dst_folder.id:
                     raise GRPCError(GrpcStatus.INVALID_ARGUMENT, "Cannot move a folder into itself")
                 if fld_to_move.user_id != req.ses.user.id and not req.ses.is_admin:
-                    raise GRPCError(GrpcStatus.PERMISSION_DENIED, f"Cannot move another user's folder")
+                    raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot move another user's folder")
 
                 with dbs.begin_nested():
                     cnt = dbs.query(DbFolderItems).filter(DbFolderItems.subfolder_id == fld_to_move.id).update({"folder_id": dst_folder.id, "sort_order": min_sort_order-1})
@@ -63,7 +64,7 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
                 if not vid_to_move:
                     raise GRPCError(GrpcStatus.NOT_FOUND, f"Media file '{it.media_file_id}' not found")
                 if vid_to_move.user_id != req.ses.user.id and not req.ses.is_admin:
-                    raise GRPCError(GrpcStatus.PERMISSION_DENIED, f"Cannot move another user's media file")
+                    raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot move another user's media file")
 
                 with dbs.begin_nested():
                     vid_to_move.user_id = dst_folder.user_id  # transfer ownership
@@ -79,7 +80,7 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
     return clap.Empty()
 
 
-async def _recursive_set_folder_owner(dbs: sqlalchemy.orm.Session, folder_id: int, new_owner_id: str, seen: set[int], log: Logger) -> None:
+async def _recursive_set_folder_owner(dbs: orm.Session, folder_id: int, new_owner_id: str, seen: set[int], log: Logger) -> None:
     """
     Set the owner of a folder and all its subfolders + media files recursively.
     """
@@ -96,11 +97,11 @@ async def _recursive_set_folder_owner(dbs: sqlalchemy.orm.Session, folder_id: in
 
     # Update media files in this folder
     log.debug(f"Setting owner of folder '{folder_id}' media files to '{new_owner_id}'")
-    files_subq = dbs.query(DbFolderItems.media_file_id).filter(DbFolderItems.folder_id == folder_id, DbFolderItems.media_file_id != None).subquery()
+    files_subq = dbs.query(DbFolderItems.media_file_id).filter(DbFolderItems.folder_id == folder_id, DbFolderItems.media_file_id != None).subquery()    # noqa: E711
     dbs.query(DbMediaFile).filter(DbMediaFile.id.in_(sqlalchemy.select(files_subq))).update({"user_id": new_owner_id})
 
     # Update subfolders
-    sub_ids = dbs.query(DbFolderItems.subfolder_id).filter(DbFolderItems.folder_id == folder_id, DbFolderItems.subfolder_id != None).all()
+    sub_ids = dbs.query(DbFolderItems.subfolder_id).filter(DbFolderItems.folder_id == folder_id, DbFolderItems.subfolder_id != None).all()  # noqa: E711
     for subi in sub_ids:
         log.debug(f"Recursing to subfolder '{subi[0]}'")
         await _recursive_set_folder_owner(dbs, subi[0], new_owner_id, seen, log)
@@ -126,7 +127,7 @@ async def reorder_items_impl(oi: organizer.OrganizerInbound, req: org.ReorderIte
                 if not parent_folder:
                     raise GRPCError(GrpcStatus.NOT_FOUND, f"Parent folder {parent_folder_id} not found")
                 if parent_folder.user_id != req.ses.user.id and not req.ses.is_admin:
-                    raise GRPCError(GrpcStatus.PERMISSION_DENIED, f"Cannot reorder items in another user's folder")
+                    raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot reorder items in another user's folder")
 
                 # Reorder items
                 for i, it in enumerate(req.ids):

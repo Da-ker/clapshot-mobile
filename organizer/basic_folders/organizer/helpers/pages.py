@@ -5,18 +5,18 @@ from html import escape as html_escape
 
 import clapshot_grpc.proto.clapshot as clap
 import clapshot_grpc.proto.clapshot.organizer as org
-import sqlalchemy
+from sqlalchemy import orm
 
 from organizer.database.operations import db_get_or_create_user_root_folder
 from organizer.helpers import media_type_to_vis_icon
 from organizer.utils import folder_path_to_uri_arg
 
 from .folders import FoldersHelper
-from organizer.database.models import DbUser, DbMediaFile, DbFolder
+from organizer.database.models import DbMediaFile, DbFolder, DbUser
 
 
 class PagesHelper:
-    def __init__(self, folders_helper: FoldersHelper, srv: org.OrganizerOutboundStub, db_new_session: sqlalchemy.orm.sessionmaker, log):
+    def __init__(self, folders_helper: FoldersHelper, srv: org.OrganizerOutboundStub, db_new_session: orm.sessionmaker, log):
         self.folders_helper = folders_helper
         self.srv = srv
         self.db_new_session = db_new_session
@@ -27,18 +27,17 @@ class PagesHelper:
         """
         Construct the main navigation page for given user session.
         """
+
         folder_path = await self.folders_helper.get_current_folder_path(ses, cookie_override)
         assert len(folder_path) > 0, "Folder path should always contain at least the root folder"
 
         cur_folder = folder_path[-1]
         parent_folder = folder_path[-2] if len(folder_path) > 1 else None
 
+
         pg_items: list[clap.PageItem] = []
 
-        if html := _make_breadcrumbs_html(folder_path):
-            pg_items.append(clap.PageItem(html=html))
-        else:
-            pg_items.append(clap.PageItem(html="<h3>Home</h3>"))
+        pg_items.append(clap.PageItem(html=_make_breadcrumbs_html(folder_path, ses.user.id)))
 
         folder_db_items = await self.folders_helper.fetch_folder_contents(cur_folder, ses)
         pg_items.extend(await self._make_folder_listing(folder_db_items, cur_folder, parent_folder, ses))
@@ -56,7 +55,7 @@ class PagesHelper:
         Admin can also trash all user's content from here.
         """
         pg_items.append(clap.PageItem(html="<h3><strong>ADMIN</strong> – User Folders</h3>"))
-        pg_items.append(clap.PageItem(html="<p>The following users currently have a home folder and/or media files.<br/>Uploading files or moving items to these folders will transfer ownership to that user.<br/>Trashing a user's home folder will delete everything they have.</p>"));
+        pg_items.append(clap.PageItem(html="<p>The following users currently have a home folder and/or media files.<br/>Uploading files or moving items to these folders will transfer ownership to that user.<br/>Trashing a user's home folder will delete everything they have.</p>"))
 
         with self.db_new_session() as dbs:
             all_users: list[DbUser] = dbs.query(DbUser).order_by(DbUser.id).distinct().all()
@@ -116,6 +115,12 @@ class PagesHelper:
             popup_actions.append("move_to_parent")
             listing_data["parent_folder_id"] = str(parent_folder.id)
 
+        # Collect access tokens for all shared folders in this listing.
+        # This is used to show shared folder links in the UI.
+        folder_items = [item for item in folder_db_items if isinstance(item, DbFolder)]
+        if shared_folder_tokens := self.folders_helper.get_shared_folder_tokens(folder_items):
+            listing_data["shared_folder_tokens"] = json.dumps(shared_folder_tokens)
+
         # Fetch media files in this folder
         media_ids = [v.id for v in folder_db_items if isinstance(v, DbMediaFile)]
         media_list = await self.srv.db_get_media_files(org.DbGetMediaFilesRequest(ids=org.IdList(ids=media_ids)))
@@ -140,12 +145,15 @@ class PagesHelper:
             else:
                 raise ValueError(f"Unknown item type: {itm}")
 
+        # Only allow uploads if user owns the folder or is admin
+        can_upload = cur_folder.user_id == ses.user.id or ses.is_admin
+
         folder_listing = clap.PageItemFolderListing(
             items = listing_items,
             allow_reordering = True,
             popup_actions = ["new_folder"],
             listing_data = listing_data,
-            allow_upload = True,
+            allow_upload = can_upload,
             media_file_added_action = "on_media_file_added")
 
         pg_items = []
@@ -157,25 +165,75 @@ class PagesHelper:
         return pg_items
 
 
-def _make_breadcrumbs_html(folder_path: list[DbFolder]) -> Optional[str]:
+def _make_breadcrumbs_html(folder_path: list[DbFolder], cur_user_id: str) -> str:
     """
-    Make a navigation (breadcrumb) trail from the folder path.
+    Generate HTML breadcrumb navigation from folder path.
+
+    Returns a styled breadcrumb trail with clickable links for all folders
+    except the current one. Shows shared folder indicators and handles
+    the home folder specially.
+
+    Args:
+        folder_path: List of folders from root to current folder
+        cur_user_id: ID of current user to identify shared folders
+
+    Returns:
+        HTML string with breadcrumb navigation in <h3> tags
     """
+    # Handle empty path - show simple "Home"
     if not folder_path:
-        return None
+        return "<h3>Home</h3>"
 
-    breadcrumbs: list[tuple[int, str]] = [(f.id, str(f.title or "UNNAMED")) for f in folder_path]
-    breadcrumbs[0] = (breadcrumbs[0][0], "[Home]")  # rename root folder to "Home" for UI
-    breadcrumbs_html = []
 
-    # Link all but last item
-    for (id, title) in breadcrumbs[:-1]:
-        args_json = json.dumps({'id': id}).replace('"', "'")
-        title = html_escape(title)
-        breadcrumbs_html.append(
-            f'<a style="text-decoration: underline;" href="javascript:clapshot.callOrganizer(\'open_folder\', {args_json});">{title}</a>')
-    # Last item in bold
-    for (_, title) in breadcrumbs[-1:]:
-        breadcrumbs_html.append(f"<strong>{html_escape(title)}</strong>")
+    def _get_folder_display_title(folder: DbFolder, cur_user_id: str, is_root: bool) -> str:
+        # Indicate shared folders with user ID in brackets
+        if folder.user_id != cur_user_id:
+            return f"🔗 {folder.title} [{folder.user_id}]"
 
-    return ("<h3>" + " ▶ ".join(breadcrumbs_html) + "</h3>") if len(breadcrumbs) > 1 else None
+        # Root folder is always "Home"
+        if is_root:
+            return "Home"
+
+        # Regular folders use their title or fallback
+        return folder.title or "UNNAMED"
+
+
+    def _create_folder_link(folder_id: int, title: str) -> str:
+        # Create a clickable HTML link for a folder in breadcrumbs.
+        escaped_title = html_escape(title)
+        args_json = json.dumps({'id': folder_id}).replace('"', "'")
+        return (
+            f'<a style="text-decoration: underline;" '
+            f'href="javascript:clapshot.callOrganizer(\'open_folder\', {args_json});">'
+            f'{escaped_title}</a>'
+        )
+
+
+    # Build breadcrumb items with titles and shared folder detection
+    breadcrumb_items = []
+    has_shared_folders = False
+
+    for folder in folder_path:
+        title = _get_folder_display_title(folder, cur_user_id, is_root=(folder == folder_path[0]))
+        if folder.user_id != cur_user_id:
+            has_shared_folders = True
+        breadcrumb_items.append((folder.id, title))
+
+    # Only show breadcrumbs if we have multiple folders OR shared folders
+    if len(breadcrumb_items) == 1 and not has_shared_folders:
+        return "<h3>Home</h3>"
+
+    # Generate HTML for breadcrumb trail
+    breadcrumb_links = []
+
+    # All items except last as clickable links
+    for folder_id, title in breadcrumb_items[:-1]:
+        link_html = _create_folder_link(folder_id, title)
+        breadcrumb_links.append(link_html)
+
+    # Last item in bold and non-clickable (current folder)
+    if breadcrumb_items:
+        _, current_title = breadcrumb_items[-1]
+        breadcrumb_links.append(f"<strong>{html_escape(current_title)}</strong>")
+
+    return f"<h3>{' ▶ '.join(breadcrumb_links)}</h3>"

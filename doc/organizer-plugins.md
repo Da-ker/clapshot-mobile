@@ -1,13 +1,14 @@
 # Organizer Plugins
 
-Clapshot 0.6.0 introduces an extensible "Organizer" plugin system. The API currently **experimental / unstable**.
+Clapshot 0.6.0 introduced an extensible "Organizer" plugin system.
 
 ## Overview
 
 An Organizer plugin can:
 1. Organize Clapshot videos into (user defined and virtual) folders
-2. Enforce access control according to your particular business logic and backend systems
-3. Implement custom workflows and UI elements (raw HTML + Javascrip callbacks)
+2. Enable read-only folder sharing and collaborative access via secure URLs
+3. Enforce access control according to your particular business logic and backend systems
+4. Implement custom workflows and UI elements (raw HTML + Javascript callbacks)
 
 You might, for example, look up projects and ACL groups from an LDAP directory or project management database to determine folder structure and user permissions.
 

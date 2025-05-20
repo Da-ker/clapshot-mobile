@@ -115,8 +115,10 @@ Clapshot now includes an extensible [Organizer Plugin system](doc/organizer-plug
 Organizers use gRPC to communicate with the Clapshot Server, and can be implemented in any language.
 
 The provided default/example organizer, called “[basic_folders](organizer/basic_folders/README.md)” (in *Python*), implements:
- - personal folders for users, and
- - for admin, a list of users and a way to manage their folder contents.
+ - personal hierarchical folders for organizing media files
+  - implicit sharing of individual videos by sharing their ID / URL
+ - read-only folder sharing via secure URLs (for sharing multiple videos more easily)
+ - administrative tools for managing users and their folder contents
 
 ### Work In Progress
 
