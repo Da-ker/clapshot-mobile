@@ -87,7 +87,7 @@ pub async fn msg_open_navigation_page(data: &OpenNavigationPage , ses: &mut User
                 server.emit_cmd(
                     client_cmd!(ShowPage, {
                         page_items: res.page_items,
-                        page_id: data.page_id.clone(),
+                        page_id: res.page_id.clone(),
                         page_title: res.page_title,
                     }),
                     super::SendTo::UserSession(&ses.sid))?;
