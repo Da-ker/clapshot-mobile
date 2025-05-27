@@ -1,3 +1,11 @@
+clapshot-client (0.8.5) bookworm; urgency=low
+
+  * New feature: Folder sharing via secret URLs
+  * Store audio volume in cookies
+  * Various bug fixes
+
+ -- Jarno Elonen <elonen@iki.fi>  Tue, 27 May 2025 17:55:52 +0300
+
 clapshot-client (0.8.2) bookworm; urgency=low
 
   * (No changes, follow server versioning)

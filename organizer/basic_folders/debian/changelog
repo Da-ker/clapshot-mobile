@@ -1,3 +1,10 @@
+clapshot-organizer-basic-folders (0.8.5) bookworm; urgency=low
+
+  * New feature: Folder sharing via secret URLs
+  * Various improvements
+
+ -- Jarno Elonen <elonen@iki.fi>  Tue, 27 May 2025 17:55:52 +0300
+
 clapshot-organizer-basic-folders (0.8.2) bookworm; urgency=low
 
   * (No changes, follow server versioning)

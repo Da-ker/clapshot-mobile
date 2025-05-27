@@ -1,3 +1,10 @@
+clapshot-server (0.8.5) bookworm; urgency=low
+
+  * New feature: Folder sharing via secret URLs
+  * Various bug fixes and improvements
+
+ -- Jarno Elonen <elonen@iki.fi>  Tue, 27 May 2025 17:55:52 +0300
+
 clapshot-server (0.8.2) bookworm; urgency=low
 
   * Fix regression: commenting on other users' videos failed
