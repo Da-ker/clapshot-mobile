@@ -136,7 +136,7 @@ async def org_test__move_to_folder(oi: organizer.OrganizerInbound):
     ses = org.UserSessionData(sid="test_sid",user=clap.UserInfo(id=user_id, name=user_name), is_admin=False, cookies={})
 
     # Get folder path. This should actually create the root folder, since the test database is empty.
-    fld_path = await oi.folders_helper.get_current_folder_path(ses)
+    fld_path, _root_folder_id = await oi.folders_helper.get_current_folder_path(ses)
     assert len(fld_path) > 0, "Folder path should always contain at least the root folder"
     root_fld = fld_path[0]
 
@@ -191,7 +191,7 @@ async def org_test__reorder_items(oi: organizer.OrganizerInbound):
     ses = org.UserSessionData(sid="test_sid",user=clap.UserInfo(id=user_id, name=user_name), is_admin=False, cookies={})
 
     # Get folder path (+ create root folder + move orphan media files to root folder)
-    fld_path = await oi.folders_helper.get_current_folder_path(ses)
+    fld_path, _root_folder_id = await oi.folders_helper.get_current_folder_path(ses)
     assert len(fld_path) > 0, "Folder path should always contain at least the root folder"
     root_fld = fld_path[0]
 
@@ -244,7 +244,7 @@ async def _create_test_folder_and_session(oi: organizer.OrganizerInbound) -> Tup
         assert len(flds) == 0, "User should have no folders yet"
 
         # Get/create the root folder for the user
-        flds = await oi.folders_helper.get_current_folder_path(ses)
+        flds, _root_folder_id = await oi.folders_helper.get_current_folder_path(ses)
         assert len(flds) == 1, "User should now have a root folder"
         root_fld = flds[0]
 
@@ -297,7 +297,7 @@ async def org_test__cmd_from_client__open_folder(oi: organizer.OrganizerInbound)
             args=json.dumps({"id": new_fld.id})))
 
         # Check that the new folder was opened
-        flds = await oi.folders_helper.get_current_folder_path(ses)
+        flds, _root_folder_id = await oi.folders_helper.get_current_folder_path(ses)
         path_got = [f.id for f in flds]
         print("Folder path that was set:", path_got, "Expected:", expected_path)
         assert path_got == expected_path, "Folder path should have been updated"
@@ -796,7 +796,7 @@ async def org_test__shared_folder_move_operations(oi: organizer.OrganizerInbound
         ))
         assert False, "Recipient should not be able to move shared folder"
     except GRPCError as e:
-        assert e.status == GrpcStatus.ABORTED, f"Expected ABORTED (error handled), got {e.status}"
+        assert e.status == GrpcStatus.PERMISSION_DENIED, f"Expected PERMISSION_DENIED (error handled), got {e.status}"
 
 
 async def org_test__shared_folder_rename_operations(oi: organizer.OrganizerInbound):
@@ -966,7 +966,7 @@ async def org_test__move_content_into_shared_folders(oi: organizer.OrganizerInbo
         ))
         assert False, "Recipient should not be able to move content out of shared folder"
     except GRPCError as e:
-        assert e.status == GrpcStatus.ABORTED, f"Expected ABORTED (error handled), got {e.status}"
+        assert e.status == GrpcStatus.PERMISSION_DENIED, f"Expected PERMISSION_DENIED (error handled), got {e.status}"
 
     # Test 5: Recipient cannot move content into shared folder
     # Create another folder for testing
@@ -985,7 +985,7 @@ async def org_test__move_content_into_shared_folders(oi: organizer.OrganizerInbo
         ))
         assert False, "Recipient should not be able to move content into shared folder"
     except GRPCError as e:
-        assert e.status == GrpcStatus.ABORTED, f"Expected ABORTED (error handled), got {e.status}"
+        assert e.status == GrpcStatus.PERMISSION_DENIED, f"Expected PERMISSION_DENIED (error handled), got {e.status}"
 
 
 async def org_test__admin_owner_transfer(oi: organizer.OrganizerInbound):

@@ -31,20 +31,20 @@ async def on_start_user_session_impl(oi: organizer.OrganizerInbound, req: org.On
 
     return org.OnStartUserSessionResponse()
 
-
 async def navigate_page_impl(oi: organizer.OrganizerInbound, req: org.NavigatePageRequest) -> org.ClientShowPageRequest:
     """
     Organizer method (gRPC/protobuf)
 
-    Called by the server to request organizer to construct a navigation page for the client to display.
+    Server calls this to request Organizer to construct a navigation page for the Client to show.
 
-    In contrast to individual media file players, this is the "folder view" page, which without any
-    Organizer, just shows a list of all media for the user. An Organizer can define a custom
-    view for this page, e.g. a folder tree or a list of categories, projects, even buttons etc.
+    This is a "folder view" page (not a media player). Without an Organizer, the Server would just show
+    a list of all media for the user. An Organizer can define a custom view,
+    e.g. a folder tree or a list of categories, projects, even buttons etc.
     """
     ses = req.ses
 
-    # First, check if this is a shared folder link
+    # If page ID starts with "shared.", e.g. ?p=shared.ABCD1234, it means the user has opened
+    # a shared folder link.
     if req.page_id and req.page_id.startswith("shared."):
         share_token = req.page_id.split(".", 1)[1]
         with oi.db_new_session() as dbs:
@@ -70,7 +70,7 @@ async def navigate_page_impl(oi: organizer.OrganizerInbound, req: org.NavigatePa
                 await oi.srv.client_set_cookies(org.ClientSetCookiesRequest(cookies=ses.cookies, sid=ses.sid))
                 return await oi.pages_helper.construct_navi_page(ses, None)
 
-    # Normal folder navigation
+    # Normal folder navigation, e.g. ?p=1.2.3
     cookie_override: Optional[str] = None
     if req.page_id:
         try:
@@ -124,7 +124,8 @@ async def cmd_from_client_impl(oi: organizer.OrganizerInbound, cmd: org.CmdFromC
             assert isinstance(folder_id, int), "open_folder arg 'id' not an int"
 
             # Construct new breadcrumb trail
-            trail = [f.id for f in (await oi.folders_helper.get_current_folder_path(cmd.ses, None))]
+            folder_path, _root_folder = await oi.folders_helper.get_current_folder_path(cmd.ses, None)
+            trail = [f.id for f in folder_path]
             if folder_id in trail:
                 trail = trail[:trail.index(folder_id)+1] # go up in current trail => remove all after this folder
             else:

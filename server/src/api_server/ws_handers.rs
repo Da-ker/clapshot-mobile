@@ -77,6 +77,7 @@ pub async fn msg_open_navigation_page(data: &OpenNavigationPage , ses: &mut User
                     tracing::debug!("Organizer doesn't implement navigate_page(). Using default.");
                 } else if e.code() == tonic::Code::Aborted {
                     tracing::debug!("Ignoring org.navigate_page() result because it GrpcStatus.ABORTED.");
+                    return Ok(());
                 } else {
                     tracing::error!(err=?e, "Error in organizer navigate_page() call");
                     anyhow::bail!("{}: {}", e.code(), e.message());

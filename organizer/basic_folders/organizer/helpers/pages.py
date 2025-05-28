@@ -28,7 +28,7 @@ class PagesHelper:
         Construct the main navigation page for given user session.
         """
 
-        folder_path = await self.folders_helper.get_current_folder_path(ses, cookie_override)
+        folder_path, user_root_folder = await self.folders_helper.get_current_folder_path(ses, cookie_override)
         assert len(folder_path) > 0, "Folder path should always contain at least the root folder"
 
         cur_folder = folder_path[-1]
@@ -37,7 +37,7 @@ class PagesHelper:
 
         pg_items: list[clap.PageItem] = []
 
-        pg_items.append(clap.PageItem(html=_make_breadcrumbs_html(folder_path, ses.user.id)))
+        pg_items.append(clap.PageItem(html=_make_breadcrumbs_html(folder_path, ses.user.id, user_root_folder.id)))
 
         folder_db_items = await self.folders_helper.fetch_folder_contents(cur_folder, ses)
         pg_items.extend(await self._make_folder_listing(folder_db_items, cur_folder, parent_folder, ses))
@@ -165,7 +165,7 @@ class PagesHelper:
         return pg_items
 
 
-def _make_breadcrumbs_html(folder_path: list[DbFolder], cur_user_id: str) -> str:
+def _make_breadcrumbs_html(folder_path: list[DbFolder], cur_user_id: str, user_root_folder_id: int) -> str:
     """
     Generate HTML breadcrumb navigation from folder path.
 
@@ -180,21 +180,18 @@ def _make_breadcrumbs_html(folder_path: list[DbFolder], cur_user_id: str) -> str
     Returns:
         HTML string with breadcrumb navigation in <h3> tags
     """
-    # Handle empty path - show simple "Home"
     if not folder_path:
-        return "<h3>Home</h3>"
+        return "<h3>Root folder</h3>"   # Fallback, should not happen in normal operation
 
-
-    def _get_folder_display_title(folder: DbFolder, cur_user_id: str, is_root: bool) -> str:
+    def _get_folder_display_title(folder: DbFolder, cur_user_id: str) -> str:
         # Indicate shared folders with user ID in brackets
         if folder.user_id != cur_user_id:
             return f"🔗 {folder.title} [{folder.user_id}]"
 
-        # Root folder is always "Home"
-        if is_root:
+        # If it's the user's root folder, show "Home"
+        if folder.id == user_root_folder_id:
             return "Home"
 
-        # Regular folders use their title or fallback
         return folder.title or "UNNAMED"
 
 
@@ -210,18 +207,7 @@ def _make_breadcrumbs_html(folder_path: list[DbFolder], cur_user_id: str) -> str
 
 
     # Build breadcrumb items with titles and shared folder detection
-    breadcrumb_items = []
-    has_shared_folders = False
-
-    for folder in folder_path:
-        title = _get_folder_display_title(folder, cur_user_id, is_root=(folder == folder_path[0]))
-        if folder.user_id != cur_user_id:
-            has_shared_folders = True
-        breadcrumb_items.append((folder.id, title))
-
-    # Only show breadcrumbs if we have multiple folders OR shared folders
-    if len(breadcrumb_items) == 1 and not has_shared_folders:
-        return "<h3>Home</h3>"
+    breadcrumb_items = [(folder.id, _get_folder_display_title(folder, cur_user_id)) for folder in folder_path]
 
     # Generate HTML for breadcrumb trail
     breadcrumb_links = []

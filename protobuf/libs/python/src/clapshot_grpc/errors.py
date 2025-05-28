@@ -51,8 +51,10 @@ def organizer_grpc_handler(func):
                     user_msg_was_sent = True
                 except Exception as e2:
                     self.log.error("Error calling client_show_user_message(): {e2}")
-                if not user_msg_was_sent:
+                if user_msg_was_sent:
                     raise GRPCError(GrpcStatus.ABORTED)   # Tell Clapshot server to ignore the result (we've shown the error to the user)
+                else:
+                    raise e  # Re-raise original error if we couldn't send user message
             else:
                 self.log.error(f"Unknown GRPCError in organizer_grpc_handler: {e}")
                 raise e

@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 
 import clapshot_grpc.proto.clapshot as clap
 import clapshot_grpc.proto.clapshot.organizer as org
-from clapshot_grpc.utilities import try_send_user_message
 
 from organizer.config import PATH_COOKIE_NAME
 from organizer.database.models import DbFolder, DbFolderItems, DbMediaFile, DbSharedFolder, DbUser
@@ -34,7 +33,6 @@ class FoldersHelper:
         Check if a user has shared access to a folder.
         Returns the share token if the user has access, None otherwise.
         """
-        # If user already owns the folder or is admin, no need to check for shared access
         with self.db_new_session() as dbs:
             folder = dbs.query(DbFolder).filter(DbFolder.id == folder_id).one_or_none()
             if not folder:
@@ -48,7 +46,7 @@ class FoldersHelper:
             if not share_token:
                 return None
 
-            # Verify it exists and is valid
+            # Verify token is valid
             shared_folder = dbs.query(DbSharedFolder).filter(DbSharedFolder.share_token == share_token).one_or_none()
             if not shared_folder:
                 # Invalid share, clear the cookie
@@ -91,7 +89,6 @@ class FoldersHelper:
             ).all()
 
             subfolder_ids = [item.subfolder_id for item in subfolder_items if item.subfolder_id is not None]
-
             if folder_id in subfolder_ids:
                 return True
 
@@ -127,7 +124,7 @@ class FoldersHelper:
         """Generate a secure random token for folder sharing"""
         return secrets.token_urlsafe(32)
 
-    async def get_current_folder_path(self, ses: org.UserSessionData, cookie_override: Optional[str]=None) -> List[DbFolder]:
+    async def get_current_folder_path(self, ses: org.UserSessionData, cookie_override: Optional[str]=None) -> Tuple[List[DbFolder], DbFolder]:
         """
         Get current folder path from cookies & DB.
 
@@ -138,19 +135,28 @@ class FoldersHelper:
         """
         ck = ses.cookies or {}
         with self.db_new_session() as dbs:
+            user_root_folder = await db_get_or_create_user_root_folder(dbs, ses.user, self.srv, self.log)
             try:
                 if folder_ids := json.loads((cookie_override or ck.get(PATH_COOKIE_NAME)) or '[]'):
                     assert all(isinstance(i, int) for i in folder_ids), "Folder path cookie contains non-integer IDs"
 
                     folders_unordered = dbs.query(DbFolder).filter(DbFolder.id.in_(folder_ids)).all()
                     if len(folders_unordered) == len(folder_ids):
-                        # Reorder the folders to match the order in the cookie
+                        # Reorder the the retrieved DB objects to match the order in the cookie
                         folders_by_id = {f.id: f for f in folders_unordered}
                         path_folders = [folders_by_id[id] for id in folder_ids if id in folders_by_id]
-                        
-                        # Validate ownership consistency
-                        if path_folders and await self._validate_path_ownership_consistency(path_folders, ses):
-                            return path_folders
+
+                        # Make sure all folders in the path are owned by the same user
+                        # (otherwise it's an error state)
+                        if path_folders and all(f.user_id == path_folders[0].user_id for f in path_folders):
+
+                            # If not shared folders, make sure the first folder is the user's root
+                            # (add it if necessary)
+                            if path_folders[0].user_id == ses.user.id and user_root_folder.id not in folder_ids:
+                                self.log.debug(f"User's root folder ({user_root_folder.id}) not in path, adding it to the start.")
+                                path_folders.insert(0, user_root_folder)
+
+                            return path_folders, user_root_folder
                         else:
                             self.log.warning("Mixed ownership in folder path. Clearing path cookie.")
                             await self._clear_path_cookie(ses)
@@ -159,47 +165,13 @@ class FoldersHelper:
                         await self._clear_path_cookie(ses)
 
                 self.log.debug("No valid folder_path cookie found. Returning user root folder.")
-                
+
             except json.JSONDecodeError as e:
                 self.log.error(f"Failed to parse folder_path cookie: {e}. Falling back to user root.")
 
-            # Add user root folder as fallback
-            user_root = await db_get_or_create_user_root_folder(dbs, ses.user, self.srv, self.log)
-            return [user_root]
+            # Show user's root as a fallback
+            return [user_root_folder], user_root_folder
 
-    async def _validate_path_ownership_consistency(self, path_folders: List[DbFolder], ses: org.UserSessionData) -> bool:
-        """
-        Validate that all folders in path have consistent ownership/access rights.
-        Returns True if path is valid, False if mixed ownership detected.
-        """
-        if not path_folders:
-            return True
-            
-        first_folder = path_folders[0]
-        
-        # Check if user has natural ownership of first folder
-        user_owns_first = first_folder.user_id == ses.user.id or ses.is_admin
-        
-        if user_owns_first:
-            # If user owns the first folder, they should own ALL folders in path
-            # This handles the case where user navigates to their own folders while having a share token
-            return all(f.user_id == ses.user.id or ses.is_admin for f in path_folders)
-        else:
-            # User doesn't own the first folder - check if they have shared access to entire path
-            share_token = ses.cookies.get(SHARED_FOLDER_TOKEN_COOKIE_NAME)
-            if not share_token:
-                return False  # No shared access but trying to access non-owned folder
-                
-            with self.db_new_session() as dbs:
-                shared_folder = dbs.query(DbSharedFolder).filter(DbSharedFolder.share_token == share_token).one_or_none()
-                if not shared_folder:
-                    return False
-                    
-                # All folders must be within the shared folder's subtree
-                for folder in path_folders:
-                    if not await self.is_folder_in_subtree(dbs, folder.id, shared_folder.folder_id):
-                        return False
-                return True
 
     async def _clear_path_cookie(self, ses: org.UserSessionData):
         """Clear path cookie and send update to client."""
