@@ -492,6 +492,14 @@ pub fn run_forever(
             recv(from_mon) -> msg => {
                 match msg {
                     Ok(new_file) => {
+                        // Create user if it does not exist (to store notifications for when user comes online)
+                        if let Ok(mut conn) = db.conn() {
+                            if let Err(e) = models::User::get_or_create(&mut conn, &new_file.user_id, None) {
+                                tracing::error!("Error getting or creating user '{}': {:?}", new_file.user_id, e);
+                                // Don't crash the pipeline, but log the error
+                            };
+                        };
+
                         // Relay to metadata reader
                         to_md.send(new_file).unwrap_or_else(|e| {
                             tracing::error!("FATAL. Error sending file to metadata reader: {:?}", e);

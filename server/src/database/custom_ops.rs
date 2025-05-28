@@ -29,7 +29,7 @@ impl models::User {
     {
         match models::User::get(conn, &user_id.to_string()) {
             Ok(u) => {
-                // Update name and admin status if needed
+                // Update name if needed
                 if let Some(username) = username {
                     models::User::set_name(conn, &u.id, &username).context("Failed to update user name")?;
                 }
