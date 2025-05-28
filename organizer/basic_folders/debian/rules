@@ -4,4 +4,4 @@
 	dh $@ --with python-virtualenv
 
 override_dh_virtualenv:
-	dh_virtualenv --builtin-venv --python python3.11
+	dh_virtualenv --builtin-venv --python python3.11 --extra-pip-arg --no-build-isolation
