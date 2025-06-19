@@ -9,6 +9,49 @@
 // *TODO*: There's quite a bit of unnecessary code for Clapshot's purposes
 // in this file, probably unintentionally introduced bugs too. Clean up
 // and simplify.
+//
+// === FINDINGS FROM COMPREHENSIVE TEST SUITE (Added 2025-06-19) ===
+//
+// Critical Issues Found:
+//
+// 1. FRAME ACCURACY PRECISION PROBLEM:
+//    - Line 217: `this.video.currentTime = ((frame / frameRate) + 0.00001);`
+//    - This hardcoded 0.00001 offset can cause cumulative errors in frame-accurate seeking
+//    - For 60fps video, this represents 0.0006 frames of error per seek operation
+//    - RECOMMENDATION: Use more precise calculation or remove offset entirely
+//
+// 2. REDUNDANT/CONFUSING API:
+//    - `toTime()` always returns HH:MM:SS:FF format (identical to toSMPTE)
+//    - `toTime()` has bizarre 12-hour conversion logic that's inconsistent
+//    - RECOMMENDATION: Remove toTime() method entirely, use toSMPTE() consistently
+//
+// 3. INCONSISTENT FRAME CALCULATIONS:
+//    - `get()` uses Math.floor() for current frame number
+//    - `toSMPTE()` uses Math.round() for frame component
+//    - This can cause off-by-one errors in frame-accurate editing
+//    - RECOMMENDATION: Use consistent rounding strategy throughout
+//
+// 4. PARAMETER HANDLING INCONSISTENCIES:
+//    - `toSeconds()` completely ignores frame portion of SMPTE timecode
+//    - Multiple methods have confusing "fallback to current video time" behavior
+//    - Some methods check parameter types, others don't
+//    - RECOMMENDATION: Standardize parameter validation and behavior
+//
+// 5. UNUSED/OVERCOMPLICATED CODE:
+//    - Commented out `listen()` method still present
+//    - Complex Date manipulation in toTime() for simple calculations
+//    - RECOMMENDATION: Remove unused code, simplify time calculations
+//
+// Cleanup Priority (High to Low):
+// 1. Fix frame accuracy precision in seeking (critical for video editing)
+// 2. Remove redundant toTime() method and its confusing logic
+// 3. Standardize Math.floor vs Math.round usage for consistency
+// 4. Simplify parameter handling and add proper validation
+// 5. Remove commented code and unnecessary complexity
+//
+// NOTE: Comprehensive test suite exists at:
+// src/__tests__/lib/player_view/VideoFrame.test.ts (63 tests)
+// Run tests before and after any refactoring to prevent regressions.
 
 /*
  * Copyright (c) 2023  Jarno Elonen

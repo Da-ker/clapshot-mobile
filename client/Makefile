@@ -1,4 +1,4 @@
-.PHONY: dev docker build clean dist docker npm-deps
+.PHONY: dev docker build clean dist docker npm-deps npm-check-local npm-test-local
 
 PACKAGE_VERSION=$(shell (git rev-parse --short HEAD || date +"%Y-%m-%d" || echo "dev"))
 PACKAGE=clapshot_client
@@ -27,7 +27,13 @@ docker-for-deb: clean
 	docker tag ${PACKAGE}:${PACKAGE_VERSION} ${PACKAGE}:deb
 
 
-build-local: npm-deps
+npm-check-local: npm-deps
+	npm run check
+
+npm-test-local: npm-deps
+	npm run test:run
+
+build-local: npm-deps npm-check-local npm-test-local
 	npm run build
 
 build-docker: docker-for-deb
@@ -61,6 +67,6 @@ dev-docker: docker
 dev:
 	@echo "Run either 'dev-local' or 'dev-docker'"
 
-test-docker:	build-docker
-	test -f dist/index.html
-	@echo "=== Client only builds for now, no other tests ==="
+test-docker: docker-for-deb
+	docker run --rm ${PACKAGE}:deb bash -c "cd /build/client && make npm-check-local && make npm-test-local"
+	@echo "=== TypeScript checks and tests completed successfully ===="

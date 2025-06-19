@@ -8,7 +8,7 @@ export class IndentedComment {
 export interface UserMenuItem {
     type: string;
     label: string;
-    data: string;
+    data?: string; // Make optional for divider, logout-basic-auth, about types
 }
 
 export interface MediaProgressReport {

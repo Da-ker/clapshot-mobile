@@ -5,8 +5,7 @@ import * as Proto3 from '@clapshot_protobuf/typescript';
 import {rgbToCssColor, cssVariables} from './utils';
 import {latestProgressReports} from '@/stores';
 import {slide} from "svelte/transition";
-import {onMount} from 'svelte';
-  import type { MediaProgressReport } from '@/types';
+import type { MediaProgressReport } from '@/types';
 
 
 export let item: Proto3.MediaFile;
@@ -24,15 +23,16 @@ let basecolor = orig_basecolor;
 // Watch for (transcoding) progress reports from server, and update progress bar if one matches this item.
 let progress: number|undefined = undefined;
 
-onMount(async () => {
-    latestProgressReports.subscribe((reports: MediaProgressReport[]) => {
-        progress = reports.find((r: MediaProgressReport) => r.mediaFileId === item.id)?.progress;
+// Use reactive statement to watch for progress reports
+$: {
+    if ($latestProgressReports) {
+        progress = $latestProgressReports.find((r: MediaProgressReport) => r.mediaFileId === item.id)?.progress;
         if (progress !== undefined)
             basecolor = rgbToCssColor(40, 40, 40);
         else
             basecolor = orig_basecolor;
-    });
-});
+    }
+}
 
 function fmt_date(d: Date | undefined) {
     if (!d) return "(no date)";
