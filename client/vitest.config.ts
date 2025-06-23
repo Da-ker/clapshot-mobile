@@ -9,6 +9,15 @@ export default defineConfig({
     svelte({
       preprocess: [sveltePreprocess({ typescript: true })],
       hot: !process.env.VITEST,
+      configFile: false,
+      ...(process.env.VITEST ? {
+        compilerOptions: {
+          hydratable: true,
+          compatibility: {
+            componentApi: 4,
+          },
+        },
+      } : {}),
     }),
   ],
   resolve: {
@@ -16,6 +25,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@clapshot_protobuf': path.resolve(__dirname, '../protobuf/libs')
     },
+    conditions: process.env.VITEST ? ['browser'] : [],
   },
   test: {
     environment: 'happy-dom',
@@ -56,5 +66,6 @@ export default defineConfig({
     'process.env.CLAPSHOT_MIN_SERVER_VERSION': '"0.8.5"',
     'process.env.CLAPSHOT_MAX_SERVER_VERSION': '"0.8.5"',
     'process.env.CLAPSHOT_CLIENT_VERSION': '"0.8.5"',
+    'import.meta.env.SSR': false,
   },
 })

@@ -56,11 +56,11 @@ function onTextChange(e: any) {
     <!-- Color selector -->
     {#if drawMode}
         <div class="absolute w-full top-[-3em] bg-gray-900 h-10 rounded-md flex place-content-center" transition:fade="{{duration: 100}}">
-            <button type="button" class="fas fa-undo text-gray-500 hover:text-gray-100 active:text-gray-400 inline-block w-10 h-10 mx-2 rounded-lg" title="Undo" on:click={()=>onUndoRedo(true)}/>
-            <button type="button" class="fas fa-redo text-gray-500 hover:text-gray-100 active:text-gray-400 inline-block w-10 h-10 mx-2 rounded-lg" title="Redo" on:click={()=>onUndoRedo(false)}/>
+            <button type="button" class="fas fa-undo text-gray-500 hover:text-gray-100 active:text-gray-400 inline-block w-10 h-10 mx-2 rounded-lg" title="Undo" aria-label="Undo" on:click={()=>onUndoRedo(true)}></button>
+            <button type="button" class="fas fa-redo text-gray-500 hover:text-gray-100 active:text-gray-400 inline-block w-10 h-10 mx-2 rounded-lg" title="Redo" aria-label="Redo" on:click={()=>onUndoRedo(false)}></button>
 
             {#each ["red", "green", "blue", "cyan", "yellow", "black", "white"] as c}
-                <button type="button" class="{(curColor==c) ? 'border-2 border-gray-100' : 'border border-gray-600'}  inline-block w-6 h-6 m-2 rounded-lg" style="background: {c};" on:click="{() => onColorSelected(c)}"/>
+                <button type="button" class="{(curColor==c) ? 'border-2 border-gray-100' : 'border border-gray-600'}  inline-block w-6 h-6 m-2 rounded-lg" style="background: {c};" aria-label="Select {c} color" on:click="{() => onColorSelected(c)}"></button>
             {/each}
         </div>
     {/if}
@@ -90,7 +90,7 @@ function onTextChange(e: any) {
             <button type="button"
                 on:click={onClickDraw}
                 class="{drawMode ? 'border-2' : ''} fas fa-pen-fancy inline-block h-9 px-3 py-2.5 ml-2 bg-cyan-700 text-white rounded-lg shadow-md hover:bg-cyan-500 hover:shadow-lg focus:bg-cyan-700 focus:shadow-lg focus:outline-none focus:ring-0 active:shadow-lg transition duration-150 ease-in-out"
-                title="Draw on video">
+                title="Draw on video" aria-label="Draw on video">
             </button>
         {/if}
 

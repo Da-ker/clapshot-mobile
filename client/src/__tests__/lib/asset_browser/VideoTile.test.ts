@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
+import { expectElementToBeHiddenOrInert } from '../../setup';
 import { get } from 'svelte/store';
 import VideoTile from '@/lib/asset_browser/VideoTile.svelte';
 import { latestProgressReports } from '@/stores';
@@ -255,7 +256,8 @@ describe('VideoTile', () => {
     latestProgressReports.set([]);
 
     await vi.waitFor(() => {
-      expect(screen.queryByText('transcoding...')).not.toBeInTheDocument();
+      const transcodingElement = screen.queryByText('transcoding...');
+      expect(expectElementToBeHiddenOrInert(transcodingElement)).toBe(true);
     });
   });
 

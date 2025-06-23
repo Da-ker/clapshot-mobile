@@ -59,6 +59,20 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }))
 
+// Mock Web Animations API
+Element.prototype.animate = vi.fn(() => ({
+  finished: Promise.resolve(),
+  cancel: vi.fn(),
+  finish: vi.fn(),
+  pause: vi.fn(),
+  play: vi.fn(),
+  reverse: vi.fn(),
+  updatePlaybackRate: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+}))
+
 // Mock IntersectionObserver
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
@@ -74,4 +88,10 @@ global.console = {
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
+}
+
+// Helper function for checking elements that might be transitioning out with inert attribute
+export function expectElementToBeHiddenOrInert(element: HTMLElement | null) {
+  // Element should either be completely removed from DOM or be in a container with inert attribute
+  return element === null || element.closest('[inert]') !== null;
 }

@@ -80,7 +80,7 @@ let basecolor = visualization?.baseColor ?
         on:consider={consider}
         on:finalize={finalize}
     >
-    {#each dndItems as _item, _i}<span/>{/each}
+    {#each dndItems as _item, _i}<span></span>{/each}
     </div>
 
     <div class="w-[85%] h-[85%] flex flex-col folder-deco" title="{name}">

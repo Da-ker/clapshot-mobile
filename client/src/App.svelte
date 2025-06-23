@@ -1012,7 +1012,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                         <!-- Subtitles -->
                         <div class="flex justify-between text-gray-500 items-center py-2 border-t border-gray-500">
                             <h6>Subtitles</h6>
-                            <button class="fa fa-plus-circle" title="Upload subtitles" on:click={onUploadSubtitles}></button>
+                            <button class="fa fa-plus-circle" title="Upload subtitles" aria-label="Upload subtitles" on:click={onUploadSubtitles}></button>
                         </div>
                         {#each $curVideo.subtitles as sub}
                             <SubtitleCard

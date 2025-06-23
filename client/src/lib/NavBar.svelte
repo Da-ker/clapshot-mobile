@@ -103,7 +103,7 @@ function addEDLComments(event: any) {
 						<div class="relative inline-block text-left">
 							<button type="button"
 							  	class="inline-flex justify-center w-full rounded-md shadow-sm px-2 py-0.5 {$collabId ? 'bg-green-500' : 'bg-gray-800'} text-sm font-medium text-gray-500 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-								aria-haspopup="true" aria-expanded="true"
+								aria-haspopup="true" aria-expanded="true" aria-label="Open menu"
 							>
 								<i class="fas fa-bars"></i>
 							</button>
@@ -128,6 +128,7 @@ function addEDLComments(event: any) {
 								<EDLImport bind:isOpen={isEDLImportOpen} on:add-comments={addEDLComments}/>
 							</Dropdown>
 						</Dropdown>
+						</div>
 
 					</h2>
 				<span class="mx-4 text-xs text-center">{$curVideo?.title}</span>

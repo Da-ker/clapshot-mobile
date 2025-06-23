@@ -227,7 +227,9 @@ describe('CommentInput.svelte', () => {
       await mockUser.click(drawButton);
       
       await waitFor(() => {
-        expect(screen.queryByTitle('Undo')).not.toBeInTheDocument();
+        const undoButton = screen.queryByTitle('Undo');
+        // Element should either be removed or its parent container should have inert attribute (transitioning out)
+        expect(undoButton === null || undoButton?.closest('[inert]')).toBeTruthy();
       });
     });
 

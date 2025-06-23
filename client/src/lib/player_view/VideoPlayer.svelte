@@ -633,7 +633,7 @@ function clickOnPin(id: string) {
 				on:mousedown|preventDefault={(e)=>handleMove(e, e.target)}
 				on:mousemove={(e)=>handleMove(e, e.target)}
 				on:touchmove|preventDefault={(e)=>handleMove(e, e.target)}
-			/>
+			></progress>
             {#if loopStartTime>0 || loopEndTime>0}
                 <div class="absolute bottom-1 border-2 h-0 pointer-events-none border-amber-600" style="left: {loopStartTime/duration*100.0}%; width: {(loopEndTime-loopStartTime)/duration*100.0}%"></div>
             {/if}
@@ -654,9 +654,9 @@ function clickOnPin(id: string) {
 
 			<!-- Play/Pause -->
 			<span class="flex-1 text-left ml-8 space-x-3 text-l whitespace-nowrap">
-				<button class="hover:text-amber-600 fa-solid fa-chevron-left" on:click={() => step_video(-1)} disabled={time==0} title="Step backwards" />
-				<button class="hover:text-amber-600 w-4 fa-solid {paused ? (loop ? 'fa-repeat' : 'fa-play') : 'fa-pause'}" id="playbutton" on:click={togglePlay} title="Play/Pause" />
-				<button class="hover:text-amber-600 fa-solid fa-chevron-right" on:click={() => step_video(1)} title="Step forwards"/>
+				<button class="hover:text-amber-600 fa-solid fa-chevron-left" on:click={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
+				<button class="hover:text-amber-600 w-4 fa-solid {paused ? (loop ? 'fa-repeat' : 'fa-play') : 'fa-pause'}" id="playbutton" on:click={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
+				<button class="hover:text-amber-600 fa-solid fa-chevron-right" on:click={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
 
 				<!-- Timecode -->
 				<span class="flex-0 mx-4 text-sm font-mono">
@@ -668,9 +668,9 @@ function clickOnPin(id: string) {
                     <!-- Loop control (in, loop-toggle, out) -->
                     <span class="flex-0 px-4 text-sm">
                         <button class="fa-solid fa-square-caret-down hover:text-white {loopStartTime>=0 ? 'text-amber-600' : 'text-gray-400'}"
-                            on:click={() => setLoopPoint(true)} title="Set loop start to current frame"/>
+                            on:click={() => setLoopPoint(true)} title="Set loop start to current frame" aria-label="Set loop start to current frame"></button>
                         <button class="fa-solid fa-square-caret-up hover:text-white {loopEndTime>=0 ? 'text-amber-600' : 'text-gray-400'}"
-                            on:click={() => setLoopPoint(false)} title="Set loop end to current frame"/>
+                            on:click={() => setLoopPoint(false)} title="Set loop end to current frame" aria-label="Set loop end to current frame"></button>
                     </span>
                 {/if}
 			</span>
@@ -681,17 +681,19 @@ function clickOnPin(id: string) {
                     <button
                         class={ $curSubtitle ? 'fa-solid fa-closed-captioning text-amber-600' : 'fa-solid fa-closed-captioning text-gray-400' }
                         title="Toggle closed captioning"
+                        aria-label="Toggle closed captioning"
                         on:click={() => toggleSubtitle()}
-                    />
+                    ></button>
                 {:else}
                     <button bind:this={uploadSubtitlesButton}
                         class="fa-solid fa-closed-captioning text-gray-400" title="Upload subtitles"
+                        aria-label="Upload subtitles"
                         on:mouseover={() => { changeSubtitleUploadIcon(true); }}
                         on:focus={() => { changeSubtitleUploadIcon(true); }}
                         on:mouseout={() => { changeSubtitleUploadIcon(false); }}
                         on:blur={() => { changeSubtitleUploadIcon(false); }}
                         on:click={() => { dispatch('uploadSubtitles', {}); }}
-                    />
+                    ></button>
                 {/if}
             </span>
 
@@ -699,8 +701,9 @@ function clickOnPin(id: string) {
 			<span class="flex-0 text-center whitespace-nowrap">
 				<button
 					class="fas {audio_volume>0 ? 'fa-volume-high' : 'fa-volume-mute'} mx-2"
+					aria-label="{audio_volume>0 ? 'Mute audio' : 'Unmute audio'}"
 					on:click="{() => audio_volume = audio_volume>0 ? 0 : 50}"
-					/>
+					></button>
                 <input class="mx-2" id="vol-control" type="range" min="0" max="100" step="1" bind:value={audio_volume}/>
 			</span>
 

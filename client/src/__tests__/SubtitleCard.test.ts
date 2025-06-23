@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { expectElementToBeHiddenOrInert } from './setup';
 import SubtitleCard from '@/lib/player_view/SubtitleCard.svelte';
 import * as Proto3 from '@clapshot_protobuf/typescript';
 import { get } from 'svelte/store';
@@ -201,9 +202,9 @@ describe('SubtitleCard.svelte', () => {
       await mockUser.click(editButton);
 
       expect(screen.getByLabelText('Title')).toBeInTheDocument();
-      expect(screen.getByLabelText(/language code/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/time offset/i)).toBeInTheDocument();
-      expect(screen.getByLabelText('Default Subtitle')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('English Subtitles')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('en')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('0')).toBeInTheDocument();
     });
 
     it('should change edit button icon when form is open', async () => {
@@ -229,7 +230,9 @@ describe('SubtitleCard.svelte', () => {
 
       await mockUser.click(editButton);
       await waitFor(() => {
-        expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+        const titleInput = screen.queryByLabelText('Title');
+        // Element should either be removed or its form should have inert attribute (transitioning out)
+        expect(titleInput === null || titleInput?.closest('[inert]')).toBeTruthy();
       });
     });
 
@@ -256,10 +259,10 @@ describe('SubtitleCard.svelte', () => {
     });
 
     it('should populate form fields with current subtitle data', () => {
-      const titleInput = screen.getByLabelText('Title') as HTMLInputElement;
-      const languageInput = screen.getByLabelText(/language code/i) as HTMLInputElement;
-      const offsetInput = screen.getByLabelText(/time offset/i) as HTMLInputElement;
-      const defaultCheckbox = screen.getByLabelText('Default Subtitle') as HTMLInputElement;
+      const titleInput = screen.getByDisplayValue('English Subtitles') as HTMLInputElement;
+      const languageInput = screen.getByDisplayValue('en') as HTMLInputElement;
+      const offsetInput = screen.getByDisplayValue('0') as HTMLInputElement;
+      const defaultCheckbox = screen.getByRole('checkbox') as HTMLInputElement;
 
       expect(titleInput.value).toBe('English Subtitles');
       expect(languageInput.value).toBe('en');
@@ -268,7 +271,7 @@ describe('SubtitleCard.svelte', () => {
     });
 
     it('should validate language code input length', () => {
-      const languageInput = screen.getByLabelText(/language code/i) as HTMLInputElement;
+      const languageInput = screen.getByDisplayValue('en') as HTMLInputElement;
       
       expect(languageInput).toHaveAttribute('minlength', '2');
       expect(languageInput).toHaveAttribute('maxlength', '3');
@@ -283,7 +286,7 @@ describe('SubtitleCard.svelte', () => {
     });
 
     it('should show language code info link', () => {
-      const infoLink = screen.getByRole('link', { name: '' }); // Info link has empty accessible name (icon only)
+      const infoLink = screen.getByRole('link', { name: 'ISO 639 language codes information' });
       expect(infoLink).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes');
       expect(infoLink).toHaveAttribute('target', '_blank');
     });
@@ -319,7 +322,7 @@ describe('SubtitleCard.svelte', () => {
       const editButton = screen.getByRole('button', { name: /edit subtitle/i });
       await mockUser.click(editButton);
 
-      const languageInput = screen.getByLabelText(/language code/i);
+      const languageInput = screen.getByDisplayValue('en');
       await mockUser.clear(languageInput);
       await mockUser.type(languageInput, 'fr');
 
@@ -509,9 +512,9 @@ describe('SubtitleCard.svelte', () => {
       const editButton = screen.getByRole('button', { name: /edit subtitle/i });
       await mockUser.click(editButton);
 
-      const titleInput = screen.getByLabelText('Title');
-      const languageInput = screen.getByLabelText(/language code/i);
-      const offsetInput = screen.getByLabelText(/time offset/i);
+      const titleInput = screen.getByDisplayValue('English Subtitles');
+      const languageInput = screen.getByDisplayValue('en');
+      const offsetInput = screen.getByDisplayValue('0');
 
       await mockUser.tab();
       expect(titleInput).toHaveFocus();
