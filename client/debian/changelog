@@ -1,3 +1,12 @@
+clapshot-client (0.8.6) bookworm; urgency=low
+
+  * Upgrade to Svelte 5 and Vite 6
+  * Add unit and integration tests
+  * Update dependencies (brace-expansion)
+  * Improve nginx configuration for better caching
+
+ -- Jarno Elonen <elonen@iki.fi>  Mon, 23 Jun 2025 12:00:00 +0300
+
 clapshot-client (0.8.5) bookworm; urgency=low
 
   * New feature: Folder sharing via secret URLs
