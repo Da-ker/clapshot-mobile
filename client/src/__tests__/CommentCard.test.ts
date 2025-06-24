@@ -320,10 +320,7 @@ describe('CommentCard.svelte', () => {
       
       await mockUser.clear(textarea);
       await mockUser.type(textarea, 'Some changes');
-      
-      // Fire keyup event with Escape key directly
-      const escapeEvent = new KeyboardEvent('keyup', { key: 'Escape' });
-      textarea.dispatchEvent(escapeEvent);
+      await mockUser.keyboard('{Escape}');
 
       // Wait for DOM updates
       await waitFor(() => {

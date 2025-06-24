@@ -2,21 +2,32 @@
 import LocalStorageCookies from "@/cookies";
 import Dropzone from "svelte-file-dropzone"
 
-let dragActive: boolean = false;
+let dragActive: boolean = $state(false);
 let files = {
     accepted: [] as File[],
     rejected: [] as File[]
 };
 
-export let postUrl: string;
-// Passed to HTTP POST request:
-export let listingData: Object;
-export let mediaFileAddedAction: string|undefined;
+
+    interface Props {
+        postUrl: string;
+        // Passed to HTTP POST request:
+        listingData: Object;
+        mediaFileAddedAction: string|undefined;
+        children?: import('svelte').Snippet;
+    }
+
+    let {
+        postUrl,
+        listingData,
+        mediaFileAddedAction,
+        children
+    }: Props = $props();
 
 
-let progressBar: HTMLProgressElement;
-let statusTxt: string = "";
-let uploadingNow: boolean = false;
+let progressBar: HTMLProgressElement | undefined = $state();
+let statusTxt: string = $state("");
+let uploadingNow: boolean = $state(false);
 let form: HTMLFormElement | undefined;
 
 function afterUpload()
@@ -111,7 +122,7 @@ function onDropFiles(e: any) {
                 <div class="text-xs overflow-ellipsis break-words">{statusTxt}</div>
             </div>
           {:else}
-            <slot></slot>
+            {@render children?.()}
           {/if}
         </Dropzone>
     </div>

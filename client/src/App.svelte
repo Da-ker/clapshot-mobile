@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { preventDefault } from 'svelte/legacy';
+
 import {Notifications, acts} from '@tadashi/svelte-notification'
 import {fade, slide} from "svelte/transition";
 
@@ -20,12 +22,12 @@ import LocalStorageCookies from './cookies';
 import RawHtmlItem from './lib/asset_browser/RawHtmlItem.svelte';
 import { ClientToServerCmd } from '@clapshot_protobuf/typescript/dist/src/client';
 
-let videoPlayer: VideoPlayer;
-let commentInput: CommentInput;
+let videoPlayer: VideoPlayer | undefined = $state();
+let commentInput: CommentInput | undefined = $state();
 let debugLayout: boolean = false;
-let uiConnectedState: boolean = false; // true if UI should look like we're connected to the server
+let uiConnectedState: boolean = $state(false); // true if UI should look like we're connected to the server
 
-let collabDialogAck = false;  // true if user has clicked "OK" on the collab dialog
+let collabDialogAck = $state(false);  // true if user has clicked "OK" on the collab dialog
 let lastCollabControllingUser: string | null = null;    // last user to control the video in a collab session
 
 let forceBadBasicAuth = false;
@@ -86,23 +88,25 @@ function onCommentInputButton(e: any) {
     const PLAYBACK_REQ_SOURCE = "comment_input";
     function resumePlayer() {
         // Only resume if playback was paused by comment input
-        if (videoPlayer.getPlaybackState().request_source == PLAYBACK_REQ_SOURCE) {
+        if (videoPlayer && videoPlayer.getPlaybackState().request_source == PLAYBACK_REQ_SOURCE) {
             videoPlayer.setPlayback(true, PLAYBACK_REQ_SOURCE);
         }
     }
     function pausePlayer() {
-        videoPlayer.setPlayback(false, PLAYBACK_REQ_SOURCE);
+        if (videoPlayer) {
+            videoPlayer.setPlayback(false, PLAYBACK_REQ_SOURCE);
+        }
     }
 
     if (e.detail.action == "send")
     {
-        if (e.detail.comment_text != "" || videoPlayer.hasDrawing())
+        if (videoPlayer && (e.detail.comment_text != "" || videoPlayer.hasDrawing()))
         {
             wsEmit({addComment: {
                 mediaFileId: $mediaFileId!,
                 comment: e.detail.comment_text,
-                drawing: videoPlayer.getScreenshot(),
-                timecode: e.detail.is_timed ? videoPlayer.getCurTimecode() : "",
+                drawing: videoPlayer ? videoPlayer.getScreenshot() : "",
+                timecode: e.detail.is_timed && videoPlayer ? videoPlayer.getCurTimecode() : "",
                 subtitleId: $curSubtitle?.id
             }});
         }
@@ -113,40 +117,40 @@ function onCommentInputButton(e: any) {
     }
     else if (e.detail.action == "color_select") {
         pausePlayer();
-        videoPlayer.onColorSelect(e.detail.color);
+        if (videoPlayer) videoPlayer.onColorSelect(e.detail.color);
     }
     else if (e.detail.action == "draw") {
         if (e.detail.is_draw_mode) { pausePlayer(); }
-        videoPlayer.onToggleDraw(e.detail.is_draw_mode);
+        if (videoPlayer) videoPlayer.onToggleDraw(e.detail.is_draw_mode);
     }
     else if (e.detail.action == "undo") {
         pausePlayer();
-        videoPlayer.onDrawUndo();
+        if (videoPlayer) videoPlayer.onDrawUndo();
     }
     else if (e.detail.action == "redo") {
         pausePlayer();
-        videoPlayer.onDrawRedo();
+        if (videoPlayer) videoPlayer.onDrawRedo();
     }
 }
 
 function onDisplayComment(e: any) {
     if (!$curVideo) { throw Error("No video loaded"); }
-    videoPlayer.seekToSMPTE(e.detail.timecode);
+    if (videoPlayer) videoPlayer.seekToSMPTE(e.detail.timecode);
     // Close draw mode while showing (drawing from a saved) comment
-    if (e.detail.drawing) { videoPlayer.setDrawing(e.detail.drawing); }
+    if (videoPlayer && e.detail.drawing) { videoPlayer.setDrawing(e.detail.drawing); }
     if (e.detail.subtitleId) { $curSubtitle = $curVideo.subtitles.find((s) => s.id == e.detail.subtitleId) ?? null; }
     if ($collabId) {
         logAbbrev("Collab: onDisplayComment. collab_id: '" + $collabId + "'");
         wsEmit({collabReport: {
             paused: true,
-            loop: videoPlayer.isLooping(),
-            seekTimeSec: videoPlayer.getCurTime(),
+            loop: videoPlayer ? videoPlayer.isLooping() : false,
+            seekTimeSec: videoPlayer ? videoPlayer.getCurTime() : 0,
             drawing: e.detail.drawing,
             subtitleId: $curSubtitle?.id
         }});
     }
-    videoPlayer.onToggleDraw(false);
-    commentInput.forceDrawMode(false);
+    if (videoPlayer) videoPlayer.onToggleDraw(false);
+    if (commentInput) commentInput.forceDrawMode(false);
 }
 
 function onDeleteComment(e: any) {
@@ -194,7 +198,7 @@ function closePlayerIfOpen() {
 }
 
 function onPlayerSeeked(_e: any) {
-    commentInput.forceDrawMode(false);  // Close draw mode when video frame is changed
+    if (commentInput) commentInput.forceDrawMode(false);  // Close draw mode when video frame is changed
 }
 
 function onCollabReport(e: { detail: { report: Proto3.client.ClientToServerCmd_CollabReport; }; }) {
@@ -233,10 +237,10 @@ function onSubtitleChange(e: any) {
     }
     if ($collabId) {
         wsEmit({collabReport: {
-            paused: videoPlayer.isPaused(),
-            loop: videoPlayer.isLooping(),
-            seekTimeSec: videoPlayer.getCurTime(),
-            drawing: videoPlayer.getScreenshot(),
+            paused: videoPlayer ? videoPlayer.isPaused() : true,
+            loop: videoPlayer ? videoPlayer.isLooping() : false,
+            seekTimeSec: videoPlayer ? videoPlayer.getCurTime() : 0,
+            drawing: videoPlayer ? videoPlayer.getScreenshot() : "",
             subtitleId: $curSubtitle?.id,
         }});
     }
@@ -362,7 +366,7 @@ else
     history.replaceState({}, '', './');
 
 
-let uploadUrl: string = "";
+let uploadUrl: string = $state("");
 
 
 // -------------------------------------------------------------
@@ -830,10 +834,12 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
                 if (evt.subtitleId != $curSubtitle?.id) {
                     $curSubtitle = $curVideo?.subtitles.find((s) => s.id == evt.subtitleId) ?? null;
                 }
-                if (!evt.paused) {
-                    videoPlayer.collabPlay(evt.seekTimeSec, evt.loop);
-                } else {
-                    videoPlayer.collabPause(evt.seekTimeSec, evt.loop, evt.drawing);
+                if (videoPlayer) {
+                    if (!evt.paused) {
+                        videoPlayer.collabPlay(evt.seekTimeSec, evt.loop);
+                    } else {
+                        videoPlayer.collabPause(evt.seekTimeSec, evt.loop, evt.drawing);
+                    }
                 }
                 if (lastCollabControllingUser != evt.fromUser) {
                     lastCollabControllingUser = evt.fromUser;
@@ -938,7 +944,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 </script>
 
 
-<svelte:window on:popstate={popHistoryState}/>
+<svelte:window onpopstate={popHistoryState}/>
 
 <main>
     <span id="popup-container"></span>
@@ -947,7 +953,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         <div class="flex-grow w-full overflow-auto {debugLayout?'border-2 border-cyan-300':''}">
             <Notifications />
 
-        {#if !uiConnectedState }
+        {#if !uiConnectedState}
 
         <!-- ========== "connecting" spinner ============= -->
         <div transition:fade class="w-full h-full text-5xl text-slate-600 align-middle text-center">
@@ -1012,7 +1018,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                         <!-- Subtitles -->
                         <div class="flex justify-between text-gray-500 items-center py-2 border-t border-gray-500">
                             <h6>Subtitles</h6>
-                            <button class="fa fa-plus-circle" title="Upload subtitles" aria-label="Upload subtitles" on:click={onUploadSubtitles}></button>
+                            <button class="fa fa-plus-circle" title="Upload subtitles" aria-label="Upload subtitles" onclick={onUploadSubtitles}></button>
                         </div>
                         {#each $curVideo.subtitles as sub}
                             <SubtitleCard
@@ -1038,7 +1044,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 <p class="">Actions like seek, play and draw are mirrored to all participants.</p>
                 <p class="">To invite people, copy browser URL and send it to them.</p>
                 <p class="">Exit by clicking the green icon in header.</p>
-                <button class="bg-gray-800 hover:bg-gray-700 text-green m-2 p-2 rounded-md shadow-lg" on:click|preventDefault="{()=>collabDialogAck=true}">Understood</button>
+                <button class="bg-gray-800 hover:bg-gray-700 text-green m-2 p-2 rounded-md shadow-lg" onclick={preventDefault(()=>collabDialogAck=true)}>Understood</button>
             </div>
         </div>
         {/if}
@@ -1048,14 +1054,14 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
             <!-- ========== page components ============= -->
             <div class="organizer_page">
                 {#each $curPageItems as pit}
-                    {#if pit.html }
+                    {#if pit.html}
                         <div class="text-slate-500">
                             <RawHtmlItem html={pit.html} />
                         </div>
                     {:else if pit.folderListing}
                         <div class="my-6">
                             <!-- ========== upload widget ============= -->
-                            {#if pit.folderListing.allowUpload }
+                            {#if pit.folderListing.allowUpload}
                                 <div class="h-24 border-4 border-dashed border-gray-700">
                                     <FileUpload
                                         postUrl={uploadUrl}

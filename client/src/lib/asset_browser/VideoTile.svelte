@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { run } from 'svelte/legacy';
+
 import ScrubbableVideoThumb from './ScrubbableVideoThumb.svelte';
 import TileVisualizationOverride from './TileVisualizationOverride.svelte';
 import * as Proto3 from '@clapshot_protobuf/typescript';
@@ -8,8 +10,12 @@ import {slide} from "svelte/transition";
 import type { MediaProgressReport } from '@/types';
 
 
-export let item: Proto3.MediaFile;
-export let visualization: Proto3.PageItem_FolderListing_Item_Visualization|undefined = undefined;
+    interface Props {
+        item: Proto3.MediaFile;
+        visualization?: Proto3.PageItem_FolderListing_Item_Visualization|undefined;
+    }
+
+    let { item, visualization = undefined }: Props = $props();
 
 export function data() { return item; }
 
@@ -18,13 +24,13 @@ let orig_basecolor = visualization?.baseColor ?
     rgbToCssColor(visualization.baseColor.r, visualization.baseColor.g, visualization.baseColor.b) :
     rgbToCssColor(71, 85, 105);
 
-let basecolor = orig_basecolor;
+let basecolor = $state(orig_basecolor);
 
 // Watch for (transcoding) progress reports from server, and update progress bar if one matches this item.
-let progress: number|undefined = undefined;
+let progress: number|undefined = $state(undefined);
 
 // Use reactive statement to watch for progress reports
-$: {
+run(() => {
     if ($latestProgressReports) {
         progress = $latestProgressReports.find((r: MediaProgressReport) => r.mediaFileId === item.id)?.progress;
         if (progress !== undefined)
@@ -32,7 +38,7 @@ $: {
         else
             basecolor = orig_basecolor;
     }
-}
+});
 
 function fmt_date(d: Date | undefined) {
     if (!d) return "(no date)";
@@ -54,7 +60,7 @@ function fmt_date(d: Date | undefined) {
             thumbSheetCols={item.previewData?.thumbSheet?.cols}
         />
         </div>
-    {:else if visualization }
+    {:else if visualization}
         <div class="flex-grow">
         <TileVisualizationOverride vis={visualization}/>
         </div>

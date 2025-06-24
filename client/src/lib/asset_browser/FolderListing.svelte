@@ -1,4 +1,7 @@
 <script lang="ts">
+    import { createBubbler, stopPropagation } from 'svelte/legacy';
+
+    const bubble = createBubbler();
 
 import {dndzone, TRIGGERS, SOURCES, SHADOW_ITEM_MARKER_PROPERTY_NAME, type DndEvent} from "svelte-dnd-action";
 import PopupMenu from './PopupMenu.svelte';
@@ -6,7 +9,7 @@ import VideoTile from "./VideoTile.svelte";
 import FolderTile from "./FolderTile.svelte";
 
 import { folderItemsToIDs, type VideoListDefItem } from "./types";
-import { createEventDispatcher, tick } from "svelte";
+import { createEventDispatcher, tick, mount, unmount } from "svelte";
 import { fade } from "svelte/transition";
 
 import { selectedTiles, serverDefinedActions } from "@/stores";
@@ -14,12 +17,21 @@ import * as Proto3 from '@clapshot_protobuf/typescript';
 
 const dispatch = createEventDispatcher();
 
-export let listingData: { [key: string]: string };
-export let items: VideoListDefItem[] = [];
-export let dragDisabled: boolean = true;
-export let listPopupActions: string[] = [];
+    interface Props {
+        listingData: { [key: string]: string };
+        items?: VideoListDefItem[];
+        dragDisabled?: boolean;
+        listPopupActions?: string[];
+    }
 
-let isDragging = false;
+    let {
+        listingData,
+        items = $bindable([]),
+        dragDisabled = true,
+        listPopupActions = []
+    }: Props = $props();
+
+let isDragging = $state(false);
 
 function mapDefItems(items: VideoListDefItem[]) {
     return folderItemsToIDs(items.map((it)=>it.obj));
@@ -181,17 +193,16 @@ function onContextMenu(e: MouseEvent, item: VideoListDefItem|null)
     if (actions.length === 0)
         return;
 
-    let popup = new PopupMenu({
-        target: popupContainer ,
-        props: {
-            menuLines: actions,
-            x: e.clientX,
-            y: e.clientY - 16, // Offset a bit to make it look better
-        },
-    });
-    popup.$on('action', (e) => dispatch("popup-action", {action: e.detail.action, items: targetTiles, listingData}));
-    popup.$on('hide', () => popup.$destroy());
-    e.preventDefault(); // Prevent default browser context menu
+    let popup = mount(PopupMenu, {
+            target: popupContainer ,
+            props: {
+                menuLines: actions,
+                x: e.clientX,
+                y: e.clientY - 16, // Offset a bit to make it look better
+                onaction: (event: any) => dispatch("popup-action", {action: event.action, items: targetTiles, listingData}),
+                onhide: () => unmount(popup)
+            },
+        });
 }
 
 function isShadowItem(item: any) {
@@ -208,9 +219,13 @@ function isShadowItem(item: any) {
             dropTargetClasses: ['activeDropTarget'],
             dropTargetStyle: {},
             }}"
-        on:consider={handleConsider}
-        on:finalize={handleFinalize}
-        on:contextmenu={(e) => onContextMenu(e, null)}
+        onconsider={handleConsider}
+        onfinalize={handleFinalize}
+        oncontextmenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onContextMenu(e, null);
+        }}
         class="flex flex-wrap gap-4 p-4 bg-slate-900"
         role="list"
     >
@@ -221,19 +236,23 @@ function isShadowItem(item: any) {
                 role="button"
                 tabindex="0"
                 class:selectedTile={Object.keys($selectedTiles).includes(item.id)}
-                on:click|stopPropagation
-                on:dblclick={(_e) => {$selectedTiles = {}; dispatchOpenItem(item.id)}}
-                on:mousedown={(e) => handleMouseOrKeyDown(item.id, e)}
-                on:mouseup={(e) => handleMouseUp(e, item)}
-                on:keydown={(e) => handleMouseOrKeyDown(item.id, e)}
-                on:contextmenu|stopPropagation={(e) => onContextMenu(e, item)}
+                onclick={stopPropagation(bubble('click'))}
+                ondblclick={(_e) => {$selectedTiles = {}; dispatchOpenItem(item.id)}}
+                onmousedown={(e) => handleMouseOrKeyDown(item.id, e)}
+                onmouseup={(e) => handleMouseUp(e, item)}
+                onkeydown={(e) => handleMouseOrKeyDown(item.id, e)}
+                oncontextmenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onContextMenu(e as MouseEvent, item);
+                }}
             >
                 {#if isShadowItem(item)}
                     <div in:fade={{duration:200}} class='custom-dnd-shadow-item'></div>
                 {:else}
-                    {#if item.obj.mediaFile }
+                    {#if item.obj.mediaFile}
                         <VideoTile item={item.obj.mediaFile} visualization={item.obj.vis}/>
-                    {:else if item.obj.folder }
+                    {:else if item.obj.folder}
                         <FolderTile
                             id={item.obj.folder.id}
                             name={item.obj.folder.title}
@@ -254,7 +273,7 @@ function isShadowItem(item: any) {
     </section>
 </div>
 
-<svelte:window on:click={(_e) => {
+<svelte:window onclick={(_e) => {
     // Deselect all items if clicked outside of the list
     if (!isDragging) $selectedTiles = {};
 }} />

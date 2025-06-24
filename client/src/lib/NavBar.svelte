@@ -11,10 +11,10 @@ import { ChevronRightOutline } from 'flowbite-svelte-icons';
 import { Modal } from 'flowbite-svelte';
 
 const dispatch = createEventDispatcher();
-let loggedOut = false;
+let loggedOut = $state(false);
 
 // Watch for (transcoding) progress reports from server, and update progress bar if one matches this item.
-let videoProgressMsg: string | undefined = undefined;
+let videoProgressMsg: string | undefined = $state(undefined);
 
 onMount(async () => {
 	latestProgressReports.subscribe((reports: MediaProgressReport[]) => {
@@ -72,7 +72,7 @@ async function copyToClipboard() {
 const randomSessionId = Math.random().toString(36).substring(2, 15);
 
 
-let isEDLImportOpen = false;
+let isEDLImportOpen = $state(false);
 function addEDLComments(event: any) {
 	console.debug("addEDLComments", event.detail);
 	dispatch('add-comments', event.detail);
@@ -111,7 +111,7 @@ function addEDLComments(event: any) {
 						<Dropdown class="w-64 text-sm">
 							<DropdownItem on:click={copyToClipboard}><i class="fas fa-share-square"></i> Share to logged in users</DropdownItem>
 							{#if $curVideo?.origUrl}
-								<DropdownItem href="{$curVideo?.origUrl}" title="Download original file"><a href="{$curVideo?.origUrl}" download><i class="fas fa-download"></i> Download original</a></DropdownItem>
+								<DropdownItem href={$curVideo?.origUrl} title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> Download original</a></DropdownItem>
 							{/if}
 							{#if $collabId}
 								<DropdownItem href="?vid={$mediaFileId}" class="text-green-400"><i class="fas fa-users"></i> Leave collaborative Session</DropdownItem>
@@ -150,11 +150,11 @@ function addEDLComments(event: any) {
 				</button>
 			</span>
 
-			{#if $userMenuItems != undefined && $userMenuItems.length > 0 }
+			{#if $userMenuItems != undefined && $userMenuItems.length > 0}
 				<Dropdown class="w-44 text-sm">
 					{#each $userMenuItems as item}
 						<DropdownItem>
-						{#if item.type === "logout-basic-auth" }
+						{#if item.type === "logout-basic-auth"}
 							<DropdownItem on:click={() => logoutBasicAuth()}>{item.label}</DropdownItem>
 						{:else if item.type === "about"}
 							<DropdownItem on:click={showAbout}>{item.label}</DropdownItem>

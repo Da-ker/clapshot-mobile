@@ -6,10 +6,14 @@ import * as Proto3 from '@clapshot_protobuf/typescript';
 
 const dispatch = createEventDispatcher();
 
-export let isOpen: boolean = false;
+    interface Props {
+        isOpen?: boolean;
+    }
 
-let edlForm: HTMLFormElement;
-let frameRate: number = 24;
+    let { isOpen = $bindable(false) }: Props = $props();
+
+let edlForm: HTMLFormElement | undefined = $state();
+let frameRate: number = $state(24);
 
 // Read fps from current video
 onMount(() => {
@@ -20,8 +24,8 @@ onMount(() => {
 });
 
 
-let edlEvents: EDLEvent[] = [];
-let errorMsg: string|null = null;
+let edlEvents: EDLEvent[] = $state([]);
+let errorMsg: string|null = $state(null);
 
 
 // --- Simplistic EDL parser ---
@@ -106,12 +110,13 @@ const handleAccept = () => {
         <Label for="fps_input" class="pt-2">Frame rate</Label>
         <Input id="fps_input" type="number" bind:value={frameRate}/>
     </form>
-    <svelte:fragment slot="footer">
+    
+    <div class="flex gap-2 mt-4">
         {#if edlEvents.length>0}
             <Button on:click={handleAccept} color="primary">Add as comments</Button>
         {/if}
         <Button on:click={() => {isOpen=false;}} color="alternative">Cancel</Button>
-    </svelte:fragment>
+    </div>
 
     <!-- scrollable list of time spans for review -->
     {#if edlEvents.length > 0}

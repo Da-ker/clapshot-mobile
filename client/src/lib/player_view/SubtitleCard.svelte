@@ -7,8 +7,12 @@ import * as Proto3 from '@clapshot_protobuf/typescript';
 
 const dispatch = createEventDispatcher();
 
-export let sub: Proto3.Subtitle;
-export let isDefault: boolean = false;
+    interface Props {
+        sub: Proto3.Subtitle;
+        isDefault?: boolean;
+    }
+
+    let { sub = $bindable(), isDefault = $bindable(false) }: Props = $props();
 
 
 function doSave() {
@@ -37,8 +41,8 @@ function handleKeyDown(event: { key: string; }) {
 <div transition:scale class="flex flex-nowrap space-x-1 text-sm whitespace-nowrap justify-between items-center text-gray-400 w-full">
     <button
         class="flex-grow text-left hover:text-white {sub.id == $curSubtitle?.id ? 'text-amber-600' : 'text-gray-400'} overflow-hidden"
-        on:click={() => dispatch("change-subtitle", {id: sub.id})}
-        on:dblclick={toggleEditing}
+        onclick={() => dispatch("change-subtitle", {id: sub.id})}
+        ondblclick={toggleEditing}
         title={sub.origFilename}
         style="text-overflow: ellipsis; white-space: nowrap;"
     >
@@ -47,14 +51,14 @@ function handleKeyDown(event: { key: string; }) {
     </button>
     {#if $curVideo?.userId == $curUserId || $curUserIsAdmin}
     <span class="flex-shrink-0">
-        <button class="fa {($subtitleEditingId==sub.id) ? "fa-angle-down" : "fa-angle-right"} hover:text-white" title="Edit subtitle" aria-label="Edit subtitle" on:click={() => { toggleEditing(); }}></button>
+        <button class="fa {($subtitleEditingId==sub.id) ? "fa-angle-down" : "fa-angle-right"} hover:text-white" title="Edit subtitle" aria-label="Edit subtitle" onclick={() => { toggleEditing(); }}></button>
     </span>
     {/if}
 </div>
 
 {#if $subtitleEditingId == sub.id}
-<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-<form class="space-y-2 p-2 mb-4 rounded-lg bg-gray-800 shadow-lg shadow-black" transition:slide="{{ duration: 200 }}" on:keydown={handleKeyDown}>
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<form class="space-y-2 p-2 mb-4 rounded-lg bg-gray-800 shadow-lg shadow-black" transition:slide="{{ duration: 200 }}" onkeydown={handleKeyDown}>
     <div>
         <label for="title" class="block text-sm font-medium text-gray-500">Title</label>
         <input id="title" type="text" bind:value={sub.title} class="mt-1 block w-full rounded-md shadow-sm text-gray-400 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300">
@@ -77,9 +81,9 @@ function handleKeyDown(event: { key: string; }) {
         <label for="isDefault" class="block text-sm font-medium text-gray-500">Default Subtitle</label>
     </div>
     <div class="py-2 flex space-x-2 place-content-end">
-        <button type="button" class="border rounded-lg px-1 text-sm border-cyan-500 text-cyan-500" on:click={doSave}>Save</button>
+        <button type="button" class="border rounded-lg px-1 text-sm border-cyan-500 text-cyan-500" onclick={doSave}>Save</button>
         <a type="button" class="border rounded-lg px-1 text-sm border-cyan-600 text-cyan-600" href="{sub.origUrl}" download>Download</a>
-        <button type="button" class="border rounded-lg px-1 text-sm border-red-300 text-red-300" on:click={doDelete}>Del</button>
+        <button type="button" class="border rounded-lg px-1 text-sm border-red-300 text-red-300" onclick={doDelete}>Del</button>
     </div>
 </form>
 {/if}
