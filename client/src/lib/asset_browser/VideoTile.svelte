@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { run } from 'svelte/legacy';
 
 import ScrubbableVideoThumb from './ScrubbableVideoThumb.svelte';
 import TileVisualizationOverride from './TileVisualizationOverride.svelte';
@@ -29,14 +28,14 @@ let basecolor = $state(orig_basecolor);
 // Watch for (transcoding) progress reports from server, and update progress bar if one matches this item.
 let progress: number|undefined = $state(undefined);
 
-// Use reactive statement to watch for progress reports
-run(() => {
+// Use effect to watch for progress reports
+$effect(() => {
     if ($latestProgressReports) {
-        progress = $latestProgressReports.find((r: MediaProgressReport) => r.mediaFileId === item.id)?.progress;
-        if (progress !== undefined)
-            basecolor = rgbToCssColor(40, 40, 40);
-        else
-            basecolor = orig_basecolor;
+        const newProgress = $latestProgressReports.find((r: MediaProgressReport) => r.mediaFileId === item.id)?.progress;
+        if (newProgress !== progress) {
+            progress = newProgress;
+            basecolor = progress !== undefined ? rgbToCssColor(40, 40, 40) : orig_basecolor;
+        }
     }
 });
 

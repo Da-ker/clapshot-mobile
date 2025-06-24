@@ -18,13 +18,19 @@ import * as Proto3 from '@clapshot_protobuf/typescript';
         oneditcomment?: (event: {id: string, comment_text: string}) => void;
     }
 
-    let { indent = 0, comment = $bindable(), ondisplaycomment, ondeletecomment, onreplytocomment, oneditcomment }: Props = $props();
+    let { indent = 0, comment, ondisplaycomment, ondeletecomment, onreplytocomment, oneditcomment }: Props = $props();
 
 let editing = $state(false);
 let showActions: boolean = $state(false);
 
 let showReply: boolean = $state(false);
 let replyInput: HTMLInputElement | undefined = $state();
+
+let commentText = $state(comment.comment);
+
+$effect(() => {
+    commentText = comment.comment;
+});
 
 function onTimecodeClick(tc: string) {
     if (ondisplaycomment) ondisplaycomment({
@@ -65,16 +71,19 @@ function onEditFieldKeyDown(e: KeyboardEvent) {
         flushSync(() => {
             editing = false;
         });
-        comment.comment = comment.comment.trim();
-        if (comment.comment != "" && oneditcomment)
-            oneditcomment({'id': comment.id, 'comment_text': comment.comment});
+        commentText = commentText.trim();
+        if (commentText != "" && oneditcomment) {
+            comment.comment = commentText;
+            oneditcomment({'id': comment.id, 'comment_text': commentText});
+        }
     }
 }
 
 function onEditFieldBlur() {
     if (editing) {
         editing = false;
-        comment.comment = comment.comment.trim();
+        commentText = commentText.trim();
+        comment.comment = commentText;
     }
 }
 
@@ -123,7 +132,7 @@ function getSubtitleLanguage(subtitleId: string): string {
 
     <div class="p-2" lang="en">
         {#if editing}
-            <textarea class="w-full outline-dashed bg-slate-500" rows=3 use:callFocus bind:value={comment.comment} onkeydown={onEditFieldKeyDown} onblur={onEditFieldBlur}></textarea>
+            <textarea class="w-full outline-dashed bg-slate-500" rows=3 use:callFocus bind:value={commentText} onkeydown={onEditFieldKeyDown} onblur={onEditFieldBlur}></textarea>
         {:else}
             <p class="text-gray-300 text-base hyphenate">
                 {comment.comment}

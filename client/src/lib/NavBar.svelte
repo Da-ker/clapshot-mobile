@@ -168,7 +168,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 						{:else if item.type === "divider"}
 							<DropdownDivider />
 						{:else if item.type === "url"}
-							<DropdownItem href={item.data}>{item.label}</DropdownItem>
+							<DropdownItem href={item.data || "#"}>{item.label}</DropdownItem>
 						{:else}
 							<DropdownItem>UNKNOWN item.type '{item.type}'</DropdownItem>
 						{/if}
