@@ -15,6 +15,80 @@ import { fade } from "svelte/transition";
 import { selectedTiles, serverDefinedActions } from "@/stores";
 import * as Proto3 from '@clapshot_protobuf/typescript';
 
+  /*
+   * ⚠️  COMPLEXITY WARNING ⚠️
+   *
+   * This component integrates svelte-dnd-action library with complex selection, keyboard navigation,
+   * and drag-and-drop functionality. Multiple intricate interdependencies exist that are NOT obvious
+   * from reading the code. Proceed with caution when making changes.
+   *
+   * 1. **svelte-dnd-action Keyboard Event Interception**:
+   *    - The library intercepts Enter/Space keys at a very low level (capture phase or earlier)
+   *    - These keys are automatically converted to drag operations (dragStarted/dragStopped events)
+   *    - NO configuration exists to exclude specific keys from drag activation
+   *    - Solution: Custom `enterKeyInterceptor` action uses capture-phase listeners to intercept
+   *      Enter before the library gets it, while leaving Space for drag operations
+   *
+   * 2. **Event Handler Hierarchy Complexity**:
+   *    - handleMouseDown: Library intercepts these events, selection logic CANNOT go here
+   *    - handleMouseUp: Where selection logic actually works
+   *    - handleKeyDown: Enter events never reach here due to library interception
+   *    - The event flow is: capture phase → dnd library → bubble phase → our handlers
+   *
+   * 3. **isDragging State Management**:
+   *    - CRITICAL: Only set to true on TRIGGERS.DRAG_STARTED, not every handleConsider event
+   *    - An old version of this code set it true for all consider events, breaking keyboard navigation
+   *    - This state affects selection behavior, keyboard handling, and visual feedback
+   *
+   * 4. **Zone Type Interactions**:
+   *    - NEVER add custom `type` to dndzone configuration
+   *    - FolderTile components use default type ('Internal')
+   *    - Different types cannot interact, breaking drop-into-folder functionality
+   *    - This was a subtle breaking change that took significant debugging to identify
+   *
+   * 5. **Focus vs Selection State**:
+   *    - Visual selection ($selectedTiles) vs keyboard focus are separate concerns
+   *    - Enter key only works on keyboard-focused elements, not just visually selected ones
+   *    - Solution: Manually set focus() on mouse click for consistent behavior
+   *    - Custom focus styling prevents harsh white outlines while maintaining functionality
+   *
+   * 6. **Multi-Select Implementation**:
+   *    - Shift+click: Range selection using getItemsInRange() and lastSelectedItemId tracking
+   *    - Cmd/Ctrl+click: Individual item toggles
+   *    - Range selection works across flexbox layout by using item array indices
+   *    - MUST maintain lastSelectedItemId correctly to avoid broken range selections
+   *
+   * 7. **Nested DnD Zone Dependencies**:
+   *    - Main list: One dndzone for reordering
+   *    - Folder tiles: Individual dndzone for accepting drops
+   *    - Drop-into-folder requires BOTH zones to work together correctly
+   *    - Event flow between nested zones is fragile and easily broken
+   *
+   * 8. **Multi-Select Drag Emulation**:
+   *    - Library doesn't natively support multi-item drag
+   *    - Custom logic in handleConsider/handleFinalize emulates this behavior
+   *    - selectedTiles store tracks multiple items for drag operations
+   *    - Extremely complex interaction between selection state and drag events
+   *
+   * BEFORE MAKING CHANGES:
+   * - Test ALL interaction modes: mouse click, drag, keyboard nav, multi-select, range select
+   * - Test drop-into-folder functionality specifically
+   * - Test Enter key opening items vs Space key drag operations
+   * - Verify focus behavior matches visual selection
+   * - Check that nested folder tiles still receive drag events properly
+   *
+   * DANGEROUS CHANGES TO AVOID:
+   * - Adding/changing dndzone `type` configuration
+   * - Moving selection logic to different event handlers
+   * - Modifying isDragging state management
+   * - Changing how enterKeyInterceptor works
+   * - Altering the nested dndzone structure
+   *
+   * This complexity exists because we're forcing the library to support use cases it wasn't
+   * designed for (multi-select + drag, Enter key opening, nested drop zones). The current
+   * implementation works but is inherently fragile.
+   */
+
 const dispatch = createEventDispatcher();
 
     interface Props {
@@ -32,9 +106,22 @@ const dispatch = createEventDispatcher();
     }: Props = $props();
 
 let isDragging = $state(false);
+let lastSelectedItemId = $state<string | null>(null);
 
 function mapDefItems(items: VideoListDefItem[]) {
     return folderItemsToIDs(items.map((it)=>it.obj));
+}
+
+function getItemsInRange(startId: string, endId: string): VideoListDefItem[] {
+    const startIndex = items.findIndex(item => item.id === startId);
+    const endIndex = items.findIndex(item => item.id === endId);
+
+    if (startIndex === -1 || endIndex === -1) return [];
+
+    const minIndex = Math.min(startIndex, endIndex);
+    const maxIndex = Math.max(startIndex, endIndex);
+
+    return items.slice(minIndex, maxIndex + 1);
 }
 
 function handleConsider(e: CustomEvent<DndEvent>) {
@@ -150,16 +237,34 @@ function handleMouseUp(e: MouseEvent, item: VideoListDefItem) {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const isMultiSelectKey = isMac ? e.metaKey : e.ctrlKey;
 
-        if (e.shiftKey || isMultiSelectKey) {
+        if (e.shiftKey && lastSelectedItemId) {
+            // Range selection: select all items between lastSelectedItemId and current item
+            const rangeItems = getItemsInRange(lastSelectedItemId, item.id);
+            for (const rangeItem of rangeItems) {
+                $selectedTiles[rangeItem.id] = rangeItem;
+            }
+            $selectedTiles = {...$selectedTiles};
+            // Don't update lastSelectedItemId for range selection
+        } else if (isMultiSelectKey) {
+            // Toggle individual item
             if (Object.keys($selectedTiles).includes(item.id)) {
                 delete($selectedTiles[item.id]);
             } else {
                 $selectedTiles[item.id] = item;
             }
             $selectedTiles = {...$selectedTiles};
+            lastSelectedItemId = item.id;
         } else {
+            // Single selection
             $selectedTiles = {};
             $selectedTiles[item.id] = item;
+            lastSelectedItemId = item.id;
+
+            // Set keyboard focus to match visual selection
+            const element = document.getElementById(`videolist_item__${item.id}`);
+            if (element) {
+                element.focus();
+            }
         }
     }
 }
@@ -340,6 +445,15 @@ function enterKeyInterceptor(node: HTMLElement) {
 
 :global(.video-list-tile-sqr:hover) {
         filter: brightness(1.2);
+}
+
+:global(.video-list-tile-sqr:focus .video-list-video),
+:global(.video-list-tile-sqr:focus .video-list-folder) {
+    background: rgba(251, 200, 60, 0.8) !important;
+}
+
+:global(.video-list-tile-sqr:focus) {
+    outline: none;
 }
 
 :global([data-selected-items-count]::after) {
