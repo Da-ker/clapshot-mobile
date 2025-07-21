@@ -89,6 +89,8 @@ See the [Sysadmin Guide](doc/sysadmin-guide.md) for information on:
 
 See [Upgrading Guide](doc/upgrading.md) for instructions on installing a new release over an old one.
 
+For help, you can also interrogate [Clapshot Config Helper GPT](https://chatgpt.com/g/g-687debd7cfec8191ad14f604552f0121-clapshot-config-helper) that has technical knowledge of the project and custom instructions to assist.
+
 ## Architecture Overview
 
 Main components:
