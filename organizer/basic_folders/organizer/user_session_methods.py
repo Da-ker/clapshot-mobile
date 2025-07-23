@@ -260,6 +260,78 @@ async def cmd_from_client_impl(oi: organizer.OrganizerInbound, cmd: org.CmdFromC
                             message="This folder is not currently shared",
                             type=clap.UserMessageType.ERROR)))
 
+        elif cmd.cmd == "cleanup_empty_user":
+            # Parse arguments
+            args = parse_json_dict(cmd.args)
+            if not args or not args.get("folder_id"):
+                raise GRPCError(GrpcStatus.INVALID_ARGUMENT, "cleanup_empty_user command missing 'folder_id' argument")
+
+            if not cmd.ses.is_admin:
+                raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Only admin can clean up users")
+
+            folder_id_str = str(args["folder_id"])
+
+            # Check if this is a batch cleanup request (folder_id = '*')
+            if folder_id_str == "*":
+                # Batch cleanup all empty users (excluding the admin user who is performing the action)
+                with oi.db_new_session() as dbs:
+                    from .folder_op_methods import find_and_cleanup_empty_users
+                    cleaned_count = await find_and_cleanup_empty_users(dbs, oi.log, exclude_user_id=cmd.ses.user.id)
+                    dbs.commit()
+
+                # Update UI after transaction commit
+                navi_page = await oi.pages_helper.construct_navi_page(cmd.ses, None)
+                await oi.srv.client_show_page(navi_page)
+
+                # Show result message
+                if cleaned_count > 0:
+                    await try_send_user_message(oi.srv,
+                        org.ClientShowUserMessageRequest(sid=cmd.ses.sid,
+                            msg=clap.UserMessage(
+                                message=f"Cleaned up {cleaned_count} empty user{'s' if cleaned_count != 1 else ''}",
+                                details="Comments from deleted users are preserved but marked as from deleted users.",
+                                type=clap.UserMessageType.OK)))
+                else:
+                    await try_send_user_message(oi.srv,
+                        org.ClientShowUserMessageRequest(sid=cmd.ses.sid,
+                            msg=clap.UserMessage(
+                                message="No empty users found to clean up",
+                                type=clap.UserMessageType.OK)))
+            else:
+                # Single user cleanup (existing logic)
+                folder_id = int(folder_id_str)
+
+                # Find the user who owns this folder
+                with oi.db_new_session() as dbs:
+                    target_folder = dbs.query(DbFolder).filter(DbFolder.id == folder_id).one_or_none()
+                    if not target_folder:
+                        raise GRPCError(GrpcStatus.NOT_FOUND, f"Folder ID '{folder_id}' not found")
+                    
+                    user_id = target_folder.user_id
+                    from .folder_op_methods import _cleanup_empty_user
+                    was_deleted = await _cleanup_empty_user(dbs, user_id, oi.log)
+                    dbs.commit()
+
+                # Update UI after transaction commit
+                navi_page = await oi.pages_helper.construct_navi_page(cmd.ses, None)
+                await oi.srv.client_show_page(navi_page)
+
+                # Show result message
+                if was_deleted:
+                    await try_send_user_message(oi.srv,
+                        org.ClientShowUserMessageRequest(sid=cmd.ses.sid,
+                            msg=clap.UserMessage(
+                                message=f"User '{user_id}' has been cleaned up (deleted)",
+                                details="Comments from this user are preserved but marked as from a deleted user.",
+                                type=clap.UserMessageType.OK)))
+                else:
+                    await try_send_user_message(oi.srv,
+                        org.ClientShowUserMessageRequest(sid=cmd.ses.sid,
+                            msg=clap.UserMessage(
+                                message=f"User '{user_id}' was not deleted",
+                                details="User still has media files or non-empty folders.",
+                                type=clap.UserMessageType.OK)))
+
         else:
             raise GRPCError(GrpcStatus.INVALID_ARGUMENT, f"Unknown organizer command: {cmd.cmd}")
 

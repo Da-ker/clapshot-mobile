@@ -55,6 +55,7 @@ class PagesHelper:
         Admin can also trash all user's content from here.
         """
         pg_items.append(clap.PageItem(html="<h3><strong>ADMIN</strong> – User Folders</h3>"))
+
         pg_items.append(clap.PageItem(html="<p>The following users currently have a home folder and/or media files.<br/>Uploading files or moving items to these folders will transfer ownership to that user.<br/>Trashing a user's home folder will delete everything they have.</p>"))
 
         with self.db_new_session() as dbs:
@@ -81,7 +82,7 @@ class PagesHelper:
                                 fa_class = clap.IconFaClass(classes="fas fa-user", color=clap.Color(r=184, g=160, b=148)),
                                 size = 3.0),
                             base_color = clap.Color(r=160, g=100, b=50)),
-                        popup_actions = ["popup_builtin_trash"],   # don't allow any actions on the virtal folders
+                        popup_actions = ["popup_builtin_trash", "cleanup_empty_user"],
                         open_action = clap.ScriptCall(
                             lang = clap.ScriptCallLang.JAVASCRIPT,
                             code = f'clapshot.callOrganizer("open_folder", {{id: {users_folder.id}}});'),
@@ -96,6 +97,16 @@ class PagesHelper:
                 media_file_added_action = None)
 
             pg_items.append(clap.PageItem(folder_listing=user_folder_listing))
+
+            # Add batch cleanup button
+            pg_items.append(clap.PageItem(html="""
+                <div style="margin-top: 2em;">
+                    <button onclick="if(confirm('This will delete ALL users who have no media files and only empty root folders.\\n\\nComments from deleted users will be preserved but marked as from deleted users.\\n\\nAre you sure?')) { clapshot.callOrganizer('cleanup_empty_user', {folder_id: '*'}); }"
+                            style="background-color: #7f4f26; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                        🗑️ Delete all users without media
+                    </button>
+                </div>
+            """))
 
 
     async def _make_folder_listing(

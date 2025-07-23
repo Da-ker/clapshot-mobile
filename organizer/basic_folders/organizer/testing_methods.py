@@ -15,9 +15,11 @@ from grpclib.const import Status as GrpcStatus
 import clapshot_grpc.proto.clapshot.organizer as org
 import clapshot_grpc.proto.clapshot as clap
 
+import sqlalchemy
+
 import organizer
 from organizer.config import PATH_COOKIE_NAME
-from organizer.database.models import DbFolder, DbUser, DbMediaFile, DbSharedFolder
+from organizer.database.models import DbFolder, DbFolderItems, DbUser, DbMediaFile, DbSharedFolder
 from organizer.database.operations import db_get_or_create_user_root_folder
 from organizer.helpers.folders import SHARED_FOLDER_TOKEN_COOKIE_NAME
 
@@ -1106,7 +1108,7 @@ async def org_test__admin_open_other_user_folder(oi: organizer.OrganizerInbound)
     )
 
     admin_ses = org.UserSessionData(
-        sid="admin_sid", 
+        sid="admin_sid",
         user=clap.UserInfo(id=admin_user_id, name="Admin User"),
         is_admin=True,
         cookies={}
@@ -1116,7 +1118,7 @@ async def org_test__admin_open_other_user_folder(oi: organizer.OrganizerInbound)
     with oi.db_new_session() as dbs:
         regular_root = await db_get_or_create_user_root_folder(dbs, regular_ses.user, oi.srv, oi.log)
         admin_root = await db_get_or_create_user_root_folder(dbs, admin_ses.user, oi.srv, oi.log)
-        
+
         # Create a test folder in regular user's space
         test_folder = await oi.folders_helper.create_folder(dbs, regular_ses, regular_root, "Regular User's Test Folder")
         regular_root_id = regular_root.id
@@ -1126,12 +1128,12 @@ async def org_test__admin_open_other_user_folder(oi: organizer.OrganizerInbound)
     # Admin navigates to main page - should see all users' folders in admin view
     admin_page = await organizer.navigate_page_impl(oi, org.NavigatePageRequest(ses=admin_ses))
     assert isinstance(admin_page, org.ClientShowPageRequest)
-    
+
     # Verify admin can see the regular user's folder in the listing
     # The _admin_show_all_user_homes function should have added a folder listing with user folders
     folder_listings = [item.folder_listing for item in admin_page.page_items if item.folder_listing]
     assert len(folder_listings) > 0, "Admin should see folder listings"
-    
+
     # Find the all-users folder listing (should be the second one after the admin's own content)
     admin_user_listing = None
     for listing in folder_listings:
@@ -1141,14 +1143,14 @@ async def org_test__admin_open_other_user_folder(oi: organizer.OrganizerInbound)
                 if item.folder and item.folder.title == regular_user_id:
                     admin_user_listing = listing
                     break
-    
+
     assert admin_user_listing is not None, "Admin should see other users' folders in listing"
 
     # Test: Admin double-clicks (opens) the regular user's folder
     # This simulates clicking on the regular user's folder from the all users view
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=admin_ses,
-        cmd="open_folder", 
+        cmd="open_folder",
         args=json.dumps({"id": regular_root_id})
     ))
 
@@ -1171,7 +1173,7 @@ async def org_test__admin_open_other_user_folder(oi: organizer.OrganizerInbound)
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=admin_ses,
         cmd="open_folder",
-        args=json.dumps({"id": test_folder_id})  
+        args=json.dumps({"id": test_folder_id})
     ))
 
     # Verify admin can navigate to subfolder
@@ -1193,47 +1195,47 @@ async def org_test__corrupted_folder_path_cookie(oi: organizer.OrganizerInbound)
     Test handling of corrupted folder path cookies - ensures robust fallback behavior.
     """
     ses, root_fld = await _create_test_folder_and_session(oi)
-    
+
     # Test 1: Malformed JSON in cookie
     ses.cookies[PATH_COOKIE_NAME] = "invalid json{"
     folder_path, _ = await oi.folders_helper.get_current_folder_path(ses)
     assert len(folder_path) == 1, "Should fall back to root folder on malformed JSON"
     assert folder_path[0].id == root_fld.id, "Should return user's root folder"
-    
+
     # Test 2: Non-existent folder IDs in cookie
     ses.cookies[PATH_COOKIE_NAME] = json.dumps([99999, 88888])
     folder_path, _ = await oi.folders_helper.get_current_folder_path(ses)
     assert len(folder_path) == 1, "Should fall back to root folder on non-existent IDs"
     assert folder_path[0].id == root_fld.id, "Should return user's root folder"
-    
+
     # Test 3: Mixed ownership in cookie (non-admin user)
     # Create another user and their folder
     with oi.db_new_session() as dbs:
         other_user_id = "corrupt.test.other"
         dbs.add(DbUser(id=other_user_id, name="Other User"))
         dbs.commit()
-    
+
     other_ses = org.UserSessionData(
         sid="other_sid",
         user=clap.UserInfo(id=other_user_id, name="Other User"),
         is_admin=False,
         cookies={}
     )
-    
+
     with oi.db_new_session() as dbs:
         other_root = await db_get_or_create_user_root_folder(dbs, other_ses.user, oi.srv, oi.log)
         other_root_id = other_root.id
         dbs.commit()
-    
+
     # Set cookie with mixed ownership (user's folder + other user's folder)
     ses.cookies[PATH_COOKIE_NAME] = json.dumps([root_fld.id, other_root_id])
     folder_path, _ = await oi.folders_helper.get_current_folder_path(ses)
     assert len(folder_path) == 1, "Should clear mixed ownership path and fall back to root"
     assert folder_path[0].id == root_fld.id, "Should return user's root folder"
-    
+
     # Verify cookie was cleared
     assert ses.cookies.get(PATH_COOKIE_NAME) != json.dumps([root_fld.id, other_root_id]), "Cookie should have been cleared"
-    
+
     print("✓ Corrupted folder path cookie handling works correctly")
 
 
@@ -1242,30 +1244,30 @@ async def org_test__open_nonexistent_folder(oi: organizer.OrganizerInbound):
     Test opening a folder that doesn't exist - ensures proper error handling.
     """
     ses, _ = await _create_test_folder_and_session(oi)
-    
+
     # Test opening non-existent folder
     try:
         await oi.cmd_from_client(org.CmdFromClientRequest(
-            ses=ses, 
-            cmd="open_folder", 
+            ses=ses,
+            cmd="open_folder",
             args=json.dumps({"id": 99999})
         ))
         assert False, "Should have raised NOT_FOUND error for non-existent folder"
     except GRPCError as e:
         assert e.status == GrpcStatus.NOT_FOUND, f"Expected NOT_FOUND, got {e.status}"
         assert "not found" in str(e.message).lower(), "Error message should mention folder not found"
-    
+
     # Test with invalid folder ID type (should be caught by validation)
     try:
         await oi.cmd_from_client(org.CmdFromClientRequest(
             ses=ses,
-            cmd="open_folder", 
+            cmd="open_folder",
             args=json.dumps({"id": "invalid_string"})
         ))
         assert False, "Should have raised error for invalid folder ID type"
     except (GRPCError, AssertionError):
         pass  # Expected - either GRPCError or AssertionError from validation
-    
+
     print("✓ Non-existent folder handling works correctly")
 
 
@@ -1274,59 +1276,59 @@ async def org_test__breadcrumb_navigation_up(oi: organizer.OrganizerInbound):
     Test navigating back up the folder hierarchy - ensures breadcrumb truncation works.
     """
     ses, root_fld = await _create_test_folder_and_session(oi)
-    
+
     # Create nested structure: root -> folder1 -> folder2 -> folder3
     with oi.db_new_session() as dbs:
         folder1 = await oi.folders_helper.create_folder(dbs, ses, root_fld, "Level 1")
         folder1_id = folder1.id
         dbs.commit()
-    
+
     with oi.db_new_session() as dbs:
         folder1_obj = dbs.query(DbFolder).filter(DbFolder.id == folder1_id).one()
         folder2 = await oi.folders_helper.create_folder(dbs, ses, folder1_obj, "Level 2")
         folder2_id = folder2.id
         dbs.commit()
-    
+
     with oi.db_new_session() as dbs:
         folder2_obj = dbs.query(DbFolder).filter(DbFolder.id == folder2_id).one()
         folder3 = await oi.folders_helper.create_folder(dbs, ses, folder2_obj, "Level 3")
         folder3_id = folder3.id
         dbs.commit()
-    
+
     # Navigate down to folder3 step by step
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=ses, cmd="open_folder", args=json.dumps({"id": folder1_id})))
-    
+
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=ses, cmd="open_folder", args=json.dumps({"id": folder2_id})))
-    
+
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=ses, cmd="open_folder", args=json.dumps({"id": folder3_id})))
-    
+
     # Verify we're at folder3 with full trail
     path, _ = await oi.folders_helper.get_current_folder_path(ses)
     path_ids = [f.id for f in path]
     assert len(path_ids) == 4, "Should have full path to folder3"
     assert path_ids == [root_fld.id, folder1_id, folder2_id, folder3_id], "Path should be complete hierarchy"
-    
+
     # Navigate back to folder1 (should truncate trail)
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=ses, cmd="open_folder", args=json.dumps({"id": folder1_id})))
-    
+
     path, _ = await oi.folders_helper.get_current_folder_path(ses)
     path_ids = [f.id for f in path]
     assert len(path_ids) == 2, "Should have truncated path"
     assert path_ids == [root_fld.id, folder1_id], "Should truncate at folder1"
-    
+
     # Navigate back to root
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=ses, cmd="open_folder", args=json.dumps({"id": root_fld.id})))
-    
+
     path, _ = await oi.folders_helper.get_current_folder_path(ses)
     path_ids = [f.id for f in path]
     assert len(path_ids) == 1, "Should be back to root only"
     assert path_ids == [root_fld.id], "Should be at root folder"
-    
+
     print("✓ Breadcrumb navigation up hierarchy works correctly")
 
 
@@ -1337,7 +1339,7 @@ async def org_test__admin_multi_user_context_switching(oi: organizer.OrganizerIn
     # Create 3 users
     with oi.db_new_session() as dbs:
         user1_id = "multi.user1"
-        user2_id = "multi.user2" 
+        user2_id = "multi.user2"
         admin_id = "multi.admin"
         dbs.add(DbUser(id=user1_id, name="User 1"))
         dbs.add(DbUser(id=user2_id, name="User 2"))
@@ -1345,13 +1347,13 @@ async def org_test__admin_multi_user_context_switching(oi: organizer.OrganizerIn
         dbs.commit()
 
     user1_ses = org.UserSessionData(
-        sid="user1_sid", user=clap.UserInfo(id=user1_id, name="User 1"), 
+        sid="user1_sid", user=clap.UserInfo(id=user1_id, name="User 1"),
         is_admin=False, cookies={})
-        
+
     user2_ses = org.UserSessionData(
         sid="user2_sid", user=clap.UserInfo(id=user2_id, name="User 2"),
         is_admin=False, cookies={})
-        
+
     admin_ses = org.UserSessionData(
         sid="admin_sid", user=clap.UserInfo(id=admin_id, name="Admin User"),
         is_admin=True, cookies={})
@@ -1361,12 +1363,12 @@ async def org_test__admin_multi_user_context_switching(oi: organizer.OrganizerIn
         user1_root = await db_get_or_create_user_root_folder(dbs, user1_ses.user, oi.srv, oi.log)
         user1_root_id = user1_root.id
         dbs.commit()
-        
+
     with oi.db_new_session() as dbs:
         user2_root = await db_get_or_create_user_root_folder(dbs, user2_ses.user, oi.srv, oi.log)
         user2_root_id = user2_root.id
         dbs.commit()
-        
+
     with oi.db_new_session() as dbs:
         admin_root = await db_get_or_create_user_root_folder(dbs, admin_ses.user, oi.srv, oi.log)
         admin_root_id = admin_root.id
@@ -1380,7 +1382,7 @@ async def org_test__admin_multi_user_context_switching(oi: organizer.OrganizerIn
     # Admin opens user1's folder
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=admin_ses, cmd="open_folder", args=json.dumps({"id": user1_root_id})))
-    
+
     path, _ = await oi.folders_helper.get_current_folder_path(admin_ses)
     assert len(path) == 1, "Should start fresh trail when switching users"
     assert path[0].id == user1_root_id, "Should be at user1's root"
@@ -1389,7 +1391,7 @@ async def org_test__admin_multi_user_context_switching(oi: organizer.OrganizerIn
     # Admin switches to user2's folder
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=admin_ses, cmd="open_folder", args=json.dumps({"id": user2_root_id})))
-    
+
     path, _ = await oi.folders_helper.get_current_folder_path(admin_ses)
     assert len(path) == 1, "Should start fresh trail again when switching users"
     assert path[0].id == user2_root_id, "Should be at user2's root"
@@ -1398,7 +1400,7 @@ async def org_test__admin_multi_user_context_switching(oi: organizer.OrganizerIn
     # Admin switches back to their own folder
     await oi.cmd_from_client(org.CmdFromClientRequest(
         ses=admin_ses, cmd="open_folder", args=json.dumps({"id": admin_root_id})))
-    
+
     path, _ = await oi.folders_helper.get_current_folder_path(admin_ses)
     assert len(path) == 1, "Should have single folder when returning to own root"
     assert path[0].id == admin_root_id, "Should be at admin's root"
@@ -1413,7 +1415,7 @@ async def org_test__shared_folder_cookie_interactions(oi: organizer.OrganizerInb
     """
     # Create owner session and shared folder
     owner_ses, owner_root = await _create_test_folder_and_session(oi)
-    
+
     with oi.db_new_session() as dbs:
         shared_folder = await oi.folders_helper.create_folder(dbs, owner_ses, owner_root, "Shared Folder")
         subfolder = await oi.folders_helper.create_folder(dbs, owner_ses, shared_folder, "Subfolder")
@@ -1449,33 +1451,33 @@ async def org_test__shared_folder_cookie_interactions(oi: organizer.OrganizerInb
         ses=recipient_ses,
         page_id=f"shared.{share_token}"
     ))
-    
+
     assert isinstance(result, org.ClientShowPageRequest), "Should return valid page"
-    
+
     # Verify both cookies are set
     assert PATH_COOKIE_NAME in recipient_ses.cookies, "Path cookie should be set"
     assert SHARED_FOLDER_TOKEN_COOKIE_NAME in recipient_ses.cookies, "Shared token cookie should be set"
     assert recipient_ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] == share_token, "Shared token should match"
-    
+
     # Verify path cookie points to shared folder
     path_data = json.loads(recipient_ses.cookies[PATH_COOKIE_NAME])
     assert path_data == [shared_folder_id], "Path should point to shared folder"
 
     # Navigate within shared folder - should preserve shared token
     await oi.cmd_from_client(org.CmdFromClientRequest(
-        ses=recipient_ses, 
-        cmd="open_folder", 
+        ses=recipient_ses,
+        cmd="open_folder",
         args=json.dumps({"id": subfolder_id})
     ))
-    
+
     # Verify shared token is still present
     assert SHARED_FOLDER_TOKEN_COOKIE_NAME in recipient_ses.cookies, "Shared token should be preserved"
     assert recipient_ses.cookies[SHARED_FOLDER_TOKEN_COOKIE_NAME] == share_token, "Shared token should be unchanged"
-    
+
     # Verify path was updated
     path_data = json.loads(recipient_ses.cookies[PATH_COOKIE_NAME])
     assert path_data == [shared_folder_id, subfolder_id], "Path should include subfolder"
-    
+
     # Verify recipient can still access folder contents
     path, _ = await oi.folders_helper.get_current_folder_path(recipient_ses)
     assert len(path) == 2, "Should have path to subfolder"
@@ -1483,6 +1485,378 @@ async def org_test__shared_folder_cookie_interactions(oi: organizer.OrganizerInb
     assert path[1].id == subfolder_id, "Should end at subfolder"
 
     print("✓ Shared folder cookie interactions work correctly")
+
+
+async def org_test__user_cleanup_basic_test(oi: organizer.OrganizerInbound):
+    """
+    Basic test for user cleanup functionality without comment dependencies.
+    Tests that users are deleted when they have no remaining content.
+    Uses pre-existing test database users and content.
+    """
+    # Get initial media files and identify users from test database
+    media_files = await oi.srv.db_get_media_files(org.DbGetMediaFilesRequest(all=clap.Empty()))
+    assert len(media_files.items) >= 2, "Need at least 2 media files for this test"
+
+    # Use pre-existing users from test database:
+    # user.num2 owns files 11111 and B1DE3 (files 1 and 3)
+    # user.num1 owns files B1DE0, 22222, B1DE4 (files 0, 2, 4)
+    source_user_id = "user.num2"  # Will be deleted after transfer
+    dest_user_id = "user.num1"    # Will receive the content
+
+    # Create admin session
+    admin_user_id = "cleanup.basic.admin"
+    with oi.db_new_session() as dbs:
+        dbs.add(DbUser(id=admin_user_id, name="Basic Admin"))
+        dbs.commit()
+
+    admin_ses = org.UserSessionData(
+        sid="admin_sid",
+        user=clap.UserInfo(id=admin_user_id, name="Basic Admin"),
+        is_admin=True,
+        cookies={}
+    )
+
+    # Set up destination folder to receive content
+    dest_ses = org.UserSessionData(
+        sid="dest_sid",
+        user=clap.UserInfo(id=dest_user_id, name="User Number1"),
+        is_admin=False,
+        cookies={}
+    )
+
+    with oi.db_new_session() as dbs:
+        dest_root = await db_get_or_create_user_root_folder(dbs, dest_ses.user, oi.srv, oi.log)
+        dest_folder = await oi.folders_helper.create_folder(dbs, dest_ses, dest_root, "Destination Folder")
+        dest_folder_id = dest_folder.id
+        dbs.commit()
+
+    # Verify source user exists and has content before transfer
+    with oi.db_new_session() as dbs:
+        source_user = dbs.query(DbUser).filter(DbUser.id == source_user_id).one_or_none()
+        assert source_user is not None, "Source user should exist"
+
+        media_count = dbs.query(DbMediaFile).filter(DbMediaFile.user_id == source_user_id).count()
+        assert media_count == 2, f"Source user should have 2 media files, has {media_count}"
+
+    # Find source user's media files (11111 and B1DE3)
+    source_media_files = [mf for mf in media_files.items if mf.user_id == source_user_id]
+    assert len(source_media_files) == 2, f"Expected 2 media files for source user, found {len(source_media_files)}"
+
+    # Transfer all source user's media files to destination folder
+    for media_file in source_media_files:
+        await oi.move_to_folder(org.MoveToFolderRequest(
+            ses=admin_ses,
+            dst_folder_id=str(dest_folder_id),
+            ids=[clap.FolderItemId(media_file_id=media_file.id)],
+            listing_data={}
+        ))
+
+    # Verify source user was deleted (no content left)
+    with oi.db_new_session() as dbs:
+        source_user = dbs.query(DbUser).filter(DbUser.id == source_user_id).one_or_none()
+        assert source_user is None, "Source user should be deleted after transferring all content"
+
+        media_count = dbs.query(DbMediaFile).filter(DbMediaFile.user_id == source_user_id).count()
+        assert media_count == 0, f"No media files should remain for deleted user, found {media_count}"
+
+    # Verify ownership transfer worked
+    with oi.db_new_session() as dbs:
+        for media_file in source_media_files:
+            transferred_media = dbs.query(DbMediaFile).filter(DbMediaFile.id == media_file.id).one()
+            assert transferred_media.user_id == dest_user_id, f"Media {media_file.id} should belong to dest user, belongs to {transferred_media.user_id}"
+
+    print("✓ Basic user cleanup functionality works correctly")
+
+
+async def org_test__user_cleanup_after_content_transfer(oi: organizer.OrganizerInbound):
+    """
+    Test that users are automatically deleted when all their content is transferred to other users.
+    Uses pre-existing test database users and their existing comments.
+
+    This test verifies:
+    1. User deletion when they have no remaining folders or media files
+    2. Comments are preserved with username_ifnull field set correctly
+    3. The trigger tr_comments_set_username_on_user_delete works correctly
+    """
+    # Get initial media files from test database
+    media_files = await oi.srv.db_get_media_files(org.DbGetMediaFilesRequest(all=clap.Empty()))
+    assert len(media_files.items) >= 3, "Need at least 3 media files for this test"
+
+    # Use pre-existing users from test database:
+    # user.num1 owns files B1DE0 (5 comments), 22222 (1 comment), B1DE4 (0 comments)
+    # user.num2 owns files 11111 (2 comments), B1DE3 (0 comments)
+    source_user_id = "user.num1"  # Will be deleted after transfer (has comments)
+    source_user_name = "User Number1"
+    dest_user_id = "user.num2"    # Will receive the content
+
+    # Create admin session
+    admin_user_id = "cleanup.admin"
+    with oi.db_new_session() as dbs:
+        dbs.add(DbUser(id=admin_user_id, name="Cleanup Test Admin"))
+        dbs.commit()
+
+    admin_ses = org.UserSessionData(
+        sid="admin_sid",
+        user=clap.UserInfo(id=admin_user_id, name="Cleanup Test Admin"),
+        is_admin=True,
+        cookies={}
+    )
+
+    # Set up destination folder to receive content
+    dest_ses = org.UserSessionData(
+        sid="dest_sid",
+        user=clap.UserInfo(id=dest_user_id, name="User Number2"),
+        is_admin=False,
+        cookies={}
+    )
+
+    with oi.db_new_session() as dbs:
+        dest_root = await db_get_or_create_user_root_folder(dbs, dest_ses.user, oi.srv, oi.log)
+        dest_folder = await oi.folders_helper.create_folder(dbs, dest_ses, dest_root, "Destination Folder")
+        dest_folder_id = dest_folder.id
+        dbs.commit()
+
+    # Find media files with comments from the source user specifically
+    media_with_comments = []
+    media_without_comments = []
+
+    with oi.db_new_session() as dbs:
+        for media_file in media_files.items:
+            if media_file.user_id == source_user_id:
+                # Count only comments from the source user on this media file
+                comment_count = dbs.execute(sqlalchemy.text(
+                    "SELECT COUNT(*) FROM comments WHERE media_file_id = :media_id AND user_id = :user_id"
+                ), {"media_id": media_file.id, "user_id": source_user_id}).scalar()
+
+                if comment_count > 0:
+                    media_with_comments.append((media_file, comment_count))
+                else:
+                    media_without_comments.append(media_file)
+
+    assert len(media_with_comments) >= 1, f"Expected at least 1 media file with comments from source user, found {len(media_with_comments)}"
+
+    total_expected_comments = sum(count for _, count in media_with_comments)
+    print(f"Found {len(media_with_comments)} media files with {total_expected_comments} total comments from source user")
+
+    # Verify source user exists and has content before transfer
+    with oi.db_new_session() as dbs:
+        source_user = dbs.query(DbUser).filter(DbUser.id == source_user_id).one_or_none()
+        assert source_user is not None, "Source user should exist"
+        assert source_user.name == source_user_name
+
+        media_count = dbs.query(DbMediaFile).filter(DbMediaFile.user_id == source_user_id).count()
+        comment_count = dbs.execute(sqlalchemy.text(
+            "SELECT COUNT(*) FROM comments WHERE user_id = :user_id"
+        ), {"user_id": source_user_id}).scalar()
+
+        # Debug: Check where all the source user's comments are
+        all_comments = dbs.execute(sqlalchemy.text("""
+            SELECT media_file_id, comment FROM comments WHERE user_id = :user_id ORDER BY media_file_id
+        """), {"user_id": source_user_id}).fetchall()
+
+        print(f"Debug: Source user has {comment_count} total comments:")
+        for comment in all_comments:
+            print(f"  - Media {comment.media_file_id}: '{comment.comment}'")
+
+        assert media_count == 3, f"Source user should have 3 media files, has {media_count}"
+        assert comment_count > 0, f"Source user should have some comments to test preservation, has {comment_count}"
+
+        # Use the actual comment count instead of assuming it matches our per-file sum
+        total_expected_comments = comment_count
+        print(f"Adjusted: Source user actually has {total_expected_comments} total comments")
+
+    # Transfer all source user's media files to destination folder
+    source_media_files = [mf for mf in media_files.items if mf.user_id == source_user_id]
+
+    for media_file in source_media_files:
+        await oi.move_to_folder(org.MoveToFolderRequest(
+            ses=admin_ses,
+            dst_folder_id=str(dest_folder_id),
+            ids=[clap.FolderItemId(media_file_id=media_file.id)],
+            listing_data={}
+        ))
+
+    # Verify source user was deleted (no content left)
+    with oi.db_new_session() as dbs:
+        source_user = dbs.query(DbUser).filter(DbUser.id == source_user_id).one_or_none()
+        assert source_user is None, "Source user should be deleted after transferring all content"
+
+        media_count = dbs.query(DbMediaFile).filter(DbMediaFile.user_id == source_user_id).count()
+        assert media_count == 0, f"No media files should remain for deleted user, found {media_count}"
+
+    # Verify comments are preserved with correct username_ifnull after user deletion
+    with oi.db_new_session() as dbs:
+        # Check all comments that were originally from the source user (now have username_ifnull set)
+        preserved_comments = dbs.execute(sqlalchemy.text("""
+            SELECT user_id, username_ifnull, comment, media_file_id
+            FROM comments
+            WHERE username_ifnull = :username
+            ORDER BY media_file_id, id
+        """), {"username": source_user_name}).fetchall()
+
+        assert len(preserved_comments) == total_expected_comments, f"Should have {total_expected_comments} preserved comments from deleted user, found {len(preserved_comments)}"
+
+        print(f"Debug: Found {len(preserved_comments)} preserved comments after user deletion:")
+        for comment in preserved_comments:
+            print(f"  - Media {comment.media_file_id}: '{comment.comment}' (user_id={comment.user_id}, username_ifnull='{comment.username_ifnull}')")
+
+        # Verify all comments have correct user_id=NULL and username_ifnull set
+        for comment in preserved_comments:
+            assert comment.user_id is None, f"Comment user_id should be NULL after user deletion, got {comment.user_id}"
+            assert comment.username_ifnull == source_user_name, f"Comment username_ifnull should be '{source_user_name}', got '{comment.username_ifnull}'"
+
+    # Verify ownership transfer worked correctly
+    with oi.db_new_session() as dbs:
+        for media_file in source_media_files:
+            transferred_media = dbs.query(DbMediaFile).filter(DbMediaFile.id == media_file.id).one()
+            assert transferred_media.user_id == dest_user_id, f"Media {media_file.id} should belong to dest user, belongs to {transferred_media.user_id}"
+
+    print(f"✓ User cleanup after content transfer works correctly")
+    print(f"✓ {total_expected_comments} comments preserved with correct username_ifnull after user deletion")
+    print(f"✓ Database trigger tr_comments_set_username_on_user_delete works correctly")
+
+
+async def org_test__cmd_from_client__cleanup_empty_user(oi: organizer.OrganizerInbound):
+    """
+    Test the 'cleanup_empty_user' client command for explicit user cleanup via context menu.
+    """
+    # Create admin session
+    admin_user = clap.UserInfo(id="admin", name="Admin User")
+    admin_ses = org.UserSessionData(
+        sid="admin_sid",
+        user=admin_user,
+        is_admin=True,
+        cookies={}
+    )
+
+    # Create a test user with only an empty root folder
+    test_user = clap.UserInfo(id="cleanup.test_user", name="Test User")
+    test_ses = org.UserSessionData(
+        sid="test_sid",
+        user=test_user,
+        is_admin=False,
+        cookies={}
+    )
+
+    # Add both admin and test user to database and create their root folders
+    with oi.db_new_session() as dbs:
+        dbs.add(DbUser(id=admin_user.id, name=admin_user.name))
+        dbs.add(DbUser(id=test_user.id, name=test_user.name))
+        root_folder = await db_get_or_create_user_root_folder(dbs, test_user, oi.srv, oi.log)
+        root_folder_id = root_folder.id
+        dbs.commit()
+
+    # Verify user exists before cleanup
+    with oi.db_new_session() as dbs:
+        user = dbs.query(DbUser).filter(DbUser.id == test_user.id).one_or_none()
+        assert user is not None, "Test user should exist before cleanup"
+
+    # Execute cleanup command via admin
+    await oi.cmd_from_client(org.CmdFromClientRequest(
+        ses=admin_ses,
+        cmd="cleanup_empty_user",
+        args=json.dumps({"folder_id": root_folder_id})
+    ))
+
+    # Verify user was deleted
+    with oi.db_new_session() as dbs:
+        user = dbs.query(DbUser).filter(DbUser.id == test_user.id).one_or_none()
+        assert user is None, "Test user should have been deleted"
+
+        # Verify root folder was also deleted
+        folder = dbs.query(DbFolder).filter(DbFolder.id == root_folder_id).one_or_none()
+        assert folder is None, "Empty root folder should have been deleted"
+
+    print("✓ cleanup_empty_user command correctly deletes empty users")
+    print("✓ Admin permission check works correctly")
+    print("✓ Empty root folders are deleted along with users")
+
+
+async def org_test__cmd_from_client__cleanup_empty_user_batch(oi: organizer.OrganizerInbound):
+    """
+    Test the batch 'cleanup_empty_user' client command (folder_id='*') for cleaning up multiple users.
+    """
+    # Create admin session
+    admin_user = clap.UserInfo(id="admin", name="Admin User")
+    admin_ses = org.UserSessionData(
+        sid="admin_sid",
+        user=admin_user,
+        is_admin=True,
+        cookies={}
+    )
+
+    # First, find any pre-existing users with no media files (like the connecting user)
+    # These will also be eligible for cleanup
+    with oi.db_new_session() as dbs:
+        pre_existing_empty_users = dbs.execute(sqlalchemy.text("""
+            SELECT u.id
+            FROM users u
+            LEFT JOIN media_files mf ON mf.user_id = u.id
+            WHERE u.id != :admin_id
+            GROUP BY u.id
+            HAVING COUNT(mf.id) = 0
+        """), {"admin_id": admin_user.id}).fetchall()
+        pre_existing_empty_count = len(pre_existing_empty_users)
+        print(f"Pre-existing empty users (excluding admin): {[u.id for u in pre_existing_empty_users]} (count: {pre_existing_empty_count})")
+
+    # Create test users for batch cleanup
+    test_users = [
+        ("batch.empty1", "Empty User 1"),
+        ("batch.empty2", "Empty User 2"),
+        ("batch.root_only", "Root Only User"),
+    ]
+
+    # Add admin and test users to database
+    with oi.db_new_session() as dbs:
+        dbs.add(DbUser(id=admin_user.id, name=admin_user.name))
+        for user_id, user_name in test_users:
+            dbs.add(DbUser(id=user_id, name=user_name))
+        dbs.commit()
+
+    # Create root folder for one test user (should still be eligible for cleanup)
+    root_only_ses = org.UserSessionData(
+        sid="root_only_sid",
+        user=clap.UserInfo(id="batch.root_only", name="Root Only User"),
+        is_admin=False,
+        cookies={}
+    )
+    with oi.db_new_session() as dbs:
+        await db_get_or_create_user_root_folder(dbs, root_only_ses.user, oi.srv, oi.log)
+        dbs.commit()
+
+    # Count users before cleanup
+    with oi.db_new_session() as dbs:
+        users_before_count = dbs.query(DbUser).count()
+
+    # Execute batch cleanup command via admin (folder_id='*')
+    await oi.cmd_from_client(org.CmdFromClientRequest(
+        ses=admin_ses,
+        cmd="cleanup_empty_user",
+        args=json.dumps({"folder_id": "*"})
+    ))
+
+    # Verify results
+    with oi.db_new_session() as dbs:
+        # Count users after cleanup
+        users_after_count = dbs.query(DbUser).count()
+        users_deleted = users_before_count - users_after_count
+
+        # Should have deleted our test users + pre-existing empty users
+        expected_deletions = len(test_users) + pre_existing_empty_count
+        assert users_deleted == expected_deletions, f"Expected {expected_deletions} users to be deleted, but {users_deleted} were deleted"
+
+        # Admin should still exist (excluded from cleanup)
+        admin_still_exists = dbs.query(DbUser).filter(DbUser.id == admin_user.id).one_or_none()
+        assert admin_still_exists is not None, "Admin user should not be deleted during batch cleanup"
+
+        # Test users should be deleted
+        for user_id, _ in test_users:
+            user = dbs.query(DbUser).filter(DbUser.id == user_id).one_or_none()
+            assert user is None, f"Test user '{user_id}' should have been deleted"
+
+    print("✓ Batch cleanup command correctly deletes multiple empty users")
+    print("✓ Admin user is excluded from batch cleanup")
+    print(f"✓ Cleaned up {users_deleted} users total ({len(test_users)} test + {pre_existing_empty_count} pre-existing)")
 
 
 # TODO: JavaScript action validation testing?

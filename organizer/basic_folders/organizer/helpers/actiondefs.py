@@ -16,6 +16,7 @@ class ActiondefsHelper:
             "share_folder": self.make_share_folder_action(),
             "copy_shared_link": self.make_copy_shared_link_action(),
             "revoke_share": self.make_revoke_share_action(),
+            "cleanup_empty_user": self.make_cleanup_empty_user_action(),
         }
 
     def make_new_folder_action(self) -> clap.ActionDef:
@@ -143,5 +144,26 @@ class ActiondefsHelper:
                         });
                     } else {
                         prompt('Copy this shared link:', shareUrl);
+                    }
+                """).strip()))
+
+    def make_cleanup_empty_user_action(self) -> clap.ActionDef:
+        return clap.ActionDef(
+            ui_props=clap.ActionUiProps(
+                label="Del user",
+                icon=clap.Icon(fa_class=clap.IconFaClass(classes="fa fa-user-minus", color=clap.Color(r=220, g=38, b=38))),
+                key_shortcut=None,
+                natural_desc="Delete user if they have no content (only empty root folder)"),
+            action=clap.ScriptCall(
+                lang=clap.ScriptCallLang.JAVASCRIPT,
+                code=dedent("""
+                    var folder = _action_args.selected_items?.[0]?.folder;
+                    var folderId = folder?.id || null;
+                    if (!folderId) {
+                        alert("No user folder selected for cleanup");
+                        return;
+                    }
+                    if (confirm("This will delete the user if they have no media files and only an empty root folder.\\n\\nComments from this user will be preserved but marked as from a deleted user.\\n\\nAre you sure?")) {
+                        clapshot.callOrganizer("cleanup_empty_user", {folder_id: folderId});
                     }
                 """).strip()))

@@ -10,7 +10,7 @@ import clapshot_grpc.proto.clapshot.organizer as org
 
 import sqlalchemy
 from sqlalchemy import orm
-from .database.models import DbFolder, DbFolderItems,DbMediaFile
+from .database.models import DbFolder, DbFolderItems, DbMediaFile, DbUser
 
 import organizer
 
@@ -34,6 +34,9 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
     if dst_folder.user_id != req.ses.user.id and not req.ses.is_admin:
         raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot move items to another user's folder")
 
+    # Track source users for potential cleanup after successful moves
+    source_users_to_check = set()
+
     for it in req.ids:
         with oi.db_new_session() as dbs:
             # Move a folder
@@ -46,6 +49,10 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
                     raise GRPCError(GrpcStatus.INVALID_ARGUMENT, "Cannot move a folder into itself")
                 if fld_to_move.user_id != req.ses.user.id and not req.ses.is_admin:
                     raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot move another user's folder")
+
+                # Track source user for potential cleanup if ownership changes
+                if fld_to_move.user_id != dst_folder.user_id:
+                    source_users_to_check.add(fld_to_move.user_id)
 
                 with dbs.begin_nested():
                     cnt = dbs.query(DbFolderItems).filter(DbFolderItems.subfolder_id == fld_to_move.id).update({"folder_id": dst_folder.id, "sort_order": min_sort_order-1})
@@ -66,6 +73,10 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
                 if vid_to_move.user_id != req.ses.user.id and not req.ses.is_admin:
                     raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot move another user's media file")
 
+                # Track source user for potential cleanup if ownership changes
+                if vid_to_move.user_id != dst_folder.user_id:
+                    source_users_to_check.add(vid_to_move.user_id)
+
                 with dbs.begin_nested():
                     vid_to_move.user_id = dst_folder.user_id  # transfer ownership
                     cnt = dbs.query(DbFolderItems).filter(DbFolderItems.media_file_id == vid_to_move.id).update({"folder_id": dst_folder.id, "sort_order": min_sort_order-1})
@@ -73,6 +84,12 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
                         dbs.add(DbFolderItems(folder_id=dst_folder.id, media_file_id=vid_to_move.id, sort_order=min_sort_order-1))
                     else:
                         oi.log.debug(f"Moved media file '{vid_to_move.id}' to folder '{dst_folder.id}'")
+
+    # Cleanup users who no longer have any content after the moves
+    for user_id in source_users_to_check:
+        with oi.db_new_session() as dbs:
+            await _cleanup_empty_user(dbs, user_id, oi.log)
+            dbs.commit()
 
     # Update page to view the opened folder (after transaction commit!)
     page = await oi.pages_helper.construct_navi_page(req.ses, None)
@@ -106,6 +123,134 @@ async def _recursive_set_folder_owner(dbs: orm.Session, folder_id: int, new_owne
         log.debug(f"Recursing to subfolder '{subi[0]}'")
         await _recursive_set_folder_owner(dbs, subi[0], new_owner_id, seen, log)
 
+
+async def _cleanup_empty_user(dbs: orm.Session, user_id: str, log: Logger) -> bool:
+    """
+    Check if a user has any remaining content and delete them if they don't.
+    
+    A user can be safely deleted if they have:
+    - No media files
+    - Only an empty root folder (or no folders at all)
+    
+    If the user only has an empty root folder, we delete it first, then delete the user.
+    Comments are preserved even after user deletion via the trigger 
+    tr_comments_set_username_on_user_delete which sets username_ifnull.
+    
+    Returns True if user was deleted, False if they still have content.
+    """
+    # Check if user has any media files
+    media_count = dbs.query(DbMediaFile).filter(DbMediaFile.user_id == user_id).count()
+    if media_count > 0:
+        log.debug(f"User '{user_id}' still has {media_count} media files, not deleting")
+        return False
+    
+    # Check folders - we need to be smart about root folders
+    user_folders = dbs.query(DbFolder).filter(DbFolder.user_id == user_id).all()
+    if not user_folders:
+        # No folders at all, safe to delete user
+        log.debug(f"User '{user_id}' has no folders")
+    elif len(user_folders) == 1:
+        # User has exactly one folder - check if it's an empty root folder
+        folder = user_folders[0]
+        
+        # Check if this folder contains any items
+        item_count = dbs.query(DbFolderItems).filter(DbFolderItems.folder_id == folder.id).count()
+        if item_count > 0:
+            log.debug(f"User '{user_id}' has a folder with {item_count} items, not deleting")
+            return False
+        
+        # Check if this folder is a root folder (not contained in any other folder)
+        is_root = dbs.query(DbFolderItems).filter(DbFolderItems.subfolder_id == folder.id).count() == 0
+        if is_root:
+            # This is an empty root folder, delete it first
+            log.debug(f"User '{user_id}' has only an empty root folder, deleting it")
+            dbs.query(DbFolder).filter(DbFolder.id == folder.id).delete()
+        else:
+            # This is a non-root folder, user still has content
+            log.debug(f"User '{user_id}' has a non-root folder, not deleting")
+            return False
+    else:
+        # User has multiple folders, they still have content
+        log.debug(f"User '{user_id}' still has {len(user_folders)} folders, not deleting")
+        return False
+    
+    # User has no content (or only had an empty root folder which we just deleted), safe to delete
+    # The database trigger will handle updating comments.username_ifnull
+    deleted_count = dbs.query(DbUser).filter(DbUser.id == user_id).delete()
+    if deleted_count > 0:
+        log.info(f"Deleted user '{user_id}' - no remaining content")
+        return True
+    else:
+        log.warning(f"User '{user_id}' not found in database when attempting cleanup")
+        return False
+
+
+async def find_and_cleanup_empty_users(dbs: orm.Session, log: Logger, exclude_user_id: Optional[str] = None) -> int:
+    """
+    Find and clean up users who have no media files and at most one empty folder.
+    
+    This is an efficient batch operation that identifies cleanup candidates with a single query
+    and then processes them. Used for manual batch cleanup operations.
+    
+    Returns the number of users that were cleaned up.
+    """
+    # Find users who have no media files and at most one folder
+    # This is much more efficient than checking each user individually
+    cleanup_candidates = dbs.execute(sqlalchemy.text("""
+        SELECT u.id, u.name,
+               COUNT(DISTINCT mf.id) as media_count,
+               COUNT(DISTINCT f.id) as folder_count,
+               MAX(f.id) as single_folder_id,
+               u.created
+        FROM users u
+        LEFT JOIN media_files mf ON mf.user_id = u.id
+        LEFT JOIN bf_folders f ON f.user_id = u.id
+        WHERE u.id != COALESCE(:exclude_user_id, '')
+        GROUP BY u.id, u.name, u.created
+        HAVING COUNT(DISTINCT mf.id) = 0 
+           AND COUNT(DISTINCT f.id) <= 1
+    """), {"exclude_user_id": exclude_user_id}).fetchall()
+    
+    if not cleanup_candidates:
+        log.debug("No empty users found for cleanup")
+        return 0
+    
+    cleaned_count = 0
+    for candidate in cleanup_candidates:
+        user_id = candidate.id
+        folder_count = candidate.folder_count
+        single_folder_id = candidate.single_folder_id
+        
+        # If user has exactly one folder, check if it's empty and a root folder
+        if folder_count == 1:
+            # Check if the folder contains any items
+            item_count = dbs.query(DbFolderItems).filter(DbFolderItems.folder_id == single_folder_id).count()
+            if item_count > 0:
+                log.debug(f"User '{user_id}' has a folder with {item_count} items, not cleaning up")
+                continue
+            
+            # Check if this folder is a root folder (not contained in any other folder)
+            is_root = dbs.query(DbFolderItems).filter(DbFolderItems.subfolder_id == single_folder_id).count() == 0
+            if not is_root:
+                log.debug(f"User '{user_id}' has a non-root folder, not cleaning up")
+                continue
+            
+            # Delete the empty root folder first
+            log.debug(f"Deleting empty root folder {single_folder_id} for user '{user_id}'")
+            dbs.query(DbFolder).filter(DbFolder.id == single_folder_id).delete()
+        
+        # Delete the user (comments will be preserved via database trigger)
+        deleted_count = dbs.query(DbUser).filter(DbUser.id == user_id).delete()
+        if deleted_count > 0:
+            log.info(f"Cleaned up empty user '{user_id}' (had {folder_count} folders, 0 media files)")
+            cleaned_count += 1
+        else:
+            log.warning(f"User '{user_id}' not found when attempting cleanup")
+    
+    if cleaned_count > 0:
+        log.info(f"Cleaned up {cleaned_count} empty users")
+    
+    return cleaned_count
 
 
 async def reorder_items_impl(oi: organizer.OrganizerInbound, req: org.ReorderItemsRequest) -> clap.Empty:
