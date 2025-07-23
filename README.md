@@ -49,6 +49,8 @@ After the Docker image starts, access the web UI at `http://127.0.0.1:8080`.
 
 The basic auth multi-user demo uses [PHP htadmin](https://github.com/soster/htadmin) for user management. Default credentials are shown in the terminal.
 
+> **Note:** If accessing from a different machine or using a different port, you'll need to configure the `CLAPSHOT_URL_BASE` environment variable. See the [Quick Start Reference](doc/quick-start-reference.md) for common deployment scenarios.
+
 
 ## Simple Small-business Production Deployments
 
@@ -79,6 +81,8 @@ The same process can be adapted to any other *HTTPS-Proxy-as-a-Service* besides 
 
 ## Configuration and Operation
 
+**New to Clapshot?** Start with the [Quick Start Reference](doc/quick-start-reference.md) for common deployment scenarios.
+
 See the [Sysadmin Guide](doc/sysadmin-guide.md) for information on:
 
 - configuring Nginx reverse proxy (for HTTPS and auth)
@@ -88,6 +92,8 @@ See the [Sysadmin Guide](doc/sysadmin-guide.md) for information on:
 - building manually and running unit tests
 
 See [Upgrading Guide](doc/upgrading.md) for instructions on installing a new release over an old one.
+
+**Having connection issues?** See the [Connection Troubleshooting Guide](doc/connection-troubleshooting.md) for help with common deployment and connectivity problems.
 
 For help, you can also interrogate [Clapshot Config Helper GPT](https://chatgpt.com/g/g-687debd7cfec8191ad14f604552f0121-clapshot-config-helper) that has technical knowledge of the project and custom instructions to assist.
 
