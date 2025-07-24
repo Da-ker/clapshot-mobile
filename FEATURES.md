@@ -60,9 +60,11 @@ Import Edit Decision Lists as time-coded comments.
 Upload videos, audio files, and images through the web interface or folder monitoring.
   - **Web Upload**: Browser-based file uploads with progress tracking and chunked transfer
   - **Monitored Folder**: Processing of files dropped into the incoming directory
-    - Files are assigned to users based on OS file ownership
+    - **Username Assignment**: Configurable user identification methods:
+      - `file-owner` (default): Files assigned to users based on OS file ownership
+      - `folder-name`: Username extracted from first subdirectory name (ideal for (S)FTP setups)
     - Polling with write-completion detection
-    - User creation based on file ownership
+    - Automatic user creation for new usernames
 - *References: [README.md](README.md), [doc/sysadmin-guide.md](doc/sysadmin-guide.md), [src1](server/src/video_pipeline/incoming_monitor.rs), [src2](client/src/lib/asset_browser/FileUpload.svelte)*
 
 ### **Media Processing**

@@ -35,6 +35,24 @@ use crate::video_pipeline::metadata_reader::MediaType;
 use cleanup_rejected::clean_up_rejected_file;
 use crate::database::{DB, models, DbBasicQuery};
 
+#[derive(Debug, Clone)]
+pub enum IngestUsernameFrom {
+    FileOwner,
+    FolderName,
+}
+
+impl std::str::FromStr for IngestUsernameFrom {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "file-owner" => Ok(IngestUsernameFrom::FileOwner),
+            "folder-name" => Ok(IngestUsernameFrom::FolderName),
+            _ => Err(format!("Invalid value '{}', must be 'file-owner' or 'folder-name'", s)),
+        }
+    }
+}
+
 pub const THUMB_SHEET_COLS: u32 = 10;
 pub const THUMB_SHEET_ROWS: u32 = 10;
 pub const THUMB_W: u32 = 160;
@@ -317,7 +335,8 @@ pub fn run_forever(
     resubmit_delay: f32,
     target_bitrate: u32,
     upload_rx: Receiver<IncomingFile>,
-    n_workers: usize)
+    n_workers: usize,
+    ingest_username_from: IngestUsernameFrom)
 {
     tracing::debug!("Starting media file processing pipeline.");
 
@@ -351,7 +370,8 @@ pub fn run_forever(
                         (data_dir.join("incoming") ).clone(),
                         poll_interval, resubmit_delay,
                         incoming_sender,
-                        exit_recvr) {
+                        exit_recvr,
+                        ingest_username_from) {
                     tracing::error!(details=?e, "Error from incoming monitor.");
                 }});
         (th, incoming_recvr, exit_sender)

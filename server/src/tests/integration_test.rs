@@ -26,7 +26,7 @@ mod integration_test
     use crate::database::schema::media_files::{thumb_sheet_cols, thumb_sheet_rows};
     use crate::{expect_client_cmd, send_server_cmd};
     use crate::grpc::grpc_client::prepare_organizer;
-    use crate::video_pipeline::{metadata_reader, IncomingFile};
+    use crate::video_pipeline::{metadata_reader, IncomingFile, IngestUsernameFrom};
     use crate::api_server::test_utils::{connect_client_ws, open_media_file, write};
     use lib_clapshot_grpc::{GrpcBindAddr, proto};
     use lib_clapshot_grpc::proto::client::ServerToClientCmd;
@@ -103,11 +103,14 @@ mod integration_test
     }
 
     macro_rules! cs_main_test {
-        ([$ws:ident, $data_dir:ident, $incoming_dir:ident, $org_conn:ident, $bitrate:expr, $org_cmd:expr, $custom_assertfs:expr] $($body:tt)*) => {
+        ([$ws:ident, $data_dir:ident, $incoming_dir:ident, $org_conn:ident, $bitrate:expr, $org_cmd:expr, $custom_assertfs:expr, $ingest_username_from:expr] $($body:tt)*) => {
+            cs_main_test!([$ws, $data_dir, $incoming_dir, $org_conn, $bitrate, $org_cmd, $custom_assertfs, $ingest_username_from, None] $($body)*)
+        };
+        ([$ws:ident, $data_dir:ident, $incoming_dir:ident, $org_conn:ident, $bitrate:expr, $org_cmd:expr, $custom_assertfs:expr, $ingest_username_from:expr, $ws_user_override:expr] $($body:tt)*) => {
             {
                 let $data_dir = $custom_assertfs.unwrap_or(assert_fs::TempDir::new().unwrap());
                 let $incoming_dir = $data_dir.join("incoming");
-                std::fs::create_dir($incoming_dir.as_path()).ok();
+                std::fs::create_dir_all($incoming_dir.as_path()).unwrap();
 
                 // Run server
                 let port = portpicker::pick_unused_port().expect("No TCP ports free");
@@ -127,7 +130,7 @@ mod integration_test
                     let org_uri = org_uri.clone();
                     let tf = terminate_flag.clone();
                     thread::spawn(move || {
-                        let mut clapshot = crate::ClapshotInit::init_and_spawn_workers(data_dir, true, url_base, vec![], "127.0.0.1".into(), port, org_uri.clone(), grpc_server_bind, 4, target_bitrate, poll_interval, "anonymous".to_string(), poll_interval*5.0, tf)?;
+                        let mut clapshot = crate::ClapshotInit::init_and_spawn_workers(data_dir, true, url_base, vec![], "127.0.0.1".into(), port, org_uri.clone(), grpc_server_bind, 4, target_bitrate, poll_interval, "anonymous".to_string(), poll_interval*5.0, $ingest_username_from, tf)?;
                         clapshot.wait_for_termination()
                 })};
 
@@ -136,7 +139,8 @@ mod integration_test
                 tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async move {
                     // Connect client
                     let cur_process_user = whoami::username();
-                    let mut $ws = connect_client_ws(&ws_url, &cur_process_user).await;
+                    let ws_user = $ws_user_override.unwrap_or(cur_process_user);
+                    let mut $ws = connect_client_ws(&ws_url, &ws_user).await;
                     let $org_conn = match org_uri.clone() {
                         Some(org_uri) => Some(crate::grpc::grpc_client::connect(org_uri.clone()).await.expect("Failed to connect to organizer")),
                         None => None,
@@ -156,7 +160,7 @@ mod integration_test
     #[traced_test]
     fn test_video_ingest_no_transcode() -> anyhow::Result<()>
     {
-        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 2500_000, None, None]
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 2500_000, None, None, IngestUsernameFrom::FileOwner]
             // Copy test file to incoming dir
             let mp4_file = "60fps-example.mp4";
             data_dir.copy_from("src/tests/assets/", &[mp4_file]).unwrap();
@@ -213,7 +217,7 @@ mod integration_test
     #[traced_test]
     fn test_video_try_ingest_corrupted_video() -> anyhow::Result<()>
     {
-        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None]
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None, IngestUsernameFrom::FileOwner]
             tracing::info!("WRITING CORRUPTED VIDEO");
 
             // Copy test file to incoming dir
@@ -464,7 +468,7 @@ mod integration_test
     #[cfg(feature = "include_slow_tests")]
     fn test_video_mov_ingest_and_transcode() -> anyhow::Result<()>
     {
-        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None]
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None, IngestUsernameFrom::FileOwner]
             // Copy test file to incoming dir
             let mov_file = "NASA_Red_Lettuce_excerpt.mov";
 
@@ -487,7 +491,7 @@ mod integration_test
     #[cfg(feature = "include_slow_tests")]
     fn test_video_12bit_dnxhr_alpha_ingest_and_transcode() -> anyhow::Result<()>
     {
-        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None]
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None, IngestUsernameFrom::FileOwner]
             // Copy test file to incoming dir
             let mov_file = "alpha-test_dnxhr-444-12bit-dnxhr.mov";
 
@@ -509,7 +513,7 @@ mod integration_test
     #[cfg(feature = "include_slow_tests")]
     fn test_audio_ingest_and_transcode() -> anyhow::Result<()>
     {
-        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None]
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None, IngestUsernameFrom::FileOwner]
             // Copy test file to incoming dir
             let audio_file_name = "drunkards-special-short-mono.wav";
             data_dir.copy_from("src/tests/assets/", &[audio_file_name]).unwrap();
@@ -526,7 +530,7 @@ mod integration_test
     #[traced_test]
     fn test_image_ingest_and_transcode() -> anyhow::Result<()>
     {
-        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None]
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, None, IngestUsernameFrom::FileOwner]
             let image_file_name = "NASA-48410_PIA25967_-_MAV_Test.jpeg";
             data_dir.copy_from("src/tests/assets/", &[image_file_name]).unwrap();
             std::fs::rename(data_dir.join(image_file_name), incoming_dir.join(image_file_name)).unwrap();
@@ -550,7 +554,7 @@ mod integration_test
         std::fs::copy("src/tests/assets/databases/clapshot-migration-test-1_v056.sqlite", &db_file)
             .expect("Failed to copy test DB for migration test");
 
-        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, Some(temp_dir)]
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, None, Some(temp_dir), IngestUsernameFrom::FileOwner]
             let image_file_name = "NASA-48410_PIA25967_-_MAV_Test.jpeg";
             data_dir.copy_from("src/tests/assets/", &[image_file_name]).unwrap();
             std::fs::rename(data_dir.join(image_file_name), incoming_dir.join(image_file_name)).unwrap();
@@ -572,7 +576,7 @@ mod integration_test
                 // Overwrite the test DB with one from assets dir, for migration testing on existing DB
                 let db_file = temp_dir.path().join("clapshot.sqlite");
                 std::fs::copy("src/tests/assets/databases/clapshot-migration-test-1_v056.sqlite", &db_file).expect("Failed to copy test DB for migration test");
-                cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, Some(org_cmd), Some(temp_dir)]
+                cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, Some(org_cmd), Some(temp_dir), IngestUsernameFrom::FileOwner]
                     // If we get any client messages, Organizer migration was successful and API server was started
                     wait_for_any_client_msg(&mut ws).await;
                 }
@@ -596,7 +600,7 @@ mod integration_test
                 // Overwrite the test DB with one from assets dir, for migration testing on existing DB
                 let db_file = temp_dir.path().join("clapshot.sqlite");
                 std::fs::copy("src/tests/assets/databases/clapshot-migration-test-2_v061.sqlite", &db_file).expect("Failed to copy test DB for migration test");
-                cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, Some(org_cmd), Some(temp_dir)]
+                cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 500_000, Some(org_cmd), Some(temp_dir), IngestUsernameFrom::FileOwner]
                     // If we get any client messages, Organizer migration was successful and API server was started
                     wait_for_any_client_msg(&mut ws).await;
                 }
@@ -643,7 +647,7 @@ mod integration_test
                 let test_names: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
                 {
                     let test_names = test_names.clone();
-                    cs_main_test! {[_ws, data_dir, incoming_dir, org_conn, 500_000, Some(cmd.clone()), None]
+                    cs_main_test! {[_ws, data_dir, incoming_dir, org_conn, 500_000, Some(cmd.clone()), None, IngestUsernameFrom::FileOwner]
                         match org_conn {
                             Some(mut org_conn) => {
                                 match org_conn.list_tests(proto::Empty {}).await {
@@ -687,7 +691,7 @@ mod integration_test
                     let test_results = test_results.clone();
                     let log = log.clone();
 
-                    cs_main_test! {[_ws, data_dir, incoming_dir, org_conn, 500_000, Some(cmd.clone()), Some(temp_dir)]
+                    cs_main_test! {[_ws, data_dir, incoming_dir, org_conn, 500_000, Some(cmd.clone()), Some(temp_dir), IngestUsernameFrom::FileOwner]
                         match org_conn {
                             Some(mut org_conn) => {
                                 match org_conn.run_test(org::RunTestRequest { test_name: test_name.clone() }).await {
@@ -736,6 +740,111 @@ mod integration_test
             None => {
                 tracing::info!("Organizer cmd not specified, skipping organizer test");
             }
+        }
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    #[traced_test]
+    fn test_ingest_username_from_file_owner() -> anyhow::Result<()>
+    {
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 2500_000, None, None, IngestUsernameFrom::FileOwner]
+            // Copy test file to incoming dir (owned by current user)
+            let mp4_file = "60fps-example.mp4";
+            data_dir.copy_from("src/tests/assets/", &[mp4_file]).unwrap();
+            std::fs::rename(data_dir.join(mp4_file), incoming_dir.join(mp4_file)).unwrap();
+
+            // Wait for file to be processed
+            thread::sleep(Duration::from_secs_f32(0.5));
+            let msg = expect_user_msg(&mut ws, proto::user_message::Type::MediaFileAdded).await;
+            let vid = msg.refs.unwrap().media_file_id.unwrap();
+
+            thread::sleep(Duration::from_secs_f32(0.5));
+            let msg = expect_user_msg(&mut ws, proto::user_message::Type::Ok).await;
+            let vid2 = msg.refs.unwrap().media_file_id.unwrap();
+            assert_eq!(vid, vid2);
+
+            crate::api_server::test_utils::wait_for_thumbnails(&mut ws).await;
+
+            // Open media file and verify the username matches file owner
+            let media_file = open_media_file(&mut ws, &vid).await.media_file.unwrap();
+            let current_user = whoami::username();
+            assert_eq!(media_file.user_id, current_user, "Username should match file owner");
+        }
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    #[traced_test]
+    fn test_ingest_username_from_folder_name() -> anyhow::Result<()>
+    {
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 2500_000, None, None, IngestUsernameFrom::FolderName, Some("test_folder_user".to_string())]
+            // Create user folder structure with specific test username
+            let current_user = whoami::username();
+            let username = "test_folder_user".to_string(); // Different from file owner - proves folder extraction works
+            let user_dir = incoming_dir.join(&username);
+            std::fs::create_dir_all(&user_dir).unwrap();
+
+            // Copy test file to user folder
+            let mp4_file = "60fps-example.mp4";
+            data_dir.copy_from("src/tests/assets/", &[mp4_file]).unwrap();
+            std::fs::rename(data_dir.join(mp4_file), user_dir.join(mp4_file)).unwrap();
+
+            // Wait for file to be processed
+            thread::sleep(Duration::from_secs_f32(0.5));
+            let msg = expect_user_msg(&mut ws, proto::user_message::Type::MediaFileAdded).await;
+            let vid = msg.refs.unwrap().media_file_id.unwrap();
+
+            thread::sleep(Duration::from_secs_f32(0.5));
+            let msg = expect_user_msg(&mut ws, proto::user_message::Type::Ok).await;
+            let vid2 = msg.refs.unwrap().media_file_id.unwrap();
+            assert_eq!(vid, vid2);
+
+            crate::api_server::test_utils::wait_for_thumbnails(&mut ws).await;
+
+            // Open media file and verify the username was extracted from folder name, not file owner
+            let media_file = open_media_file(&mut ws, &vid).await.media_file.unwrap();
+            assert_eq!(media_file.user_id, username, "Username should match folder name");
+            assert_ne!(media_file.user_id, current_user, "Username should NOT match file owner - proves folder extraction worked");
+        }
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    #[traced_test]
+    fn test_ingest_username_from_folder_name_nested() -> anyhow::Result<()>
+    {
+        cs_main_test! {[ws, data_dir, incoming_dir, _org_conn, 2500_000, None, None, IngestUsernameFrom::FolderName, Some("test_nested_user".to_string())]
+            // Create folder structure with specific test username  
+            let current_user = whoami::username();
+            let username = "test_nested_user".to_string(); // Different from file owner - proves folder extraction works
+            let user_dir = incoming_dir.join(&username);
+            std::fs::create_dir_all(&user_dir).unwrap();
+
+            // Copy test file to user folder
+            let mp4_file = "60fps-example.mp4";
+            data_dir.copy_from("src/tests/assets/", &[mp4_file]).unwrap();
+            std::fs::rename(data_dir.join(mp4_file), user_dir.join(mp4_file)).unwrap();
+
+            // Wait for file to be processed
+            thread::sleep(Duration::from_secs_f32(0.5));
+            let msg = expect_user_msg(&mut ws, proto::user_message::Type::MediaFileAdded).await;
+            let vid = msg.refs.unwrap().media_file_id.unwrap();
+
+            thread::sleep(Duration::from_secs_f32(0.5));
+            let msg = expect_user_msg(&mut ws, proto::user_message::Type::Ok).await;
+            let vid2 = msg.refs.unwrap().media_file_id.unwrap();
+            assert_eq!(vid, vid2);
+
+            crate::api_server::test_utils::wait_for_thumbnails(&mut ws).await;
+
+            // Open media file and verify the username was extracted from folder name, not file owner
+            let media_file = open_media_file(&mut ws, &vid).await.media_file.unwrap();
+            assert_eq!(media_file.user_id, username, "Username should match folder name");
+            assert_ne!(media_file.user_id, current_user, "Username should NOT match file owner - proves folder extraction worked");
         }
         Ok(())
     }

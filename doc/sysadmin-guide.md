@@ -73,6 +73,7 @@ The incoming folder monitoring is configured via command-line options:
 - `--poll <seconds>` - Polling interval for checking new files (default: 3.0 seconds)
 - `--workers <count>` - Number of parallel workers for media processing (default: CPU core count)
 - `--bitrate <mbps>` - Target maximum bitrate for transcoding (default: 2.5 Mbps)
+- `--ingest-username-from <method>` - How to determine username for files in incoming/ folder (default: `file-owner`)
 
 #### Directory Structure
 
@@ -88,22 +89,38 @@ The incoming folder monitoring is configured via command-line options:
 
 1. **File Detection**: The system continuously polls `<data_dir>/incoming/` for new files
 2. **Write Completion**: Waits for file size to stabilize between polls to ensure upload completion
-3. **Owner Resolution**: Uses OS-level file ownership to determine the Clapshot user
-4. **User Assignment**: Files are assigned to users based on their OS username (e.g., file owned by `alice` becomes owned by Clapshot user `alice`)
+3. **Username Resolution**: Determines the Clapshot user based on the `--ingest-username-from` setting:
+   - `file-owner` (default): Uses OS-level file ownership to determine the user (e.g., file owned by `alice` becomes owned by Clapshot user `alice`)
+   - `folder-name`: Uses the first subdirectory name in the file path as the username (e.g., `incoming/alice/video.mp4` assigns to user `alice`)
+4. **User Assignment**: Files are assigned to users based on the resolved username
 5. **Processing**: Files are moved to permanent storage, transcoded if needed, and added to the user's media library
 
 #### Important Notes
 
-- **OS Username Mapping**: The system directly maps OS file owners to Clapshot user IDs with no translation layer. Note that for web uploads, Clapshot server trusts the reverse proxy's HTTP headers for both username and display name, so any user mappings should happen at the proxy level.
+- **Username Mapping**: 
+  - In `file-owner` mode: The system directly maps OS file owners to Clapshot user IDs with no translation layer
+  - In `folder-name` mode: Username is extracted from the first subdirectory path, enabling (S)FTP uploads without OS-level user accounts
+  - Note that for web uploads, Clapshot server trusts the reverse proxy's HTTP headers for both username and display name, so any user mappings should happen at the proxy level
 - **User Auto-Creation**: If a user doesn't exist in the database, they are automatically created when their first file is processed
-- **No Subdirectories**: Only files in the top-level `incoming/` directory are processed (subdirectories are ignored)
+- **Directory Processing**: 
+  - Both modes process files in `incoming/` and one level of subdirectories (e.g., `incoming/username/file.mp4`)
+  - This allows for atomic moves from staging directories (e.g., `incoming/username/incomplete/` → `incoming/username/`) to avoid processing incomplete uploads
+  - In `folder-name` mode: Username is extracted from the first directory level in the path
 - **Error Handling**: Files that fail processing are moved to the `rejected/` directory with error details
 - **Duplicate Prevention**: The system prevents re-processing of identical files using content-based hashing
 
 #### Security Considerations
 
-Since user assignment is based on file system ownership, ensure that:
+User assignment security depends on the chosen method:
+
+**For `file-owner` mode:**
 - File system permissions align with your desired user access model
 - OS usernames match your intended Clapshot user identifiers
 - The incoming directory has appropriate write permissions for authorized users
 - Consider using group ownership and umask settings for shared environments
+
+**For `folder-name` mode:**
+- Ensure write permissions are properly restricted on the `incoming/` directory
+- **File Permissions**: Files must be writable by the OS user running Clapshot Server (often `www-data`) so they can be moved during processing. Use group ownership with sticky bits or appropriate umask settings (e.g., `chmod g+s incoming/` and ensure uploaded files have group write permissions)
+- Consider that any user who can create directories in `incoming/` can impersonate other users
+- This mode is ideal for (S)FTP scenarios where you control directory creation through the FTP server configuration

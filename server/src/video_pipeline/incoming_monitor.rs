@@ -15,7 +15,7 @@ use tracing;
 use anyhow::anyhow;
 
 use crate::video_pipeline::metadata_reader;
-use super::cleanup_rejected::clean_up_rejected_file;
+use super::{cleanup_rejected::clean_up_rejected_file, IngestUsernameFrom};
 
 pub enum Void {}
 
@@ -25,7 +25,8 @@ pub fn run_forever(
     poll_interval: f32,
     resubmit_delay: f32,
     incoming_sender: Sender<super::IncomingFile>,
-    exit_evt: Receiver<Void>) -> anyhow::Result<()>
+    exit_evt: Receiver<Void>,
+    ingest_username_from: IngestUsernameFrom) -> anyhow::Result<()>
 {
     let _span = tracing::info_span!("INCOMING").entered();
     tracing::debug!(dir=data_dir.to_str(), poll_interval=poll_interval, resubmit_delay=resubmit_delay, "Starting.");
@@ -46,15 +47,52 @@ pub fn run_forever(
         match incoming_dir.read_dir() {
             Ok(entries) => {
 
-                let names_and_sizes = entries
-                    .filter_map(|entry| {
-                        let entry = entry.ok()?;
-                        let stat = entry.metadata().ok()?;
-                        stat.is_file().then(|| (entry.path(), stat.len()))
-                    }).collect::<Vec<_>>();
+                // Collect files from incoming directory and one level of subdirectories
+                let mut names_and_sizes = Vec::new();
+                for entry in entries {
+                    if let Ok(entry) = entry {
+                        let path = entry.path();
+                        if let Ok(metadata) = entry.metadata() {
+                            if metadata.is_file() {
+                                // File directly in incoming/
+                                names_and_sizes.push((path, metadata.len()));
+                            } else if metadata.is_dir() {
+                                // Look one level deeper in subdirectories
+                                if let Ok(subdir_entries) = std::fs::read_dir(&path) {
+                                    for subentry in subdir_entries {
+                                        if let Ok(subentry) = subentry {
+                                            if let Ok(sub_metadata) = subentry.metadata() {
+                                                if sub_metadata.is_file() {
+                                                    names_and_sizes.push((subentry.path(), sub_metadata.len()));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 fn get_file_owner_name(path: &Path) -> anyhow::Result<String> {
                     path.owner()?.name()?.ok_or(anyhow!("Unnamed OS user for file {:?}", path))
+                }
+
+                fn get_username_from_folder(path: &Path, incoming_dir: &Path) -> anyhow::Result<String> {
+                    let relative_path = path.strip_prefix(incoming_dir)
+                        .map_err(|e| anyhow!("File {:?} is not within incoming directory {:?}: {}", path, incoming_dir, e))?;
+                    
+                    let first_component = relative_path.components().next()
+                        .ok_or(anyhow!("File {:?} has no parent directory components", relative_path))?;
+                    
+                    match first_component {
+                        std::path::Component::Normal(username) => {
+                            username.to_str()
+                                .ok_or(anyhow!("Username directory name is not valid UTF-8: {:?}", username))
+                                .map(|s| s.to_string())
+                        },
+                        _ => Err(anyhow!("Invalid directory structure for file {:?}", relative_path))
+                    }
                 }
 
                 for (path, sz) in names_and_sizes {
@@ -64,19 +102,24 @@ pub fn run_forever(
                         // Check if file is still being written to
                         if sz > 1 && sz != 4096 {  // 4096 = size of an empty file on ext4
                             if &sz == last_tested_size.get(&path).unwrap_or(&0) {
-                                match get_file_owner_name(&path) {
+                                let username_result = match ingest_username_from {
+                                    IngestUsernameFrom::FileOwner => get_file_owner_name(&path),
+                                    IngestUsernameFrom::FolderName => get_username_from_folder(&path, &incoming_dir),
+                                };
+                                
+                                match username_result {
                                     Err(e) => {
-                                        tracing::error!(details=%e, "Cannot ingest. Failed to get owner's name for file.");
+                                        tracing::error!(details=%e, "Cannot ingest. Failed to get username for file.");
                                         clean_up_rejected_file(&data_dir, &path, None).unwrap_or_else(|e| {
                                             tracing::error!(details=%e, "Clean up also failed.");
                                         });
                                         continue;
                                     }
-                                    Ok(owner) => {
+                                    Ok(username) => {
                                         tracing::info!("Submitting for processing.");
                                         submission_time.insert(path.clone(), std::time::Instant::now());
                                         if let Err(e) = incoming_sender.send(
-                                                super::IncomingFile {file_path: path.clone(), user_id: owner, cookies: HashMap::new()}) {
+                                                super::IncomingFile {file_path: path.clone(), user_id: username, cookies: HashMap::new()}) {
                                             tracing::error!(details=%e, "Failed to send incoming file to processing queue.");
                                         }
                                     },

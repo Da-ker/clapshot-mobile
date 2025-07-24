@@ -3,8 +3,9 @@ use clap::Parser;
 use clapshot_server::{
     grpc::{grpc_client::prepare_organizer, grpc_server::make_grpc_server_bind},
     run_clapshot, PKG_NAME, PKG_VERSION,
+    video_pipeline::IngestUsernameFrom,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc, str::FromStr};
 use tracing::error;
 use indoc::indoc;
 
@@ -89,6 +90,11 @@ struct Args {
     #[arg(long, default_value="anonymous", value_name="USER")]
     default_user: String,
 
+    /// How to determine username for files in incoming/ folder.
+    /// 'file-owner' uses filesystem ownership, 'folder-name' uses first subfolder name.
+    #[arg(long, default_value="file-owner", value_name="METHOD")]
+    ingest_username_from: String,
+
 
     /// Shell command to start Organizer plugin.
     /// The command should block until SIGTERM, and log to stdout/stderr without timestamps.
@@ -115,6 +121,9 @@ fn main() -> anyhow::Result<()> {
         bail!("Bitrate must be >= 0.1");
     }
     let target_bitrate = (args.bitrate * 1_000_000.0) as u32;
+
+    let ingest_username_from = IngestUsernameFrom::from_str(&args.ingest_username_from)
+        .map_err(|e| anyhow::anyhow!("Invalid --ingest-username-from: {}", e))?;
 
     if !args.data_dir.exists() {
         bail!("Data directory does not exist: {:?}", args.data_dir);
@@ -167,6 +176,7 @@ fn main() -> anyhow::Result<()> {
         default_user,
         args.poll,
         args.poll * 5.0,
+        ingest_username_from,
     ) {
         error!("run_clapshot() failed: {}", e);
     }

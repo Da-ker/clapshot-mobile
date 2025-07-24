@@ -42,6 +42,7 @@ impl ClapshotInit {
         poll_interval: f32,
         default_user: String,
         resubmit_delay: f32,
+        ingest_username_from: video_pipeline::IngestUsernameFrom,
         terminate_flag: Arc<AtomicBool>)
         -> anyhow::Result<Self>
     {
@@ -117,7 +118,7 @@ impl ClapshotInit {
         let vpp_thread = Some({
             let db = db.clone();
             thread::spawn(move || { video_pipeline::run_forever(
-                db, tf.clone(), dd, user_msg_tx, poll_interval, resubmit_delay, target_bitrate, upload_rx, n_workers)})
+                db, tf.clone(), dd, user_msg_tx, poll_interval, resubmit_delay, target_bitrate, upload_rx, n_workers, ingest_username_from)})
         });
 
 
@@ -351,7 +352,8 @@ pub fn run_clapshot(
     target_bitrate: u32,
     default_user: String,
     poll_interval: f32,
-    resubmit_delay: f32
+    resubmit_delay: f32,
+    ingest_username_from: video_pipeline::IngestUsernameFrom,
 ) -> anyhow::Result<()> {
 
     let terminate_flag = Arc::new(AtomicBool::new(false));
@@ -371,6 +373,7 @@ pub fn run_clapshot(
         poll_interval,
         default_user,
         resubmit_delay,
+        ingest_username_from,
         terminate_flag.clone()
     )?;
 
