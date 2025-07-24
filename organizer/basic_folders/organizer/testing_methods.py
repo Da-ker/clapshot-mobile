@@ -1551,13 +1551,13 @@ async def org_test__user_cleanup_basic_test(oi: organizer.OrganizerInbound):
             listing_data={}
         ))
 
-    # Verify source user was deleted (no content left)
+    # Verify source user still exists (automatic cleanup removed)
     with oi.db_new_session() as dbs:
         source_user = dbs.query(DbUser).filter(DbUser.id == source_user_id).one_or_none()
-        assert source_user is None, "Source user should be deleted after transferring all content"
+        assert source_user is not None, "Source user should still exist after transfer (no automatic cleanup)"
 
         media_count = dbs.query(DbMediaFile).filter(DbMediaFile.user_id == source_user_id).count()
-        assert media_count == 0, f"No media files should remain for deleted user, found {media_count}"
+        assert media_count == 0, f"No media files should remain for source user after transfer, found {media_count}"
 
     # Verify ownership transfer worked
     with oi.db_new_session() as dbs:
@@ -1565,7 +1565,7 @@ async def org_test__user_cleanup_basic_test(oi: organizer.OrganizerInbound):
             transferred_media = dbs.query(DbMediaFile).filter(DbMediaFile.id == media_file.id).one()
             assert transferred_media.user_id == dest_user_id, f"Media {media_file.id} should belong to dest user, belongs to {transferred_media.user_id}"
 
-    print("✓ Basic user cleanup functionality works correctly")
+    print("✓ Basic content transfer functionality works correctly (no automatic cleanup)")
 
 
 async def org_test__user_cleanup_after_content_transfer(oi: organizer.OrganizerInbound):
@@ -1676,34 +1676,33 @@ async def org_test__user_cleanup_after_content_transfer(oi: organizer.OrganizerI
             listing_data={}
         ))
 
-    # Verify source user was deleted (no content left)
+    # Verify source user still exists (automatic cleanup removed)
     with oi.db_new_session() as dbs:
         source_user = dbs.query(DbUser).filter(DbUser.id == source_user_id).one_or_none()
-        assert source_user is None, "Source user should be deleted after transferring all content"
+        assert source_user is not None, "Source user should still exist after transfer (no automatic cleanup)"
 
         media_count = dbs.query(DbMediaFile).filter(DbMediaFile.user_id == source_user_id).count()
-        assert media_count == 0, f"No media files should remain for deleted user, found {media_count}"
+        assert media_count == 0, f"No media files should remain for source user after transfer, found {media_count}"
 
-    # Verify comments are preserved with correct username_ifnull after user deletion
+    # Verify comments are preserved with original user_id (user not deleted)
     with oi.db_new_session() as dbs:
-        # Check all comments that were originally from the source user (now have username_ifnull set)
+        # Check all comments from the source user (user_id should still be set)
         preserved_comments = dbs.execute(sqlalchemy.text("""
             SELECT user_id, username_ifnull, comment, media_file_id
             FROM comments
-            WHERE username_ifnull = :username
+            WHERE user_id = :user_id
             ORDER BY media_file_id, id
-        """), {"username": source_user_name}).fetchall()
+        """), {"user_id": source_user_id}).fetchall()
 
-        assert len(preserved_comments) == total_expected_comments, f"Should have {total_expected_comments} preserved comments from deleted user, found {len(preserved_comments)}"
+        assert len(preserved_comments) == total_expected_comments, f"Should have {total_expected_comments} comments from source user, found {len(preserved_comments)}"
 
-        print(f"Debug: Found {len(preserved_comments)} preserved comments after user deletion:")
+        print(f"Debug: Found {len(preserved_comments)} comments still owned by source user:")
         for comment in preserved_comments:
             print(f"  - Media {comment.media_file_id}: '{comment.comment}' (user_id={comment.user_id}, username_ifnull='{comment.username_ifnull}')")
 
-        # Verify all comments have correct user_id=NULL and username_ifnull set
+        # Verify all comments still have original user_id (user not deleted)
         for comment in preserved_comments:
-            assert comment.user_id is None, f"Comment user_id should be NULL after user deletion, got {comment.user_id}"
-            assert comment.username_ifnull == source_user_name, f"Comment username_ifnull should be '{source_user_name}', got '{comment.username_ifnull}'"
+            assert comment.user_id == source_user_id, f"Comment user_id should still be {source_user_id}, got {comment.user_id}"
 
     # Verify ownership transfer worked correctly
     with oi.db_new_session() as dbs:
@@ -1711,9 +1710,8 @@ async def org_test__user_cleanup_after_content_transfer(oi: organizer.OrganizerI
             transferred_media = dbs.query(DbMediaFile).filter(DbMediaFile.id == media_file.id).one()
             assert transferred_media.user_id == dest_user_id, f"Media {media_file.id} should belong to dest user, belongs to {transferred_media.user_id}"
 
-    print(f"✓ User cleanup after content transfer works correctly")
-    print(f"✓ {total_expected_comments} comments preserved with correct username_ifnull after user deletion")
-    print(f"✓ Database trigger tr_comments_set_username_on_user_delete works correctly")
+    print(f"✓ Content transfer works correctly (user preserved, no automatic cleanup)")
+    print(f"✓ {total_expected_comments} comments preserved with source user still existing")
 
 
 async def org_test__cmd_from_client__cleanup_empty_user(oi: organizer.OrganizerInbound):

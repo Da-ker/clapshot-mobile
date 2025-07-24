@@ -34,8 +34,6 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
     if dst_folder.user_id != req.ses.user.id and not req.ses.is_admin:
         raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot move items to another user's folder")
 
-    # Track source users for potential cleanup after successful moves
-    source_users_to_check = set()
 
     for it in req.ids:
         with oi.db_new_session() as dbs:
@@ -50,9 +48,6 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
                 if fld_to_move.user_id != req.ses.user.id and not req.ses.is_admin:
                     raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot move another user's folder")
 
-                # Track source user for potential cleanup if ownership changes
-                if fld_to_move.user_id != dst_folder.user_id:
-                    source_users_to_check.add(fld_to_move.user_id)
 
                 with dbs.begin_nested():
                     cnt = dbs.query(DbFolderItems).filter(DbFolderItems.subfolder_id == fld_to_move.id).update({"folder_id": dst_folder.id, "sort_order": min_sort_order-1})
@@ -73,9 +68,6 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
                 if vid_to_move.user_id != req.ses.user.id and not req.ses.is_admin:
                     raise GRPCError(GrpcStatus.PERMISSION_DENIED, "Cannot move another user's media file")
 
-                # Track source user for potential cleanup if ownership changes
-                if vid_to_move.user_id != dst_folder.user_id:
-                    source_users_to_check.add(vid_to_move.user_id)
 
                 with dbs.begin_nested():
                     vid_to_move.user_id = dst_folder.user_id  # transfer ownership
@@ -85,11 +77,6 @@ async def move_to_folder_impl(oi: organizer.OrganizerInbound, req: org.MoveToFol
                     else:
                         oi.log.debug(f"Moved media file '{vid_to_move.id}' to folder '{dst_folder.id}'")
 
-    # Cleanup users who no longer have any content after the moves
-    for user_id in source_users_to_check:
-        with oi.db_new_session() as dbs:
-            await _cleanup_empty_user(dbs, user_id, oi.log)
-            dbs.commit()
 
     # Update page to view the opened folder (after transaction commit!)
     page = await oi.pages_helper.construct_navi_page(req.ses, None)

@@ -11,7 +11,7 @@ Video player with playback controls and navigation features.
   - **Keyboard Shortcuts**: Control system (spacebar play/pause, `l` toggle loop, `z`/`y` undo/redo)
   - **SMPTE Timecode Display**: Timecode format with editable timecode fields for seeking
   - **Audio Waveform Visualization**: Waveform display for audio files with click-to-seek
-  - **Volume Control**: Volume settings with slider control (saved to browser local storage) 
+  - **Volume Control**: Volume settings with slider control (saved to browser local storage)
 - *References: [src1](client/src/lib/player_view/VideoPlayer.svelte), [src2](client/src/lib/player_view/CommentTimelinePin.svelte), [src3](client/src/lib/asset_browser/ScrubbableVideoThumb.svelte)*
 
 ### **Comment System**
@@ -144,7 +144,7 @@ Administrator users (specified by HTTP headers, again) can edit users and their 
   - **Admin Folder View**: Admin interface showing all user home folders with management capabilities
   - **Cross-User Navigation**: Admin users can navigate and manage any user's content
   - **Ownership Transfer**: User ownership change when moving content between user folders
-  - **User Cleanup System**: Detection and removal of empty users with manual (per-user) or batch cleanup.
+  - **User Cleanup System**: Detection and removal of empty users with per-user or batch cleanup.
   - **Safe delete**: User delete declines if the user still has files. Comments are preserved even after user is deleted.
 - *References: [src1](server/migrations/2024-05-13-093800_add_users_table/), [src2](organizer/basic_folders/organizer/user_session_methods.py), [src3](organizer/basic_folders/organizer/helpers/pages.py), [src4](organizer/basic_folders/organizer/folder_op_methods.py)*
 
