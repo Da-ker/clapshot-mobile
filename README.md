@@ -79,6 +79,8 @@ If you want to expose this to the Internet, you'll probably want to get HTTPS ce
 In this option, you'll run Clapshot + Htadmin in a Docker container (binding a local directory for Clapshot data),
 and then start Cloudflared in another container to expose Clapshot to the Internet over an HTTPS tunnel.
 
+> WARNING: Cloudflare – at least in the free plan – apparently limits HTTP upload times and/or sizes, so double check their offerings if you are planning to use this option for a production deployment.
+
 1. Download and read [test/run-cloudflare.sh](test/run-cloudflare.sh), then run it
 2. Once satisfied about operation, get a static domain on Cloudflare and modify the above script accordingly - or perhaps make a custom Docker Compose file
 3. **!! Change the default `admin` and `htadmin` passwords, and delete example users in Htadmin !!**
