@@ -423,8 +423,7 @@ mod integration_test
             assert!(vid_dir.join("orig").join(input_filename).is_file());
             if expect_transcode {
                 assert!(vid_dir.join("video.mp4").is_symlink());
-                assert!(vid_dir.join("stdout.txt").is_file());
-                assert!(vid_dir.join("stderr.txt").is_file());
+                assert!(vid_dir.join("transcode.log").is_file());
             }
 
             if expect_thumbnail {
@@ -436,8 +435,7 @@ mod integration_test
                 assert!(thumb_dir.join(format!("sheet-{}x{}.webp", res.ts_cols, res.ts_rows)).is_file());
             }
             if expect_thumbnail || expect_thumbsheet {
-                assert!(thumb_dir.join("stdout.txt").is_file());
-                assert!(thumb_dir.join("stderr.txt").is_file());
+                assert!(thumb_dir.join("thumbnail.log").is_file());
             }
         }
 

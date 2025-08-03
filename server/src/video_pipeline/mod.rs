@@ -565,15 +565,7 @@ pub fn run_forever(
                             let videos_dir = media_files_dir.clone();
                             let vid = logs.media_file_id.clone();
 
-                            // Write out stdout/stderr to separate files
-                            for (name, data) in [("stdout", &logs.stdout), ("stderr", &logs.stderr)].iter() {
-                                let path = videos_dir.join(&vid).join(format!("{}.txt", name));
-                                tracing::debug!(media_file=%vid, file=?path, "Writing {} from ffmpeg", name);
-                                match std::fs::write(&path, data) {
-                                    Ok(_) => {},
-                                    Err(e) => {
-                                        tracing::error!(file=?path, details=%e, "Error writing {:?}", name);
-                            }}}
+                            tracing::info!(media_file=%vid, log_info=%logs.stdout, "Transcoding completed");
 
                             // Get filename from path
                             fn get_filename(p: &PathBuf) -> anyhow::Result<String> {
@@ -638,17 +630,9 @@ pub fn run_forever(
                             let mut db_errors = false;
 
                             // Thumbnails (and/or sheet) done?
-                            if let Some(thumb_dir) = thumb_dir {
+                            if let Some(_thumb_dir) = thumb_dir {
 
-                                // Write out stdout/stderr to separate files
-                                for (name, data) in [("stdout", &logs.stdout), ("stderr", &logs.stderr)].iter() {
-                                    let path = thumb_dir.join(format!("{}.txt", name));
-                                    tracing::debug!(media_file=%vid, file=?path, "Writing {} from thumbnailer", name);
-                                    match std::fs::write(&path, data) {
-                                        Ok(_) => {},
-                                        Err(e) => {
-                                            tracing::error!(file=?path, details=%e, "Error writing {:?}", name);
-                                }}}
+                                tracing::info!(media_file=%vid, log_info=%logs.stdout, "Thumbnailing completed");
 
                                 // Set has thumbnail in DB
                                 if let Err(e) = db.conn().and_then(|mut conn| models::MediaFile::set_has_thumb(&mut conn, &vid, true)) {
@@ -696,11 +680,11 @@ pub fn run_forever(
                             let op = if matches!(&res, TranscodeFailure {..}) { "transcoding" } else { "thumbnailing" };
                             let msg = format!("Media {op} failed");
                             let logs = logs.clone();
-                            tracing::error!(video=logs.media_file_id, details=?logs.dmsg, stdout=%logs.stdout, stderr=%logs.stderr, msg);
+                            tracing::error!(video=logs.media_file_id, details=?logs.dmsg, log_location=%logs.stdout, msg);
                             user_msg_tx.send(UserMessage {
                                     topic: UserMessageTopic::Error,
-                                    msg: msg,
-                                    details: Some(logs.dmsg.details),
+                                    msg: msg.clone(),
+                                    details: Some(format!("{}. {}. Check server logs for log file location.", logs.dmsg.details, logs.stdout)),
                                     user_id: Some(logs.dmsg.user_id),
                                     media_file_id: Some(logs.media_file_id),
                                     subtitle_id: None,

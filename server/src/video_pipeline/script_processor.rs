@@ -6,6 +6,7 @@ use rust_decimal::prelude::ToPrimitive;
 use tracing;
 use threadpool::ThreadPool;
 use std::fs;
+use chrono;
 
 use super::metadata_reader::MediaType;
 use super::DetailedMsg;
@@ -59,7 +60,7 @@ pub struct CmprLogs {
     pub media_file_id: String,
     pub user_id: String,
     pub stdout: String,
-    pub stderr: String,
+    pub _stderr: String,
     pub dmsg: DetailedMsg,
 }
 
@@ -254,7 +255,7 @@ fn err2cout<E: std::fmt::Debug>(msg_txt: &str, err: E, args: &CmprInput, sanitiz
         media_file_id: src.media_file_id.clone(),
         user_id: src.user_id.clone(),
         stdout: "".into(),
-        stderr: "".into(),
+        _stderr: "".into(),
         dmsg: DetailedMsg {
             msg: msg_txt.to_string(),
             details: details_str,
@@ -322,7 +323,7 @@ fn run_transcode_script(src: &CmprInputSource, output_dir: PathBuf, output_prefi
         let progress_terminate = progress_terminate.clone();
         let user_id = src.user_id.clone();
         let vid = src.media_file_id.clone();
-        
+
         // Extract duration before spawning the thread to avoid lifetime issues
         let total_duration_us = (src.duration.to_f64().unwrap_or(0.0) * 1_000_000.0) as u64;
 
@@ -430,6 +431,10 @@ fn run_transcode_script(src: &CmprInputSource, output_dir: PathBuf, output_prefi
 
     // Run the transcoding script
     let script_path_owned = script_path.to_string();
+    let media_id = src.media_file_id.clone();
+    let user_id = src.user_id.clone();
+    let input_file = sanitized_input.clone();
+    let output_dir_clone = output_dir.clone();
     let script_thread = {
         std::thread::spawn(move || {
             let _span = tracing::info_span!("transcode_script",
@@ -442,17 +447,74 @@ fn run_transcode_script(src: &CmprInputSource, output_dir: PathBuf, output_prefi
                 cmd.env(key, value);
             }
 
-            tracing::debug!(cmd=?cmd, "Invoking transcoding script.");
+            // Create dedicated log file for transcoding
+            let log_file = output_dir_clone.join("transcode.log");
+
+            tracing::debug!(cmd=?cmd, log_file=?log_file, "Invoking transcoding script.");
             match cmd.output() {
                 Ok(res) => {
                     tracing::info!("Transcoding script finished");
+
+                    // Write stdout/stderr to log file
+                    let log_content = format!(
+                        "=== Transcoding Script Execution ===\n\
+                        Command: {:?}\n\
+                        Exit Status: {}\n\
+                        Media ID: {}\n\
+                        User: {}\n\
+                        Input: {:?}\n\
+                        Output Dir: {:?}\n\
+                        Timestamp: {}\n\n\
+                        === STDOUT ===\n\
+                        {}\n\n\
+                        === STDERR ===\n\
+                        {}\n\n",
+                        &script_path_owned,
+                        res.status,
+                        &media_id,
+                        &user_id,
+                        &input_file,
+                        &output_dir_clone,
+                        chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
+                        String::from_utf8_lossy(&res.stdout),
+                        String::from_utf8_lossy(&res.stderr)
+                    );
+
+                    if let Err(e) = fs::write(&log_file, log_content) {
+                        tracing::error!(file=?log_file, details=%e, "Failed to write transcoding log file");
+                    }
+
                     (if res.status.success() {None} else {Some("Script exited with error".to_string())},
-                        String::from_utf8_lossy(&res.stdout).to_string(),
-                        String::from_utf8_lossy(&res.stderr).to_string() )
+                        format!("Log written to: {}", log_file.display()),
+                        "".to_string() )
                 },
                 Err(e) => {
                     tracing::error!(details=%e, "Script exec failed");
-                    (Some(e.to_string()), "".into(), "".into())
+
+                    // Write error to log file
+                    let log_content = format!(
+                        "=== Transcoding Script Execution Failed ===\n\
+                        Command: {:?}\n\
+                        Error: {}\n\
+                        Media ID: {}\n\
+                        User: {}\n\
+                        Input: {:?}\n\
+                        Output Dir: {:?}\n\
+                        Timestamp: {}\n\n",
+                        &script_path_owned,
+                        e,
+                        &media_id,
+                        &user_id,
+                        &input_file,
+                        &output_dir_clone,
+                        chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
+                    );
+
+                    if let Err(write_err) = fs::write(&log_file, log_content) {
+                        tracing::error!(file=?log_file, details=%write_err, "Failed to write transcoding error log");
+                    }
+
+                    (Some(e.to_string()), format!("Log written to: {}", log_file.display()), "".into())
                 }
             }
         })
@@ -494,7 +556,7 @@ fn run_transcode_script(src: &CmprInputSource, output_dir: PathBuf, output_prefi
                                 media_file_id: src.media_file_id.clone(),
                                 user_id: src.user_id.clone(),
                                 stdout,
-                                stderr,
+                                _stderr: stderr,
                                 dmsg: DetailedMsg {
                                     msg: "Failed to get script output filename".to_string(),
                                     details: "Script output has invalid filename".to_string(),
@@ -524,7 +586,7 @@ fn run_transcode_script(src: &CmprInputSource, output_dir: PathBuf, output_prefi
                             media_file_id: src.media_file_id.clone(),
                             user_id: src.user_id.clone(),
                             stdout,
-                            stderr,
+                            _stderr: stderr,
                             dmsg: DetailedMsg {
                                 msg: "Failed to move script output to final location".to_string(),
                                 details: format!("Error moving file: {}", e),
@@ -551,7 +613,7 @@ fn run_transcode_script(src: &CmprInputSource, output_dir: PathBuf, output_prefi
                         media_file_id: src.media_file_id.clone(),
                         user_id: src.user_id.clone(),
                         stdout,
-                        stderr,
+                        _stderr: stderr,
                         dmsg: DetailedMsg {
                             msg: "Script output validation failed".to_string(),
                             details: e,
@@ -569,7 +631,7 @@ fn run_transcode_script(src: &CmprInputSource, output_dir: PathBuf, output_prefi
         media_file_id: src.media_file_id.clone(),
         user_id: src.user_id.clone(),
         stdout,
-        stderr,
+        _stderr: stderr,
         dmsg: DetailedMsg {
             msg: if err_msg.is_some() { "Transcoding failed" } else { "Transcoding complete" }.to_string(),
             details: format!("Error in script: {:?}", err_msg.clone().unwrap_or_default()),
@@ -666,6 +728,10 @@ fn run_thumbnail_script(thumb_dir: PathBuf, thumb_size: (u32,u32), thumb_sheet_d
 
     // Run the thumbnailing script
     let script_path_owned = script_path.to_string();
+    let media_id = src.media_file_id.clone();
+    let user_id = src.user_id.clone();
+    let input_file = sanitized_input.clone();
+    let thumb_dir_clone = thumb_dir.clone();
     let script_thread = {
         std::thread::spawn(move || {
             let _span = tracing::info_span!("thumbnail_script",
@@ -678,17 +744,74 @@ fn run_thumbnail_script(thumb_dir: PathBuf, thumb_size: (u32,u32), thumb_sheet_d
                 cmd.env(key, value);
             }
 
-            tracing::debug!(cmd=?cmd, "Invoking thumbnailing script.");
+            // Create dedicated log file for thumbnailing
+            let log_file = thumb_dir_clone.join("thumbnail.log");
+
+            tracing::debug!(cmd=?cmd, log_file=?log_file, "Invoking thumbnailing script.");
             match cmd.output() {
                 Ok(res) => {
                     tracing::info!("Thumbnailing script finished");
+
+                    // Write stdout/stderr to log file
+                    let log_content = format!(
+                        "=== Thumbnailing Script Execution ===\n\
+                        Command: {:?}\n\
+                        Exit Status: {}\n\
+                        Media ID: {}\n\
+                        User: {}\n\
+                        Input: {:?}\n\
+                        Thumb Dir: {:?}\n\
+                        Timestamp: {}\n\n\
+                        === STDOUT ===\n\
+                        {}\n\n\
+                        === STDERR ===\n\
+                        {}\n\n",
+                        &script_path_owned,
+                        res.status,
+                        &media_id,
+                        &user_id,
+                        &input_file,
+                        &thumb_dir_clone,
+                        chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
+                        String::from_utf8_lossy(&res.stdout),
+                        String::from_utf8_lossy(&res.stderr)
+                    );
+
+                    if let Err(e) = fs::write(&log_file, log_content) {
+                        tracing::error!(file=?log_file, details=%e, "Failed to write thumbnailing log file");
+                    }
+
                     (if res.status.success() {None} else {Some("Script exited with error".to_string())},
-                        String::from_utf8_lossy(&res.stdout).to_string(),
-                        String::from_utf8_lossy(&res.stderr).to_string() )
+                        format!("Log written to: {}", log_file.display()),
+                        "".to_string() )
                 },
                 Err(e) => {
                     tracing::error!(details=%e, "Script exec failed");
-                    (Some(e.to_string()), "".into(), "".into())
+
+                    // Write error to log file
+                    let log_content = format!(
+                        "=== Thumbnailing Script Execution Failed ===\n\
+                        Command: {:?}\n\
+                        Error: {}\n\
+                        Media ID: {}\n\
+                        User: {}\n\
+                        Input: {:?}\n\
+                        Thumb Dir: {:?}\n\
+                        Timestamp: {}\n\n",
+                        &script_path_owned,
+                        e,
+                        &media_id,
+                        &user_id,
+                        &input_file,
+                        &thumb_dir_clone,
+                        chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
+                    );
+
+                    if let Err(write_err) = fs::write(&log_file, log_content) {
+                        tracing::error!(file=?log_file, details=%write_err, "Failed to write thumbnailing error log");
+                    }
+
+                    (Some(e.to_string()), format!("Log written to: {}", log_file.display()), "".into())
                 }
             }
         })
@@ -705,7 +828,7 @@ fn run_thumbnail_script(thumb_dir: PathBuf, thumb_size: (u32,u32), thumb_sheet_d
         media_file_id: src.media_file_id.clone(),
         user_id: src.user_id.clone(),
         stdout,
-        stderr,
+        _stderr: stderr,
         dmsg: DetailedMsg {
             msg: if err_msg.is_some() { "Thumbnailing failed" } else { "Thumbnailing complete" }.to_string(),
             details: format!("Error in script: {:?}", err_msg.clone().unwrap_or_default()),
@@ -755,16 +878,23 @@ fn run_thumbnail_script(thumb_dir: PathBuf, thumb_size: (u32,u32), thumb_sheet_d
         Some(_) => CmprOutput::ThumbsFailure { logs },
         None => {
             // Check if any thumbnail files were actually created
-            let has_thumbnails = thumb_dir.exists() && 
+            let has_thumbnails = thumb_dir.exists() &&
                 fs::read_dir(&thumb_dir)
                     .map(|entries| entries.filter_map(|e| e.ok()).any(|entry| {
                         let path = entry.path();
-                        path.is_file() && path.file_name()
+                        let is_thumb = path.is_file() && path.file_name()
                             .and_then(|name| name.to_str())
-                            .map(|s| s.ends_with(".webp") || s.contains("thumb") || s.contains("sheet"))
-                            .unwrap_or(false)
+                            .map(|s| {
+                                // Only consider actual thumbnail files, not log files
+                                s.ends_with(".webp") || 
+                                (s.starts_with("thumb") && s.ends_with(".webp")) || 
+                                (s.starts_with("sheet-") && s.ends_with(".webp"))
+                            })
+                            .unwrap_or(false);
+                        is_thumb
                     }))
                     .unwrap_or(false);
+            
 
             CmprOutput::ThumbsSuccess {
                 thumb_dir: if has_thumbnails { Some(thumb_dir) } else { None },

@@ -118,10 +118,14 @@ Scripts should exit with status 0 for success, non-zero for failure. The server 
 
 ### Debugging
 
-Script execution logs are captured by the server:
-- Check server logs for script stdout/stderr
+Script execution outputs are written to dedicated log files:
+- **Transcoding logs**: `<media-dir>/<media-id>/transcode.log`
+- **Thumbnailing logs**: `<media-dir>/<media-id>/thumbs/thumbnail.log`
+- **Server logs**: Check for log file locations when processing fails
 - Use `--log-level debug` for detailed execution information
 - Test scripts manually with environment variables set
+
+Log files contain timestamps, command details, exit status, and complete stdout/stderr output from the scripts.
 
 ## Related Documentation
 
