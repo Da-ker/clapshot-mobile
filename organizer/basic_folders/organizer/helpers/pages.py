@@ -156,8 +156,12 @@ class PagesHelper:
             else:
                 raise ValueError(f"Unknown item type: {itm}")
 
-        # Only allow uploads if user owns the folder or is admin
-        can_upload = cur_folder.user_id == ses.user.id or ses.is_admin
+        # Only allow uploads if user owns the folder or is admin, AND has upload permission
+        from ..authz_methods import check_upload_permission
+        upload_permission = check_upload_permission(ses)
+        # If no header found (None), default to allow for backward compatibility
+        has_upload_permission = upload_permission is not False
+        can_upload = (cur_folder.user_id == ses.user.id or ses.is_admin) and has_upload_permission
 
         folder_listing = clap.PageItemFolderListing(
             items = listing_items,
@@ -170,8 +174,9 @@ class PagesHelper:
         pg_items = []
         pg_items.append(clap.PageItem(folder_listing=folder_listing))
         if len(folder_listing.items) == 0:
-            pg_items.append(clap.PageItem(html="<p style='margin-top: 1em;'><i class='far fa-circle-question text-blue-400'></i> Use the drop zone to <strong>upload media files</strong>, or right-click on the empty space above to <strong>create a folder</strong>.</p>"))
-            pg_items.append(clap.PageItem(html="<p>After that, drag items to <strong>reorder</strong>, or drop them <strong>into folders</strong>. Hold shift to multi-select.</p>"))
+            if can_upload:
+                pg_items.append(clap.PageItem(html="<p style='margin-top: 1em;'><i class='far fa-circle-question text-blue-400'></i> Use the drop zone to <strong>upload media files</strong>, or right-click on the empty space above to <strong>create a folder</strong>.</p>"))
+                pg_items.append(clap.PageItem(html="<p>After that, drag items to <strong>reorder</strong>, or drop them <strong>into folders</strong>. Hold shift to multi-select.</p>"))
 
         return pg_items
 

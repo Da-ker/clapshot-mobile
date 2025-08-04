@@ -18,6 +18,7 @@ use futures_util::stream::StreamExt;
 use futures_util::SinkExt;
 use warp::ws::Message;
 use warp::http::HeaderMap;
+use regex::Regex;
 use std::sync::atomic::Ordering::Relaxed;
 
 use anyhow::{anyhow, bail};
@@ -101,6 +102,7 @@ async fn handle_ws_session(
         username: String,
         is_admin: bool,
         cookies: HashMap<String, String>,
+        filtered_headers: HashMap<String, String>,
         server: ServerState)
 {
     let (msgq_tx, mut msgq_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -134,6 +136,7 @@ async fn handle_ws_session(
             }),
             is_admin,
             cookies,
+            http_headers: filtered_headers,
         }
     };
 
@@ -327,6 +330,19 @@ async fn handle_ws_session(
     }
 }
 
+/// Validate and compile the org_http_headers regex pattern
+///
+/// # Arguments
+/// * `pattern` - Regex pattern string to validate
+///
+/// # Returns
+/// * `Ok(Regex)` - Compiled regex with case-insensitive matching
+/// * `Err(anyhow::Error)` - If pattern is invalid
+pub fn validate_org_http_headers_regex(pattern: &str) -> anyhow::Result<Regex> {
+    Regex::new(&format!("(?i){}", pattern))
+        .map_err(|e| anyhow!("Invalid org-http-headers regex pattern '{}': {}", pattern, e))
+}
+
 /// Extract user id, name and clapshot_cookies from HTTP headers (set by nginx)
 /// If any of the headers are missing, default values are used:
 /// - If X-Remote-User-Id is missing, `default_user_id` is used.
@@ -337,9 +353,10 @@ async fn handle_ws_session(
 /// # Arguments
 /// * `hdrs` - HTTP headers
 /// * `default_user_id` - Default user ID to use if X-Remote-User-Id is missing
+/// * `filter_regex` - Regex to filter headers for organizer (case-insensitive)
 ///
-/// * Returns: (user_id: String, user_name: String, is_admin: bool, clapshot_cookies: HashMap<String, String>)
-fn parse_auth_headers(hdrs: &HeaderMap, default_user_id: &str) -> (String, String, bool, HashMap<String, String>)
+/// * Returns: (user_id: String, user_name: String, is_admin: bool, clapshot_cookies: HashMap<String, String>, filtered_headers: HashMap<String, String>)
+fn parse_auth_headers(hdrs: &HeaderMap, default_user_id: &str, filter_regex: &Regex) -> (String, String, bool, HashMap<String, String>, HashMap<String, String>)
 {
     fn try_get_first_named_hdr<T>(hdrs: &HeaderMap, names: T) -> Option<String>
         where T: IntoIterator<Item=&'static str> {
@@ -383,7 +400,20 @@ fn parse_auth_headers(hdrs: &HeaderMap, default_user_id: &str) -> (String, Strin
         }
     };
 
-    (user_id, user_name, is_admin, app_cookies)
+    // Filter headers for organizer using the provided regex
+    let mut filtered_headers = HashMap::new();
+    for (name, value) in hdrs.iter() {
+        let header_name = name.as_str();
+        if filter_regex.is_match(header_name) {
+            if let Ok(header_value) = value.to_str() {
+                filtered_headers.insert(header_name.to_string(), header_value.to_string());
+            } else {
+                tracing::warn!("Failed to convert header '{}' value to string", header_name);
+            }
+        }
+    }
+
+    (user_id, user_name, is_admin, app_cookies, filtered_headers)
 }
 
 /// Handle HTTP requests, read authentication headers and dispatch to WebSocket handler.
@@ -465,7 +495,7 @@ async fn run_api_server_async(
         .map (move|hdrs: HeaderMap, ws: warp::ws::Ws| {
 
             // Get user ID and username (from reverse proxy)
-            let (user_id, user_name, is_admin, app_cookies) = parse_auth_headers(&hdrs, &server_state.default_user);
+            let (user_id, user_name, is_admin, app_cookies, filtered_headers) = parse_auth_headers(&hdrs, &server_state.default_user, &server_state.org_http_headers_regex);
 
             // Increment session counter
             let sid = {
@@ -481,7 +511,7 @@ async fn run_api_server_async(
                 // even though we're using async/await
                 tokio::task::spawn_blocking(move || {
                     let _span = tracing::info_span!("ws_session", sid=%sid, user=%user_id).entered();
-                    block_on(handle_ws_session(ws, sid, user_id, user_name, is_admin, app_cookies, server_state));
+                    block_on(handle_ws_session(ws, sid, user_id, user_name, is_admin, app_cookies, filtered_headers, server_state));
                 }).await.unwrap_or_else(|e| {
                     tracing::error!(details=%e, "Error joining handle_ws_session thread."); });
             })

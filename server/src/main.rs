@@ -1,6 +1,7 @@
 use anyhow::bail;
 use clap::Parser;
 use clapshot_server::{
+    api_server::validate_org_http_headers_regex,
     grpc::{grpc_client::prepare_organizer, grpc_server::make_grpc_server_bind},
     run_clapshot, PKG_NAME, PKG_VERSION,
     video_pipeline::IngestUsernameFrom,
@@ -120,6 +121,12 @@ struct Args {
     /// Path to custom thumbnailing script
     #[arg(long, value_name="SCRIPT", default_value="scripts/clapshot-thumbnail")]
     thumbnail_script: String,
+
+    /// Regular expression to filter HTTP headers passed to Organizer.
+    /// Only headers matching this pattern will be included in UserSessionData.
+    /// Case-insensitive matching.
+    #[arg(long, value_name="REGEX", default_value="^X[-_]REMOTE[-_]")]
+    org_http_headers: String,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -169,6 +176,9 @@ fn main() -> anyhow::Result<()> {
 
     let default_user = args.default_user.clone();
 
+    // Validate and compile the org_http_headers regex
+    let org_http_headers_regex = validate_org_http_headers_regex(&args.org_http_headers)?;
+
     // Run the server (blocking)
     if let Err(e) = run_clapshot(
         args.data_dir.to_path_buf(),
@@ -187,6 +197,7 @@ fn main() -> anyhow::Result<()> {
         ingest_username_from,
         args.transcode_script,
         args.thumbnail_script,
+        org_http_headers_regex,
     ) {
         error!("run_clapshot() failed: {}", e);
     }

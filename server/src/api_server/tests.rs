@@ -11,13 +11,15 @@ use reqwest::{multipart, Client};
 
 use crate::database::DbBasicQuery;
 use crate::database::error::DBError;
-use crate::api_server::{UserMessage, UserMessageTopic, run_api_server_async};
+use crate::api_server::{parse_auth_headers, run_api_server_async, validate_org_http_headers_regex, UserMessage, UserMessageTopic};
 use crate::api_server::server_state::ServerState;
 use crate::database::models::{self};
 use crate::database::tests::make_test_db;
 
 use crate::api_server::test_utils::{ApiTestState, expect_msg, expect_no_msg, write, open_media_file, connect_client_ws};
 use crate::grpc::db_models::proto_msg_type_to_event_name;
+
+use warp::http::{HeaderMap, HeaderValue};
 
 use lib_clapshot_grpc::proto::client::client_to_server_cmd::{AddComment, DelComment, DelMediaFile, EditComment, ListMyMessages, OpenNavigationPage, OpenMediaFile, RenameMediaFile};
 use std::convert::TryFrom;
@@ -402,4 +404,67 @@ async fn test_multipart_upload()
         std::io::Read::read_to_string(&mut file, &mut contents).unwrap();
         assert_eq!(contents, file_body);
     }
+}
+
+
+#[test]
+fn test_validate_org_http_headers_regex() {
+    // Test valid patterns
+    assert!(validate_org_http_headers_regex("^X[-_]REMOTE[-_]").is_ok());
+    assert!(validate_org_http_headers_regex(".*").is_ok());
+    assert!(validate_org_http_headers_regex("test").is_ok());
+
+    // Test invalid patterns
+    assert!(validate_org_http_headers_regex("[").is_err());
+    assert!(validate_org_http_headers_regex("*").is_err());
+}
+
+#[test]
+fn test_header_filtering() {
+    let regex = validate_org_http_headers_regex("^X[-_]REMOTE[-_]").unwrap();
+
+    // Create test headers
+    let mut headers = HeaderMap::new();
+    headers.insert("X-Remote-User-Id", HeaderValue::from_static("testuser"));
+    headers.insert("X-Remote-User-Name", HeaderValue::from_static("Test User"));
+    headers.insert("X-Remote-User-Can-Upload", HeaderValue::from_static("true"));
+    headers.insert("X_REMOTE_USER_GROUPS", HeaderValue::from_static("admins,users"));
+    headers.insert("Authorization", HeaderValue::from_static("Bearer token123"));
+    headers.insert("Content-Type", HeaderValue::from_static("application/json"));
+
+    let (user_id, user_name, is_admin, _cookies, filtered_headers) =
+        parse_auth_headers(&headers, "anonymous", &regex);
+
+    // Verify basic auth parsing still works
+    assert_eq!(user_id, "testuser");
+    assert_eq!(user_name, "Test User");
+    assert!(!is_admin); // No X-Remote-User-Is-Admin header, user is not "admin"
+
+    // Verify header filtering (HeaderMap converts names to lowercase)
+    assert_eq!(filtered_headers.len(), 4); // 4 X-Remote headers
+    assert_eq!(filtered_headers.get("x-remote-user-id"), Some(&"testuser".to_string()));
+    assert_eq!(filtered_headers.get("x-remote-user-name"), Some(&"Test User".to_string()));
+    assert_eq!(filtered_headers.get("x-remote-user-can-upload"), Some(&"true".to_string()));
+    assert_eq!(filtered_headers.get("x_remote_user_groups"), Some(&"admins,users".to_string()));
+
+    // Verify non-matching headers are filtered out (also lowercase)
+    assert!(!filtered_headers.contains_key("authorization"));
+    assert!(!filtered_headers.contains_key("content-type"));
+}
+
+#[test]
+fn test_header_filtering_case_insensitive() {
+    let regex = validate_org_http_headers_regex("^x-remote-").unwrap();
+
+    let mut headers = HeaderMap::new();
+    headers.insert("X-Remote-User-Id", HeaderValue::from_static("testuser"));
+    headers.insert("x-remote-groups", HeaderValue::from_static("users"));
+
+    let (_, _, _, _, filtered_headers) =
+        parse_auth_headers(&headers, "anonymous", &regex);
+
+    // Both should match due to case insensitive regex (HeaderMap converts to lowercase)
+    assert_eq!(filtered_headers.len(), 2);
+    assert!(filtered_headers.contains_key("x-remote-user-id"));
+    assert!(filtered_headers.contains_key("x-remote-groups"));
 }

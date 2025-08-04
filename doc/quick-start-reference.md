@@ -170,6 +170,7 @@ curl http://YOUR_IP:8080/api/health
 - `admin:admin` (can edit all videos)
 - `demo:demo`
 - `alice:alice123`
+- `bob:bob123` (cannot upload files)
 
 **User Management:**
 - `htadmin:admin` (access `/htadmin/` for user management)

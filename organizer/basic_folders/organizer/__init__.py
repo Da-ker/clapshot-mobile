@@ -19,6 +19,7 @@ from .migration_methods import check_migrations_impl, apply_migration_impl, db_i
 from .user_session_methods import on_start_user_session_impl, navigate_page_impl, cmd_from_client_impl
 from .folder_op_methods import move_to_folder_impl, reorder_items_impl
 from .testing_methods import list_tests_impl, run_test_impl
+from .authz_methods import authz_user_action_impl
 
 from .helpers.folders import FoldersHelper
 from .helpers.pages import PagesHelper
@@ -103,7 +104,7 @@ class OrganizerInbound(org.OrganizerInboundBase):
     @override
     @organizer_grpc_handler
     async def authz_user_action(self, authz_user_action_request: org.AuthzUserActionRequest) -> org.AuthzResponse:
-        raise GRPCError(GrpcStatus.UNIMPLEMENTED)   # = let Clapshot server decide
+        return await authz_user_action_impl(self, authz_user_action_request)
 
 
     # Folder operation methods

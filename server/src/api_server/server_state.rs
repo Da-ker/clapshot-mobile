@@ -4,6 +4,7 @@ use std::sync::Arc;
 use lib_clapshot_grpc::proto::org::OrganizerInfo;
 use parking_lot::{RwLock, MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::atomic::AtomicBool;
+use regex::Regex;
 
 use tokio::sync::Mutex;
 use anyhow::anyhow;
@@ -27,6 +28,7 @@ pub struct ServerState {
     pub upload_dir: PathBuf,
     pub url_base: String,
     pub default_user: String,
+    pub org_http_headers_regex: Regex,
 
     sid_to_session: SessionMap,
     user_id_to_senders: SenderListMap,
@@ -49,7 +51,8 @@ impl ServerState {
         organizer_uri: Option<OrganizerURI>,
         grpc_srv_listening_flag: Arc<AtomicBool>,
         default_user: String,
-        terminate_flag: Arc<AtomicBool>) -> ServerState
+        terminate_flag: Arc<AtomicBool>,
+        org_http_headers_regex: Regex) -> ServerState
     {
         ServerState {
             db,
@@ -59,6 +62,7 @@ impl ServerState {
             terminate_flag,
             url_base: url_base.to_string(),
             default_user,
+            org_http_headers_regex,
             sid_to_session: Arc::new(RwLock::new(HashMap::<String, UserSession>::new())),
             user_id_to_senders: Arc::new(RwLock::new(HashMap::<String, SenderList>::new())),
             media_file_id_to_senders: Arc::new(RwLock::new(HashMap::<String, SenderList>::new())),

@@ -23,6 +23,8 @@ mod integration_test
     use crossbeam_channel::{Receiver, RecvTimeoutError, unbounded, select};
 
     use crate::api_server::tests::expect_user_msg;
+    use crate::api_server::validate_org_http_headers_regex;
+
     use crate::database::schema::media_files::{thumb_sheet_cols, thumb_sheet_rows};
     use crate::{expect_client_cmd, send_server_cmd};
     use crate::grpc::grpc_client::prepare_organizer;
@@ -117,6 +119,7 @@ mod integration_test
                 let url_base = format!("http://127.0.0.1:{}", port);
                 let ws_url = format!("{}/api/ws", &url_base.replace("http", "ws"));
                 let target_bitrate = $bitrate;
+                let regex = validate_org_http_headers_regex("^X[-_]REMOTE[-_]").unwrap();
 
                 let grpc_server_bind = crate::grpc::grpc_server::make_grpc_server_bind(&None, &$data_dir)?;
                 let (org_uri, _org_hdl) = prepare_organizer(&None, &$org_cmd, tracing::Level::DEBUG, false, &$data_dir.path())?;
@@ -130,7 +133,7 @@ mod integration_test
                     let org_uri = org_uri.clone();
                     let tf = terminate_flag.clone();
                     thread::spawn(move || {
-                        let mut clapshot = crate::ClapshotInit::init_and_spawn_workers(data_dir, true, url_base, vec![], "127.0.0.1".into(), port, org_uri.clone(), grpc_server_bind, 4, target_bitrate, poll_interval, "anonymous".to_string(), poll_interval*5.0, $ingest_username_from, "scripts/clapshot-transcode".to_string(), "scripts/clapshot-thumbnail".to_string(), tf)?;
+                        let mut clapshot = crate::ClapshotInit::init_and_spawn_workers(data_dir, true, url_base, vec![], "127.0.0.1".into(), port, org_uri.clone(), grpc_server_bind, 4, target_bitrate, poll_interval, "anonymous".to_string(), poll_interval*5.0, $ingest_username_from, "scripts/clapshot-transcode".to_string(), "scripts/clapshot-thumbnail".to_string(), regex, tf)?;
                         clapshot.wait_for_termination()
                 })};
 
@@ -518,7 +521,7 @@ mod integration_test
             std::fs::rename(data_dir.join(audio_file_name), incoming_dir.join(audio_file_name)).unwrap();
 
             let wait_res = wait_for_reports(&mut ws, true, false, false, Some((data_dir.path().into(), audio_file_name.into()))).await;    // No thumbnail for audio
-            
+
             // Check that waveform video file was created for audio transcoding
             let videos_dir = data_dir.join("videos");
             let mut found_video = false;
@@ -549,10 +552,10 @@ mod integration_test
             std::fs::rename(data_dir.join(audio_file_name), incoming_dir.join(audio_file_name)).unwrap();
 
             println!("DEBUG: Testing MP3 file integration: {}", audio_file_name);
-            
+
             // This should work correctly with audio file processing
             let wait_res = wait_for_reports(&mut ws, true, false, false, Some((data_dir.path().into(), audio_file_name.into()))).await;    // No thumbnail for audio
-            
+
             // Check that waveform video file was created for audio transcoding
             let videos_dir = data_dir.join("videos");
             let mut found_video = false;
@@ -579,27 +582,27 @@ mod integration_test
         use crate::video_pipeline::metadata_reader;
         use crate::video_pipeline::IncomingFile;
         use std::collections::HashMap;
-        
+
         // Test that MP3 files are correctly detected as Audio
         let test_file = std::path::PathBuf::from("src/tests/assets/Apollo11_countdown.mp3");
-        
+
         let incoming_file = IncomingFile {
             file_path: test_file.clone(),
             user_id: "test_user".to_string(),
             cookies: HashMap::new(),
         };
-        
+
         let (tx, rx) = crossbeam_channel::unbounded();
         let (result_tx, result_rx) = crossbeam_channel::unbounded();
-        
+
         // Start metadata reader
         std::thread::spawn(move || {
             metadata_reader::run_forever(rx, result_tx, 1);
         });
-        
+
         // Send the file for processing
         tx.send(incoming_file).unwrap();
-        
+
         // Get the result
         match result_rx.recv_timeout(std::time::Duration::from_secs(5)) {
             Ok(result) => {
@@ -607,7 +610,7 @@ mod integration_test
                     metadata_reader::MetadataResult::Ok(metadata) => {
                         // After the fix, MP3 files should be correctly detected as Audio
                         assert_eq!(format!("{:?}", metadata.media_type), "Audio", "MP3 file should be detected as Audio");
-                        
+
                         // Duration should be reasonable for the test file (~25 seconds)
                         assert!(metadata.duration > rust_decimal::Decimal::from(20), "Duration should be > 20 seconds");
                         assert!(metadata.duration < rust_decimal::Decimal::from(30), "Duration should be < 30 seconds");
@@ -621,7 +624,7 @@ mod integration_test
                 panic!("Timeout waiting for metadata result: {:?}", e);
             }
         }
-        
+
         Ok(())
     }
 

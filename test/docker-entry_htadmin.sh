@@ -151,6 +151,7 @@ cat <<-EOF
 ---   - admin:admin     (can edit other people's videos)
 ---   - demo:demo
 ---   - alice:alice123
+---   - bob:bob123      (cannot upload files)
 ---
 ---  User management admin:
 ---   - htadmin:admin   (only for /htadmin)

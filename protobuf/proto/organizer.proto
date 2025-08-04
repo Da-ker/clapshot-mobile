@@ -181,6 +181,7 @@ message UserSessionData {
     UserInfo user = 2;
     bool is_admin = 3;
     map<string, string> cookies = 4;
+    map<string, string> http_headers = 5;
 }
 
 // ---------------------------------------------------------

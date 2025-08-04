@@ -55,7 +55,7 @@ RUN git clone https://github.com/soster/htadmin.git
 RUN cp -r htadmin/app/htadmin /var/www/htadmin
 RUN chown -R www-data:www-data /var/www/htadmin
 
-RUN echo "alice:J/JsbnRtaHBlc\ndemo:N7HpG2DddhtME\nadmin:KURMbfRvhQPWs" > /var/www/.htpasswd   # alice:alice123, demo:demo, admin:admin
+RUN echo "alice:J/JsbnRtaHBlc\nbob:BJIDAhhNc4bsE\ndemo:N7HpG2DddhtME\nadmin:KURMbfRvhQPWs" > /var/www/.htpasswd   # alice:alice123, bob:bob123, demo:demo, admin:admin
 RUN chown www-data:www-data /var/www/.htpasswd
 RUN mv /var/www/htadmin/config/config.ini.example /var/www/htadmin/config/config.ini
 

@@ -45,6 +45,7 @@ impl ClapshotInit {
         ingest_username_from: video_pipeline::IngestUsernameFrom,
         transcode_script: String,
         thumbnail_script: String,
+        org_http_headers_regex: regex::Regex,
         terminate_flag: Arc<AtomicBool>)
         -> anyhow::Result<Self>
     {
@@ -86,7 +87,8 @@ impl ClapshotInit {
                 organizer_uri.clone(),
                 grpc_srv_listening_flag.clone(),
                 default_user,
-                terminate_flag.clone());
+                terminate_flag.clone(),
+                org_http_headers_regex);
             let grpc_srv = if (&organizer_uri).is_some() { Some(grpc_server_bind.clone()) } else { None };
             let ub = url_base.clone();
             thread::spawn(move || { api_server::run_forever(user_msg_rx, grpc_srv, upload_tx, bind_api.to_string(), ub, cors_origins, server, port) })
@@ -360,6 +362,7 @@ pub fn run_clapshot(
     ingest_username_from: video_pipeline::IngestUsernameFrom,
     transcode_script: String,
     thumbnail_script: String,
+    org_http_headers_regex: regex::Regex,
 ) -> anyhow::Result<()> {
 
     let terminate_flag = Arc::new(AtomicBool::new(false));
@@ -382,6 +385,7 @@ pub fn run_clapshot(
         ingest_username_from,
         transcode_script,
         thumbnail_script,
+        org_http_headers_regex,
         terminate_flag.clone()
     )?;
 

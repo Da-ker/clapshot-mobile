@@ -33,7 +33,7 @@ pub async fn handle_multipart_upload(
     body: impl warp::Stream<Item = Result<impl bytes::Buf, warp::Error>> + Unpin)
         -> Result<warp::reply::WithStatus<String>, Infallible>
 {
-    let (user_id, user_name, is_admin, cookies) = parse_auth_headers(&hdrs, &server.default_user);
+    let (user_id, user_name, is_admin, cookies, filtered_headers) = parse_auth_headers(&hdrs, &server.default_user, &server.org_http_headers_regex);
 
     // Check from organizer if user is allowed to upload.
     // Allow by default if organizer is not configured or doesn't care.
@@ -51,7 +51,8 @@ pub async fn handle_multipart_upload(
                 sid: "<upload--not-set>".to_string(),
                 user: Some(proto::UserInfo { id: user_id.clone(), name: user_name.clone() }),
                 is_admin,
-                cookies: cookies.clone()
+                cookies: cookies.clone(),
+                http_headers: filtered_headers,
             };
 
             match org_authz_with_default(&org_session, "upload media file", true, &server, &Some(organizer),

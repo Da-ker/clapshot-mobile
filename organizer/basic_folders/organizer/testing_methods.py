@@ -116,13 +116,79 @@ async def org_test__navigate_page(oi: organizer.OrganizerInbound):
 
 async def org_test__authz_user_action(oi: organizer.OrganizerInbound):
     """
-    authz_user_action() -- Should return UNIMPLEMENTED.
+    authz_user_action() -- Should return UNIMPLEMENTED for non-upload actions.
     """
     try:
-        await oi.authz_user_action(org.AuthzUserActionRequest())
+        # Test non-upload action should still return UNIMPLEMENTED
+        await oi.authz_user_action(org.AuthzUserActionRequest(
+            ses=org.UserSessionData(
+                sid="test_sid",
+                user=clap.UserInfo(id="test_user", name="Test User"),
+                is_admin=False,
+                cookies={},
+                http_headers={}
+            ),
+            other_op=org.AuthzUserActionRequestOtherOp(
+                op=org.AuthzUserActionRequestOtherOpOp.LOGIN
+            )
+        ))
         assert False, "Expected GRPCError"
     except GRPCError as e:
         assert e.status == GrpcStatus.UNIMPLEMENTED
+
+
+async def org_test__authz_user_action_upload(oi: organizer.OrganizerInbound):
+    """
+    authz_user_action() -- Test upload authorization based on X-Remote-User-Can-Upload header.
+    """
+    async def test_upload_auth(header_value, expected_authorized, should_fallback=False):
+        headers = {"x-remote-user-can-upload": header_value} if header_value is not None else {}
+        req = org.AuthzUserActionRequest(
+            ses=org.UserSessionData(
+                sid="test_sid", user=clap.UserInfo(id="test_user", name="Test User"),
+                is_admin=False, cookies={}, http_headers=headers
+            ),
+            other_op=org.AuthzUserActionRequestOtherOp(
+                op=org.AuthzUserActionRequestOtherOpOp.UPLOAD_MEDIA_FILE
+            )
+        )
+
+        if should_fallback:
+            try:
+                await oi.authz_user_action(req)
+                assert False, f"Expected fallback for '{header_value}'"
+            except GRPCError as e:
+                assert e.status == GrpcStatus.UNIMPLEMENTED
+        else:
+            res = await oi.authz_user_action(req)
+            assert res.is_authorized == expected_authorized, f"Wrong auth result for '{header_value}'"
+            if not expected_authorized:
+                assert "Upload permission denied" in res.message
+
+    # Test allow cases
+    for value in ["true", "1", "yes", "TRUE", " yes ", "x_remote_user_can_upload"]:
+        if value == "x_remote_user_can_upload":
+            # Test underscore variant
+            req = org.AuthzUserActionRequest(
+                ses=org.UserSessionData(
+                    sid="test_sid", user=clap.UserInfo(id="test_user", name="Test User"),
+                    is_admin=False, cookies={}, http_headers={"x_remote_user_can_upload": "true"}
+                ),
+                other_op=org.AuthzUserActionRequestOtherOp(
+                    op=org.AuthzUserActionRequestOtherOpOp.UPLOAD_MEDIA_FILE
+                )
+            )
+            res = await oi.authz_user_action(req)
+            assert res.is_authorized == True
+        else:
+            await test_upload_auth(value, True)
+
+    # Test deny cases
+    for value in ["false", "0", "no", "invalid"]:
+        await test_upload_auth(value, False)
+
+    # Test fallback case (no header)
+    await test_upload_auth(None, None, should_fallback=True)
 
 
 async def org_test__move_to_folder(oi: organizer.OrganizerInbound):

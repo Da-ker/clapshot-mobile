@@ -62,6 +62,42 @@ for .deb packages.
 
 There are currently no demos for any of these more advanced auths (`vouch-proxy` example for Okta, Google etc. would be especially welcome, if you want to contribute!).
 
+### Upload Permission Control
+
+Clapshot's `basic_folders` Organizer supports restricting file upload permissions per user through HTTP headers. This allows integration with external authorization systems (e.g. LDAP).
+
+#### Configuration
+
+Upload permission is controlled via the `X-Remote-User-Can-Upload` header set by your reverse proxy. Set it "true" to allow uploads; "false" to deny.
+
+#### Nginx Example
+
+Since htAdmin doesn't support groups, the example Nginx config just matches usernames:
+
+```nginx
+# Define upload permissions per user
+map $remote_user $can_upload {
+    default true;    # Allow uploads for all users by default
+    bob false;       # Deny uploads for user 'bob'
+}
+
+server {
+    location /api {
+        proxy_pass http://127.0.0.1:8095/api;
+
+        # Pass upload permission to Clapshot
+        proxy_set_header X-Remote-User-Can-Upload $can_upload;
+        # ... other headers
+    }
+}
+```
+
+The `demo-htadmin` Docker image includes a demo user with restricted upload permissions:
+
+- `bob:bob123` (cannot upload files) - demonstrates upload permission restrictions
+
+All other demo users (`admin`, `demo`, `alice`) have full upload permissions.
+
 ### Monitored Folder Ingestion
 
 Clapshot automatically processes media files dropped into the monitored incoming folder. This system enables batch uploads and integration with external tools or workflows.

@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::video_pipeline::IncomingFile;
-use crate::api_server::UserMessage;
+use crate::api_server::{UserMessage};
 use crate::database::{DB, models};
 
 
@@ -191,6 +191,7 @@ macro_rules! api_test {
             let media_files_dir = data_dir.join("videos");
             let upload_dir = data_dir.join("upload");
 
+            let test_regex = validate_org_http_headers_regex("^X[-_]REMOTE[-_]").expect("Test regex failed");
             let server_state = ServerState::new( db.clone(),
                 &media_files_dir.clone(),
                 &upload_dir.clone(),
@@ -198,7 +199,8 @@ macro_rules! api_test {
                 None,
                 grpc_srv_listening_flag.clone(),
                 "anonymous".to_string(),
-                terminate_flag.clone());
+                terminate_flag.clone(),
+                test_regex);
 
             let bind_addr: std::net::IpAddr = "127.0.0.1".parse().unwrap();
             let $state = ApiTestState { db, user_msg_tx, upload_res_rx, media_files_dir, upload_dir, terminate_flag, media_files, comments, url_base, port, ws_url };
