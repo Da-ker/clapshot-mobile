@@ -57,7 +57,7 @@ dist_deb/built.${ARCH}.target: ${SERVER_CMD} ${DEB_DEPS}
 	cargo install cargo-deb
 	cargo deb
 	mkdir -p dist_deb
-	cp target/debian/* dist_deb/
+	find target/debian/ -maxdepth 1 -type f -exec cp {} dist_deb/ \;
 	touch $@
 
 debian-docker: docker
