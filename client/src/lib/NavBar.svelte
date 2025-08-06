@@ -115,10 +115,10 @@ function addEDLComments(comments: Proto3.Comment[]) {
 								<i class="fas fa-bars"></i>
 							</button>
 
-						<Dropdown class="w-64 text-sm">
+						<Dropdown class="w-64 text-sm clapshot-dropdown" simple>
 							<DropdownItem onclick={copyToClipboard}><i class="fas fa-share-square"></i> Share to logged in users</DropdownItem>
 							{#if $curVideo?.origUrl}
-								<DropdownItem href={$curVideo?.origUrl} title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> Download original</a></DropdownItem>
+								<DropdownItem title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> Download original</a></DropdownItem>
 							{/if}
 							{#if $collabId}
 								<DropdownItem href="?vid={$mediaFileId}" class="text-green-400"><i class="fas fa-users"></i> Leave collaborative Session</DropdownItem>
@@ -130,7 +130,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 								<i class="fas fa-cog"></i> Experimental tools
 								<ChevronRightOutline class="w-6 h-6 ms-2 float-right" />
 							</DropdownItem>
-							<Dropdown placement="right-start" class="w-64 text-sm">
+							<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown" simple>
 								<DropdownItem onclick={() => isEDLImportOpen = true}><i class="fas fa-file-import"></i> Import EDL as Comments</DropdownItem>
 								<EDLImport bind:isOpen={isEDLImportOpen} onaddcomments={addEDLComments}/>
 							</Dropdown>
@@ -158,9 +158,8 @@ function addEDLComments(comments: Proto3.Comment[]) {
 			</span>
 
 			{#if $userMenuItems != undefined && $userMenuItems.length > 0}
-				<Dropdown class="w-44 text-sm">
+				<Dropdown class="w-44 text-sm clapshot-dropdown" simple>
 					{#each $userMenuItems as item}
-						<DropdownItem>
 						{#if item.type === "logout-basic-auth"}
 							<DropdownItem onclick={() => logoutBasicAuth()}>{item.label}</DropdownItem>
 						{:else if item.type === "about"}
@@ -172,7 +171,6 @@ function addEDLComments(comments: Proto3.Comment[]) {
 						{:else}
 							<DropdownItem>UNKNOWN item.type '{item.type}'</DropdownItem>
 						{/if}
-						</DropdownItem>
 					{/each}
 				</Dropdown>
 			{/if}
