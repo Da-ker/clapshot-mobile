@@ -1,3 +1,11 @@
+clapshot-client (0.8.7) bookworm; urgency=low
+
+  * Fix navbar dropdown menu CSS styling issues and upgrade Flowbite-Svelte
+  * Fix non-ASCII filename uploads
+  * Fix cancelAnimationFrame error in client test suite teardown
+
+ -- Jarno Elonen <elonen@iki.fi>  Wed, 18 Sep 2025 18:21:00 +0300
+
 clapshot-client (0.8.6) bookworm; urgency=low
 
   * Upgrade to Svelte 5 and Vite 6

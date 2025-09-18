@@ -1,3 +1,16 @@
+clapshot-server (0.8.7) bookworm; urgency=low
+
+  * Replace hardcoded ffmpeg parameter generation with user-editable bash scripts for transcoding and thumbnailing
+  * Add support for (S)FTP ingests with '--ingest-username-from folder-name' option
+  * Add support for X-Remote-User-Can-Upload header and pass all X-Remote-* headers to Organizer
+  * Add CLAPSHOT_SERVER__ environment variables for overriding config options in Docker deployments
+  * Fix missing transcode script path configs in Debian package
+  * Fix several transcoding/thumbnailing regressions
+  * Improve debian-docker build targets
+  * Log stdout+stderr in transcode.log / thumbnail.log
+
+ -- Jarno Elonen <elonen@iki.fi>  Wed, 18 Sep 2025 18:21:00 +0300
+
 clapshot-server (0.8.6) bookworm; urgency=low
 
   * Upgrade Tokio to 1.38.2

@@ -1,3 +1,10 @@
+clapshot-organizer-basic-folders (0.8.7) bookworm; urgency=low
+
+  * Support for X-Remote-* HTTP headers forwarding from server
+  * Improved Docker deployment configuration options
+
+ -- Jarno Elonen <elonen@iki.fi>  Wed, 18 Sep 2025 18:21:00 +0300
+
 clapshot-organizer-basic-folders (0.8.6) bookworm; urgency=low
 
   * Fix regression preventing admin access to other users' folders
