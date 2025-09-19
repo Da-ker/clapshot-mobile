@@ -49,6 +49,7 @@ above does, too:
  - `X-Remote-User-Id` / `X_Remote_User_Id` / `HTTP_X_REMOTE_USER_ID` – Authenticated user's ID (e.g. "alice.brown")
  - `X-Remote-User-Name` / `X_Remote_User_Name` / `HTTP_X_REMOTE_USER_NAME` – Display name for user (e.g. "Alice Brown")
  - `X-Remote-User-Is-Admin` / `X_Remote_User_Is_Admin` / `HTTP_X_REMOTE_USER_IS_ADMIN` – If set to "1" or "true", user is a Clapshot admin
+ - `X-Remote-User-Can-Upload` / `X_Remote_User_Can_Upload` / `HTTP_X_REMOTE_USER_CAN_UPLOAD` -  If set to "1" or "true", user is allowed to upload media files
 
 Most modern real-world deployments will likely use some more advanced authentication mechanism, such as OAuth, Kerberos etc, but htadmin is a good starting point.
 
