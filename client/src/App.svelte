@@ -206,18 +206,36 @@ function onCollabReport(e: { report: Proto3.client.ClientToServerCmd_CollabRepor
     }
 }
 
-function onCommentPinClicked(e: any) {
-    // Find corresponding comment in the list, scroll to it and highlight
+function activateComment(e: any) {
+    // Unified comment activation function - handles both timecoded and non-timecoded comments
+    // Called from: pin clicks, URL hash, and potentially other sources
     let commentId = e.id;
     let c = $allComments.find((c: { comment: { id: any; }; }) => c.comment.id == commentId);
-    if (c) {
-        onDisplayComment({timecode: c.comment.timecode, drawing: c.comment.drawing});
-        let card = document.getElementById("comment_card_" + commentId);
-        if (card) {
-            card.scrollIntoView({behavior: "smooth", block: "center", inline: "nearest"});
-            setTimeout(() => { card?.classList.add("highlighted_comment"); }, 500);
-            setTimeout(() => { card?.classList.remove("highlighted_comment"); }, 3000);
-        }
+
+    if (!c) {
+        console.warn("Comment not found:", commentId);
+        acts.add({mode: 'warning', message: 'Comment not found', lifetime: 3});
+        return;
+    }
+
+    // If comment has a timecode, activate it on the timeline (seek, set loop points)
+    if (c.comment.timecode && videoPlayer) {
+        videoPlayer.activateCommentOnTimeline(commentId);
+    }
+
+    // Handle all the display logic (drawing, subtitle, collab, etc.)
+    onDisplayComment({
+        timecode: c.comment.timecode,
+        drawing: c.comment.drawing,
+        subtitleId: c.comment.subtitleId
+    });
+
+    // Scroll to comment card and highlight it
+    let card = document.getElementById("comment_card_" + commentId);
+    if (card) {
+        card.scrollIntoView({behavior: "smooth", block: "center", inline: "nearest"});
+        setTimeout(() => { card?.classList.add("highlighted_comment"); }, 500);
+        setTimeout(() => { card?.classList.remove("highlighted_comment"); }, 3000);
     }
 }
 
@@ -319,6 +337,8 @@ async function onSubtitleUpdate(e: any) {
 
 function popHistoryState(e: PopStateEvent) {
     console.debug("popHistoryState called. e.state=", e.state);
+
+    // If state is present, use it
     if (e.state) {
         if (e.state.mediaFileId) {
             console.debug("popHistoryState: Opening video: ", e.state.mediaFileId);
@@ -330,7 +350,23 @@ function popHistoryState(e: PopStateEvent) {
             return;
         }
     }
-    console.debug("popHistoryState: Resetting UI view due to empty state");
+
+    // State might be empty if URL was pasted directly - check URL parameters
+    const currentParams = new URLSearchParams(window.location.search);
+    const vidParam = currentParams.get('vid');
+    const pageParam = currentParams.get('p');
+
+    if (vidParam) {
+        console.debug("popHistoryState: Empty state but found vid param, opening video:", vidParam);
+        wsEmit({ openMediaFile: { mediaFileId: vidParam } });
+        return;
+    } else if (pageParam) {
+        console.debug("popHistoryState: Empty state but found page param, opening page:", pageParam);
+        wsEmit({openNavigationPage: {pageId: decodeURIComponent(pageParam)}});
+        return;
+    }
+
+    console.debug("popHistoryState: Resetting UI view due to empty state and no URL params");
     closePlayerIfOpen();
     wsEmit({openNavigationPage: {pageId: undefined}});
 }
@@ -355,10 +391,41 @@ $collabId = urlParams.get('collab');
 const encodedPageParm = urlParams.get('p');
 $curPageId = encodedPageParm ? decodeURIComponent(encodedPageParm) : null;
 
+// Parse URL hash for direct comment links (#comment_{id})
+const urlHash = window.location.hash;
+const commentHashMatch = urlHash.match(/^#comment_(.+)$/);
+const commentIdFromHash = commentHashMatch ? commentHashMatch[1] : null;
+
+// Track whether we've activated the hash comment yet
+let hashCommentActivated = false;
+
+// Helper function to try activating comment from URL hash
+function tryActivateHashComment() {
+    if (hashCommentActivated || !commentIdFromHash) {
+        return;
+    }
+
+    if ($videoIsReady && $allComments.length > 0) {
+        hashCommentActivated = true;
+        setTimeout(() => {
+            activateComment({id: commentIdFromHash});
+            // Clear hash after activation to avoid confusion on refresh/reshare
+            history.replaceState(history.state, '', window.location.href.split('#')[0]);
+        }, 1000);
+    }
+}
+
+// Watch for video ready state changes to try activating hash comment
+$effect(() => {
+    if ($videoIsReady) {
+        tryActivateHashComment();
+    }
+});
+
 if ($mediaFileId && $collabId)
-    history.replaceState({mediaFileId: $mediaFileId}, '', `/?vid=${$mediaFileId}&collab=${$collabId}`);
+    history.replaceState({mediaFileId: $mediaFileId}, '', `/?vid=${$mediaFileId}&collab=${$collabId}${urlHash}`);
 else if ($mediaFileId)
-    history.replaceState({mediaFileId: $mediaFileId}, '', `/?vid=${$mediaFileId}`);
+    history.replaceState({mediaFileId: $mediaFileId}, '', `/?vid=${$mediaFileId}${urlHash}`);
 else if ($curPageId)
     history.replaceState({pageId: $curPageId}, '', `/?p=${encodeURIComponent($curPageId)}`);
 else
@@ -822,6 +889,9 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
                     return res;
                 }
                 $allComments = indentCommentTree($allComments);
+
+                // Try to activate comment from URL hash if conditions are met
+                tryActivateHashComment();
             }
             // delComment
             else if (cmd.delComment) {
@@ -988,7 +1058,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                         bind:this={videoPlayer} src={$curVideo.playbackUrl}
                         onseeked={onPlayerSeeked}
                         oncollabreport={onCollabReport}
-                        oncommentpinclicked={onCommentPinClicked}
+                        oncommentpinclicked={activateComment}
                         onuploadsubtitles={onUploadSubtitles}
                         onchangesubtitle={onSubtitleChange}
                     />

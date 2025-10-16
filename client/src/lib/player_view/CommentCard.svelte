@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { preventDefault } from 'svelte/legacy';
     import { flushSync } from 'svelte';
 
 
@@ -96,6 +95,21 @@ function getSubtitleLanguage(subtitleId: string): string {
     return sub ? sub.languageCode.toUpperCase() : "";
 }
 
+function onClickShare() {
+    // Build a simple fragment link to this comment
+    try {
+        const base = window.location.href.split('#')[0];
+        const url = `${base}#comment_${comment.id}`;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
+                alert("Link copied to clipboard");
+            }).catch(() => { alert("Copy link: " + url); });
+        } else { alert("Copy link: " + url); }
+    } catch (e) {
+        console.error('Failed to copy link', e);
+    }
+}
+
 </script>
 
 <div transition:scale
@@ -104,11 +118,11 @@ function getSubtitleLanguage(subtitleId: string): string {
     style="margin-left: {indent*1.5}em"
     tabindex="0"
     role="link"
-    onfocus={() => showActions=true}
-    onmouseenter={() => showActions=true}
-    onmouseleave={() => showActions=false}
-    onclick={() => {if (comment.timecode) onTimecodeClick(comment.timecode);}}
-    onkeydown={(e) => {
+    on:focus={() => showActions=true}
+    on:mouseenter={() => showActions=true}
+    on:mouseleave={() => showActions=false}
+    on:click={() => {if (comment.timecode) onTimecodeClick(comment.timecode);}}
+    on:keydown={(e) => {
         if (e.key == "Escape") { editing = false; }
         else if (e.key == "Enter") { if (comment.timecode) onTimecodeClick(comment.timecode); }
     }}
@@ -132,7 +146,7 @@ function getSubtitleLanguage(subtitleId: string): string {
 
     <div class="p-2" lang="en">
         {#if editing}
-            <textarea class="w-full outline-dashed bg-slate-500" rows=3 use:callFocus bind:value={commentText} onkeydown={onEditFieldKeyDown} onblur={onEditFieldBlur}></textarea>
+            <textarea class="w-full outline-dashed bg-slate-500" rows=3 use:callFocus bind:value={commentText} on:keydown={onEditFieldKeyDown} on:blur={onEditFieldBlur}></textarea>
         {:else}
             <p class="text-gray-300 text-base hyphenate">
                 {comment.comment}
@@ -144,25 +158,37 @@ function getSubtitleLanguage(subtitleId: string): string {
     </div>
 
     {#if showActions}
-    <div class="p-2 flex place-content-end" transition:slide="{{ duration: 200 }}">
-        <button class="border rounded-lg px-1 placeholder: ml-2 text-sm border-cyan-500 text-cyan-500" onclick={()=>showReply=true}>Reply</button>
-        {#if comment.userId == $curUserId || $curUserIsAdmin}
-            <button class="border rounded-lg px-1 ml-2 text-sm border-cyan-600 text-cyan-600" onclick={()=>{editing=true;}}>Edit</button>
-            {#if !hasChildren()}
-            <button class="border rounded-lg px-1 ml-2 text-sm border-red-300 text-red-300" onclick={onClickDeleteComment}>Del</button>
+    <div class="p-2 flex items-center justify-between" transition:slide="{{ duration: 200 }}">
+        <!-- Left: share icon -->
+        <div class="flex-none">
+            <button
+                class="fa fa-link border rounded-lg px-2 py-1 text-sm border-gray-500 text-gray-300 hover:bg-gray-700"
+                title="Copy link"
+                on:click={onClickShare}
+            ></button>
+        </div>
+
+        <!-- Right: existing action buttons -->
+        <div class="flex-1 flex justify-end">
+            <button class="border rounded-lg px-1 placeholder: ml-2 text-sm border-cyan-500 text-cyan-500" on:click={()=>showReply=true}>Reply</button>
+            {#if comment.userId == $curUserId || $curUserIsAdmin}
+                <button class="border rounded-lg px-1 ml-2 text-sm border-cyan-600 text-cyan-600" on:click={()=>{editing=true;}}>Edit</button>
+                {#if !hasChildren()}
+                <button class="border rounded-lg px-1 ml-2 text-sm border-red-300 text-red-300" on:click={onClickDeleteComment}>Del</button>
+                {/if}
             {/if}
-        {/if}
+        </div>
     </div>
     {/if}
 
     {#if showReply}
-        <form class="p-2" onsubmit={preventDefault(onReplySubmit)}>
+    <form class="p-2" on:submit|preventDefault={onReplySubmit}>
             <input
                 class="w-full border p-1 rounded bg-gray-900"
                 type="text" placeholder="Your reply..."
                 use:callFocus
                 bind:this={replyInput}
-                onblur={()=>showReply=false} />
+        on:blur={()=>showReply=false} />
         </form>
     {/if}
 </div>
@@ -175,5 +201,8 @@ function getSubtitleLanguage(subtitleId: string): string {
     -ms-hyphens: auto;
     hyphens: auto;
     word-break: break-word;
+}
+button {
+    cursor: pointer;
 }
 </style>

@@ -595,15 +595,13 @@ function handleTimeUpdate() {
     }
 }
 
-function clickOnPin(id: string) {
-    console.debug("Comment pin clicked:", id);
-    if (oncommentpinclicked) oncommentpinclicked({id});
-
-    // Set loop region between this pin and the next one, if looping is enabled
+// Public method to activate a comment on the timeline (called from App.svelte)
+export function activateCommentOnTimeline(commentId: string) {
+    // Find the comment and next comment
     let clicked_pin = null;
     let next_pin = null;
     for (let i = 0; i < commentsWithTc.length; i++) {
-        if (commentsWithTc[i].id == id) {
+        if (commentsWithTc[i].id == commentId) {
             if (!clicked_pin)
                 clicked_pin = commentsWithTc[i];
             if (i < commentsWithTc.length - 1) {
@@ -612,14 +610,32 @@ function clickOnPin(id: string) {
             break;
         }
     }
+
+    if (!clicked_pin) {
+        console.warn("Comment not found on timeline:", commentId);
+        return;
+    }
+
+    // Seek to the timecode
+    if (clicked_pin.timecode) {
+        try {
+            seekToSMPTE(clicked_pin.timecode);
+        } catch (err) {
+            console.error("Failed to seek to timecode:", clicked_pin.timecode, err);
+        }
+    }
+
+    // Set loop region between this pin and the next one, if looping is enabled
     if ((loop || videoElem.loop) && clicked_pin) {
         loopStartTime = clicked_pin.timecode ? vframeCalc.toMilliseconds(clicked_pin.timecode) / 1000 : 0;
         loopEndTime = next_pin?.timecode ? vframeCalc.toMilliseconds(next_pin.timecode) / 1000 : getEffectiveDuration();
-        console.debug("Loop region set to", loopStartTime, loopEndTime);
         videoElem.loop = true;
-    } else {
-        console.debug("Looping disabled or no next pin");
     }
+}
+
+// Internal handler for pin clicks - bubbles event up to App
+function handlePinClick(id: string) {
+    if (oncommentpinclicked) oncommentpinclicked({id});
 }
 
 </script>
@@ -683,7 +699,7 @@ function clickOnPin(id: string) {
 					username={item.usernameIfnull || item.userId || '?'}
 					comment={item.comment}
 					x_loc={tcToDurationFract(item.timecode)}
-					onclick={(event) => clickOnPin(event.id)}
+					onclick={(event) => handlePinClick(event.id)}
 					/>
 			{/each}
 		</div>
