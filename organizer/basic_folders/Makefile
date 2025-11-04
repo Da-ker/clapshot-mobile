@@ -81,6 +81,10 @@ dist_deb/built.${ARCH}.target: ${DEB_SRC} deps/$(PROTOLIB)
 	@mkdir -p dist_deb   # Create the directory if it doesn't exist (in Docker its a link to ../ where the deb is)
 	touch $@
 
+test-local: $(TARGET_BIN)
+	# Organizer depends on Clapshot Server's gRPC calls and context, so tests are initialized by it, over actual gRPC session
+	cd ../../server && FILTER=org_test_ make test-local
+
 debian-local: dist_deb/built.${ARCH}.target
 
 debian-docker: dist_deb/built.${ARCH}.docker
