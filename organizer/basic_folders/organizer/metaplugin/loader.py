@@ -191,7 +191,14 @@ class MetaPluginLoader:
                 continue
 
             try:
-                actions = plugin.extend_actions(actions)
+                result = plugin.extend_actions(actions)
+                if result is not None:
+                    actions = result
+                else:
+                    self.log.warning(
+                        f"Metaplugin {plugin.PLUGIN_NAME}.extend_actions() returned None - "
+                        "plugins must return the modified actions dict"
+                    )
             except Exception as e:
                 self.log.error(
                     f"Metaplugin {plugin.PLUGIN_NAME} failed in extend_actions: {e}",
@@ -258,9 +265,16 @@ class MetaPluginLoader:
                 continue
 
             try:
-                listing_items = await plugin.augment_folder_listing(
+                result = await plugin.augment_folder_listing(
                     listing_items, folder_context, session
                 )
+                if result is not None:
+                    listing_items = result
+                else:
+                    self.log.warning(
+                        f"Metaplugin {plugin.PLUGIN_NAME}.augment_folder_listing() returned None - "
+                        "plugins must return the modified listing_items list"
+                    )
             except Exception as e:
                 self.log.error(
                     f"Metaplugin {plugin.PLUGIN_NAME} failed in augment_folder_listing: {e}",
@@ -291,9 +305,16 @@ class MetaPluginLoader:
                 continue
 
             try:
-                listing_data = await plugin.augment_listing_data(
+                result = await plugin.augment_listing_data(
                     listing_data, folder_context, session
                 )
+                if result is not None:
+                    listing_data = result
+                else:
+                    self.log.warning(
+                        f"Metaplugin {plugin.PLUGIN_NAME}.augment_listing_data() returned None - "
+                        "plugins must return the modified listing_data dict"
+                    )
             except Exception as e:
                 self.log.error(
                     f"Metaplugin {plugin.PLUGIN_NAME} failed in augment_listing_data: {e}",

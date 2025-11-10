@@ -14,7 +14,7 @@ Then in your metaplugin:
 
 from dataclasses import dataclass
 from logging import Logger, LoggerAdapter
-from typing import Any, Optional, Protocol, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING
 from sqlalchemy import orm
 
 from organizer.database.models import DbFolder
@@ -67,12 +67,16 @@ class OrganizerContext:
     """Helper for constructing UI pages"""
 
 
-class MetaPluginInterface(Protocol):
+class MetaPluginInterface:
     """
-    Protocol defining the metaplugin interface.
+    Base class for metaplugins.
 
-    Metaplugins should implement a `Plugin` class with these attributes and methods.
-    All methods are optional - metaplugins only need to implement the hooks they use.
+    Metaplugins should inherit from this class and override the hooks they need.
+    All methods have sensible defaults, so you only need to implement what you use.
+
+    Required attributes:
+        PLUGIN_NAME: str - Unique metaplugin identifier (e.g., "my_metaplugin")
+        PLUGIN_VERSION: str - Metaplugin version string (e.g., "1.0.0")
     """
 
     PLUGIN_NAME: str
@@ -96,7 +100,7 @@ class MetaPluginInterface(Protocol):
                 self.log = context.log
                 self.log.info(f"{self.PLUGIN_NAME} initialized")
         """
-        ...
+        pass
 
     async def on_shutdown(self) -> None:
         """
@@ -108,7 +112,7 @@ class MetaPluginInterface(Protocol):
             async def on_shutdown(self):
                 self.log.info(f"{self.PLUGIN_NAME} shutting down")
         """
-        ...
+        pass
 
     def extend_actions(self, actions: dict[str, clap.ActionDef]) -> dict[str, clap.ActionDef]:
         """
@@ -138,7 +142,7 @@ class MetaPluginInterface(Protocol):
 
                 return actions
         """
-        ...
+        return actions
 
     async def handle_custom_command(
         self, cmd: str, args: dict[str, Any], session: org.UserSessionData, organizer: "OrganizerInbound"
@@ -173,7 +177,7 @@ class MetaPluginInterface(Protocol):
 
                 return True
         """
-        ...
+        return False
 
     async def augment_folder_listing(
         self, listing_items: list[clap.PageItemFolderListingItem], folder_context: "FolderContext", session: org.UserSessionData
@@ -206,7 +210,7 @@ class MetaPluginInterface(Protocol):
 
                 return listing_items
         """
-        ...
+        return listing_items
 
     async def augment_listing_data(
         self, listing_data: dict[str, str], folder_context: "FolderContext", session: org.UserSessionData
@@ -231,7 +235,7 @@ class MetaPluginInterface(Protocol):
                 listing_data["folder_id"] = str(folder_context.folder.id)
                 return listing_data
         """
-        ...
+        return listing_data
 
     async def check_action_authorization(
         self,
@@ -270,4 +274,4 @@ class MetaPluginInterface(Protocol):
                 # Use default checks for everything else
                 return None
         """
-        ...
+        return None
