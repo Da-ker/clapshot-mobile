@@ -118,11 +118,11 @@ function onClickShare() {
     style="margin-left: {indent*1.5}em"
     tabindex="0"
     role="link"
-    on:focus={() => showActions=true}
-    on:mouseenter={() => showActions=true}
-    on:mouseleave={() => showActions=false}
-    on:click={() => {if (comment.timecode) onTimecodeClick(comment.timecode);}}
-    on:keydown={(e) => {
+    onfocus={() => showActions=true}
+    onmouseenter={() => showActions=true}
+    onmouseleave={() => showActions=false}
+    onclick={() => {if (comment.timecode) onTimecodeClick(comment.timecode);}}
+    onkeydown={(e) => {
         if (e.key == "Escape") { editing = false; }
         else if (e.key == "Enter") { if (comment.timecode) onTimecodeClick(comment.timecode); }
     }}
@@ -146,7 +146,7 @@ function onClickShare() {
 
     <div class="p-2" lang="en">
         {#if editing}
-            <textarea class="w-full outline-dashed bg-slate-500" rows=3 use:callFocus bind:value={commentText} on:keydown={onEditFieldKeyDown} on:blur={onEditFieldBlur}></textarea>
+            <textarea class="w-full outline-dashed bg-slate-500" rows=3 use:callFocus bind:value={commentText} onkeydown={onEditFieldKeyDown} onblur={onEditFieldBlur}></textarea>
         {:else}
             <p class="text-gray-300 text-base hyphenate">
                 {comment.comment}
@@ -164,17 +164,18 @@ function onClickShare() {
             <button
                 class="fa fa-link border rounded-lg px-2 py-1 text-sm border-gray-500 text-gray-300 hover:bg-gray-700"
                 title="Copy link"
-                on:click={onClickShare}
+                aria-label="Copy link"
+                onclick={onClickShare}
             ></button>
         </div>
 
         <!-- Right: existing action buttons -->
         <div class="flex-1 flex justify-end">
-            <button class="border rounded-lg px-1 placeholder: ml-2 text-sm border-cyan-500 text-cyan-500" on:click={()=>showReply=true}>Reply</button>
+            <button class="border rounded-lg px-1 placeholder: ml-2 text-sm border-cyan-500 text-cyan-500" onclick={()=>showReply=true}>Reply</button>
             {#if comment.userId == $curUserId || $curUserIsAdmin}
-                <button class="border rounded-lg px-1 ml-2 text-sm border-cyan-600 text-cyan-600" on:click={()=>{editing=true;}}>Edit</button>
+                <button class="border rounded-lg px-1 ml-2 text-sm border-cyan-600 text-cyan-600" onclick={()=>{editing=true;}}>Edit</button>
                 {#if !hasChildren()}
-                <button class="border rounded-lg px-1 ml-2 text-sm border-red-300 text-red-300" on:click={onClickDeleteComment}>Del</button>
+                <button class="border rounded-lg px-1 ml-2 text-sm border-red-300 text-red-300" onclick={onClickDeleteComment}>Del</button>
                 {/if}
             {/if}
         </div>
@@ -182,13 +183,13 @@ function onClickShare() {
     {/if}
 
     {#if showReply}
-    <form class="p-2" on:submit|preventDefault={onReplySubmit}>
+    <form class="p-2" onsubmit={(e) => {e.preventDefault(); onReplySubmit();}}>
             <input
                 class="w-full border p-1 rounded bg-gray-900"
                 type="text" placeholder="Your reply..."
                 use:callFocus
                 bind:this={replyInput}
-        on:blur={()=>showReply=false} />
+        onblur={()=>showReply=false} />
         </form>
     {/if}
 </div>
