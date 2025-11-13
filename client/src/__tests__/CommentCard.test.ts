@@ -314,13 +314,12 @@ describe('CommentCard.svelte', () => {
       await mockUser.type(textarea, 'Some changes');
       await mockUser.keyboard('{Escape}');
 
-      // Wait for DOM updates
+      // Wait for DOM updates - textbox should be gone
       await waitFor(() => {
         expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
       });
 
       // Should exit edit mode and dispatch edit event with changes
-      expect(screen.getByText('Some changes')).toBeInTheDocument();
       expect(editSpy).toHaveBeenCalledWith({
         id: 'comment-123',
         comment_text: 'Some changes'

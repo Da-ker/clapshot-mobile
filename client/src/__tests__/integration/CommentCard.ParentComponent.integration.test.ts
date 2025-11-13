@@ -88,6 +88,8 @@ describe('CommentCard Integration with Parent Callback Handler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.confirm = vi.fn().mockReturnValue(true);
+    // Reset mockComment to original state (in case previous tests mutated it)
+    mockComment.comment = 'This is a test comment';
   });
 
   afterEach(() => {
