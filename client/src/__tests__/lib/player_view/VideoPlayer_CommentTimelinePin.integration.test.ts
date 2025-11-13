@@ -43,16 +43,16 @@ vi.mock('simple-drawing-board', () => ({
 }));
 
 vi.mock('@/lib/player_view/VideoFrame', () => ({
-  VideoFrame: vi.fn().mockImplementation(() => ({
-    frameRate: 30,
-    fps: 30,
-    toSMPTE: vi.fn((frame) => `00:00:01:${String(frame || 0).padStart(2, '0')}`),
-    toMilliseconds: vi.fn((smpte) => 1000),
-    seekForward: vi.fn(),
-    seekBackward: vi.fn(),
-    seekToFrame: vi.fn(),
-    seekToSMPTE: vi.fn()
-  }))
+  VideoFrame: class MockVideoFrame {
+    frameRate = 30;
+    fps = 30;
+    toSMPTE = vi.fn((frame) => `00:00:01:${String(frame || 0).padStart(2, '0')}`);
+    toMilliseconds = vi.fn((smpte) => 1000);
+    seekForward = vi.fn();
+    seekBackward = vi.fn();
+    seekToFrame = vi.fn();
+    seekToSMPTE = vi.fn();
+  }
 }));
 
 vi.mock('@/cookies', () => ({

@@ -76,10 +76,17 @@ describe('FileUpload functionality', () => {
 
   beforeEach(() => {
     mockXHR = new MockXMLHttpRequest();
-    (global as any).XMLHttpRequest = vi.fn(() => mockXHR);
-    (global as any).FormData = vi.fn(() => ({
-      append: vi.fn()
-    }));
+    (global as any).XMLHttpRequest = class {
+      constructor() {
+        return mockXHR;
+      }
+    };
+    (global as any).FormData = class MockFormData {
+      append = vi.fn();
+      constructor() {
+        return this;
+      }
+    };
     vi.useFakeTimers();
   });
 
