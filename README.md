@@ -25,11 +25,11 @@ Clapshot is an open-source, self-hosted tool for collaborative video/media revie
 
 *For a comprehensive feature list, see [FEATURES.md](FEATURES.md).*
 
+![Video listing screenshot](doc/video-list.webp)
+
 ### When not to use Clapshot
 
 If you don't require local hosting, or are not adept in networking and Linux, consider commercial cloud services which may offer more user-friendly interfaces and additional features out of the box.
-
-![Video listing screenshot](doc/video-list.webp)
 
 ## Demo
 
@@ -54,6 +54,22 @@ After the Docker image starts, access the web UI at `http://127.0.0.1:8080`.
 The multi-user demo uses [PHP htadmin](https://github.com/soster/htadmin) for user management. Default credentials are shown in the terminal.
 
 > **Note:** Chrome/Chromium works best. If accessing from a different machine, configure the `CLAPSHOT_SERVER__URL_BASE` environment variable (or legacy `CLAPSHOT_URL_BASE`). See the [Quick Start Reference](doc/quick-start-reference.md) for common deployment scenarios.
+
+
+### Known Limitations
+
+**Browser Compatibility:**
+- **Desktop-first design:** Chrome/Chromium recommended for best compatibility
+- **Mobile browsers:** Limited support - double-tap to open doesn't work on iOS/iPad, video player controls may not function properly, drawing annotations fail. Use desktop browsers for full functionality.
+
+**Reverse Proxy Considerations:**
+- **IIS:** Hard 2GB file upload limit (use monitored folder ingestion for larger files)
+- **Cloudflare free tier:** ~100 second upload timeout can interrupt large file uploads
+
+For large file uploads with these proxies, use the [monitored folder ingestion](doc/sysadmin-guide.md#monitored-folder-ingestion) feature with SFTP/SMB instead of HTTP uploads.
+
+**Authentication:**
+- **PHP htadmin:** The included htadmin example is simplistic and limited for user management and security. For production deployments, consider integrating with a modern identity provider (OAuth, LDAP, Kerberos, SAML, etc.) via reverse proxy. See [Advanced Authentication](doc/sysadmin-guide.md#advanced-authentication).
 
 
 ## Simple Small-business Production Deployments

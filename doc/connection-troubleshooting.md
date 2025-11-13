@@ -182,6 +182,79 @@ CAUTION: Using '*' in production could expose your users' data to malicious acto
 docker run ... -e CLAPSHOT_CORS="https://yourdomain.com" ...
 ```
 
+### 5. Large File Upload Failures
+
+**Symptoms:**
+- Uploads fail at ~1.5-2GB or after ~100 seconds
+- Error in logs: `Upload failed: error reading a body from connection: end of file before message length reached`
+- Upload progress stops and times out
+
+#### A. IIS Reverse Proxy Limitations
+
+**Problem:** Microsoft IIS has a hard-coded 2GB upload limit that cannot be easily bypassed.
+
+**Solutions:**
+
+1. **Switch to a different reverse proxy** (Recommended)
+   - Use Nginx, Apache, or Caddy instead of IIS
+   - These proxies support larger file uploads with proper configuration
+
+2. **Use monitored folder ingestion** (Workaround)
+
+   Edit `/etc/clapshot-server.conf`:
+   ```ini
+   [general]
+   ingest-username-from = folder-name
+   ```
+
+   If using Docker instead:
+   ```bash
+   docker run ... -e CLAPSHOT_SERVER__INGEST_USERNAME_FROM=folder-name ...
+   ```
+
+   - Set up SFTP/SMB access to the `incoming/` directory
+   - Create subdirectories named after usernames: `incoming/alice/`, `incoming/bob/`
+   - Users upload files to their directories (via SFTP/FTP/SMB)
+   - Clapshot automatically detects and processes files based on folder name
+   - See [Monitored Folder Ingestion](sysadmin-guide.md#monitored-folder-ingestion) for details
+
+**Important:** File permissions must allow `www-data` (or Clapshot server user) to move files during processing.
+
+#### B. Cloudflare Limitations
+
+**Problem:** Cloudflare free tier enforces a ~100 second upload timeout that can interrupt large file uploads.
+
+**Warning from README:**
+> Cloudflare – at least in the free plan – apparently limits HTTP upload times and/or sizes, so double check their offerings if you are planning to use this option for a production deployment.
+
+**Solutions:**
+
+1. **Use Cloudflare paid plans** with higher limits
+2. **Use monitored folder ingestion** (same configuration as above)
+3. **Use a different tunnel/proxy solution** for large file uploads
+4. **Split your setup:**
+   - Cloudflare for web UI access
+   - Direct connection or VPN for file uploads
+
+#### C. Other Reverse Proxy Considerations
+
+Ensure your reverse proxy is configured for large uploads:
+
+**Nginx:**
+```nginx
+client_max_body_size 50G;
+client_body_buffer_size 256K;
+proxy_request_buffering off;
+proxy_read_timeout 3600s;
+proxy_send_timeout 3600s;
+```
+
+**Apache:**
+```apache
+LimitRequestBody 53687091200  # 50GB in bytes
+ProxyTimeout 3600
+```
+
 ## Step-by-Step Troubleshooting
 
 ### Step 1: Check Server Status

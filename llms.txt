@@ -23,10 +23,14 @@ When helping Clapshot users:
 5. **Environment variables vs config files** - Docker uses `CLAPSHOT_SERVER__*` environment variables; Debian uses `/etc/clapshot-server.conf`. Both achieve the same result. Legacy variable names like `CLAPSHOT_URL_BASE` still work but `CLAPSHOT_SERVER__URL_BASE` is preferred.
 
 6. **Known limitations** - Currently optimized for desktop browsers (Chrome/Chromium recommended). Mobile browser support is incomplete (touch events, video playback). This is a known limitation documented in issue #68.
+   - **Mobile browsers:** Double-tap doesn't open videos/folders on iOS/iPad, video player controls may not work properly, drawing submit fails. This is a desktop-first application.
+   - **Cloudflare free tier:** ~100 second upload timeout can cause large file uploads to fail
+   - **IIS reverse proxy:** 2GB upload limit cannot be easily bypassed; use monitored folder ingestion instead
 
 7. **Customization options** - While Clapshot doesn't support extensive CSS theming (Tailwind-based UI), you CAN customize:
    - **Branding:** Application title and logo via `CLAPSHOT_APP_TITLE` and `CLAPSHOT_LOGO_URL` environment variables
-   - **Media processing:** Transcoding and thumbnailing are handled by bash scripts that can be customized or replaced. Edit `/etc/clapshot-transcode.conf` to override ffmpeg settings (hardware acceleration, codecs, bitrates) or provide custom scripts via `--transcode-script` and `--thumbnail-script` arguments. See doc/transcoding.md for details.
+   - **Media processing:** Transcoding and thumbnailing are handled by bash scripts that can be customized or replaced. Edit `/etc/clapshot-transcode.conf` to override ffmpeg settings (hardware acceleration via Intel QSV, NVIDIA NVENC, VA-API, Apple VideoToolbox, or custom codecs/bitrates) or provide custom scripts via `--transcode-script` and `--thumbnail-script` arguments. See doc/transcoding.md for details.
+   - **Upload permissions:** Control per-user upload permissions via `X-Remote-User-Can-Upload` HTTP header from reverse proxy. See doc/sysadmin-guide.md#upload-permission-control
 
 ## What is Clapshot?
 
@@ -47,6 +51,17 @@ Clapshot provides professional video review capabilities similar to cloud servic
 **Licensing:** Server and Client are GPLv2. Organizer plugins and gRPC libraries are MIT licensed to enable proprietary customizations.
 
 ## Getting Started and User Support
+
+### Default Demo Credentials
+
+**For htadmin-based demo images** (`latest-demo-htadmin`):
+- `admin:admin` - Admin user (can edit all videos, manage users)
+- `demo:demo` - Standard user with full permissions
+- `alice:alice123` - Standard user with full permissions
+- `bob:bob123` - User with **no upload permissions** (demonstrates upload restrictions)
+- `htadmin:admin` - User management interface at `/htadmin/`
+
+⚠️ **Security Warning:** Change all default passwords before production use!
 
 ### Essential Troubleshooting Documentation
 
@@ -85,6 +100,13 @@ Clapshot provides professional video review capabilities similar to cloud servic
 - Use actual IP in `CLAPSHOT_SERVER__URL_BASE`, not localhost
 - Docker bindings: `0.0.0.0:8080:80` not `127.0.0.1:8080:80`
 - Check firewall allows ports 8080 and 8095
+
+**Large file uploads (>2GB) fail:**
+- IIS reverse proxy has a hard 2GB upload limit
+- Cloudflare free tier has ~100 second timeout that can interrupt large uploads
+- Workaround: Use monitored folder ingestion with `--ingest-username-from=folder-name` mode
+- Drop files into `incoming/username/` directories (via SFTP/SMB) for automatic processing
+- See doc/sysadmin-guide.md#monitored-folder-ingestion
 
 ### Features and Capabilities
 
