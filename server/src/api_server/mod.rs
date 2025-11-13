@@ -568,12 +568,15 @@ async fn run_api_server_async(
     };
 
     debug!("Binding Websocket API to {}:{}", bind_addr, port);
-    let (_addr, server) = warp::serve(routes)
-        .bind_with_graceful_shutdown((bind_addr, port), async move {
+    let server = warp::serve(routes)
+        .bind((bind_addr, port))
+        .await
+        .graceful(async move {
             while !server_state_cln1.terminate_flag.load(Relaxed) {
                 sleep(Duration::from_millis(100)).await;
             }
-        });
+        })
+        .run();
 
     let server_state = server_state_cln2;
     let msg_relay = async move {
