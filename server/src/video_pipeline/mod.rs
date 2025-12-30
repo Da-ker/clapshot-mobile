@@ -182,7 +182,21 @@ fn ingest_media_file(
     let src_moved = dir_for_orig.join(src.file_name().ok_or(anyhow!("Bad filename: {:?}", src))?);
 
     tracing::debug!("Moving '{}' to '{}'", src.display(), src_moved.display());
-    std::fs::rename(&src, &src_moved)?;
+
+    // Try rename first (fast, atomic), fallback to copy+delete for cross-filesystem moves
+    match std::fs::rename(&src, &src_moved) {
+        Ok(_) => {},
+        Err(e) if e.raw_os_error() == Some(18) => {
+            // EXDEV (cross-device link) - fallback to copy + delete
+            tracing::debug!("Cross-filesystem move detected, using copy+delete");
+            std::fs::copy(&src, &src_moved)
+                .with_context(|| format!("Failed to copy {} to {}", src.display(), src_moved.display()))?;
+            std::fs::remove_file(&src)
+                .with_context(|| format!("Failed to remove source file {}", src.display()))?;
+        },
+        Err(e) => return Err(e.into()),
+    }
+
     if !src_moved.exists() { bail!("Failed to move {:?} file to orig/", src_moved) }
 
     let orig_filename = src.file_name().ok_or(anyhow!("Bad filename: {:?}", src))?.to_string_lossy().into_owned();
