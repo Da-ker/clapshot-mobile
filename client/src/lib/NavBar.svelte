@@ -7,6 +7,7 @@ import {latestProgressReports, clientConfig} from '@/stores';
 import type { MediaProgressReport } from '@/types';
 import { Dropdown, DropdownItem, DropdownDivider, DropdownHeader } from 'flowbite-svelte';
 import EDLImport from './tools/EDLImport.svelte';
+import ExportDialog from './tools/comment-export/ExportDialog.svelte';
 import { ChevronRightOutline } from 'flowbite-svelte-icons';
 import { Modal } from 'flowbite-svelte';
 import * as Proto3 from '@clapshot_protobuf/typescript';
@@ -97,6 +98,8 @@ const randomSessionId = Math.random().toString(36).substring(2, 15);
 
 
 let isEDLImportOpen = $state(false);
+let isExportOpen = $state(false);
+
 function addEDLComments(comments: Proto3.Comment[]) {
 	console.debug("addEDLComments", comments);
 	if (onaddcomments) onaddcomments(comments);
@@ -149,7 +152,9 @@ function addEDLComments(comments: Proto3.Comment[]) {
 							</DropdownItem>
 							<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown" simple>
 								<DropdownItem onclick={() => isEDLImportOpen = true}><i class="fas fa-file-import"></i> {$t('nav.importEdl')}</DropdownItem>
+								<DropdownItem onclick={() => isExportOpen = true}><i class="fas fa-file-export"></i> {$t('nav.exportComments')}</DropdownItem>
 								<EDLImport bind:isOpen={isEDLImportOpen} onaddcomments={addEDLComments}/>
+								<ExportDialog bind:isOpen={isExportOpen}/>
 							</Dropdown>
 						</Dropdown>
 						</div>
