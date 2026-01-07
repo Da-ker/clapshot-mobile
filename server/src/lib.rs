@@ -45,6 +45,7 @@ impl ClapshotInit {
         ingest_username_from: video_pipeline::IngestUsernameFrom,
         transcode_script: String,
         thumbnail_script: String,
+        transcode_decision_script: String,
         org_http_headers_regex: regex::Regex,
         terminate_flag: Arc<AtomicBool>)
         -> anyhow::Result<Self>
@@ -121,10 +122,11 @@ impl ClapshotInit {
         let dd = data_dir.clone();
         let ts = transcode_script.clone();
         let ths = thumbnail_script.clone();
+        let tds = transcode_decision_script.clone();
         let vpp_thread = Some({
             let db = db.clone();
             thread::spawn(move || { video_pipeline::run_forever(
-                db, tf.clone(), dd, user_msg_tx, poll_interval, resubmit_delay, target_bitrate, upload_rx, n_workers, ingest_username_from, ts, ths)})
+                db, tf.clone(), dd, user_msg_tx, poll_interval, resubmit_delay, target_bitrate, upload_rx, n_workers, ingest_username_from, ts, ths, tds)})
         });
 
 
@@ -362,6 +364,7 @@ pub fn run_clapshot(
     ingest_username_from: video_pipeline::IngestUsernameFrom,
     transcode_script: String,
     thumbnail_script: String,
+    transcode_decision_script: String,
     org_http_headers_regex: regex::Regex,
 ) -> anyhow::Result<()> {
 
@@ -385,6 +388,7 @@ pub fn run_clapshot(
         ingest_username_from,
         transcode_script,
         thumbnail_script,
+        transcode_decision_script,
         org_http_headers_regex,
         terminate_flag.clone()
     )?;

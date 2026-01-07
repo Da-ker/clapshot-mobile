@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 use std::io::Read;
+use std::process::Command;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -120,7 +121,8 @@ fn ingest_media_file(
         target_bitrate: u32,
         db: &DB,
         user_msg_tx: &crossbeam_channel::Sender<UserMessage>,
-        cmpr_tx: &crossbeam_channel::Sender<script_processor::CmprInput>)
+        cmpr_tx: &crossbeam_channel::Sender<script_processor::CmprInput>,
+        transcode_decision_script: &str)
             -> anyhow::Result<bool>
 {
     let _span = tracing::info_span!("INGEST_MEDIA",
@@ -222,25 +224,60 @@ fn ingest_media_file(
     })?;
 
 
-    // Check if it needs recompressing
-    fn needs_transcoding(md: &metadata_reader::Metadata, target_max_bitrate: u32) -> Option<(String, u32)> {
-        match md.media_type {
-            metadata_reader::MediaType::Audio => Some(("client cannot playback audio only".to_string(), target_max_bitrate)),
-            metadata_reader::MediaType::Image => Some(("client cannot 'playback' still images".to_string(), target_max_bitrate)),
-            metadata_reader::MediaType::Video => {
-                let new_bitrate = std::cmp::max(md.bitrate/2, std::cmp::min(md.bitrate, target_max_bitrate));
-                let ext = md.src_file.extension().unwrap_or(std::ffi::OsStr::new("")).to_string_lossy().to_lowercase();
-                {
-                    let bitrate_fine = (new_bitrate >= md.bitrate || (md.bitrate as f32) <= 1.2 * (target_max_bitrate as f32));
-                    let codec_fine = ["h264", "avc", "hevc", "h265"].contains(&md.orig_codec.to_lowercase().as_str());
-                    let container_fine = ["mp4", "mkv"].contains(&ext.as_str());
+    // Check if it needs recompressing by running the decision script
+    fn run_transcode_decision_script(
+        md: &metadata_reader::Metadata,
+        target_max_bitrate: u32,
+        script_path: &str
+    ) -> anyhow::Result<Option<(String, u32)>> {
+        let container = md.src_file.extension()
+            .unwrap_or(std::ffi::OsStr::new(""))
+            .to_string_lossy()
+            .to_lowercase();
 
-                    if !container_fine { Some(format!("container '{}' not supported", md.src_file.extension().unwrap_or_default().to_string_lossy())) }
-                    else if !codec_fine { Some(format!("codec '{}' not supported", md.orig_codec)) }
-                    else if !bitrate_fine { Some(format!("bitrate is too high: old {} > new {}", md.bitrate, new_bitrate)) }
-                    else { None }
-                }.map(|reason| (reason, new_bitrate))
-            },
+        let mut cmd = Command::new(script_path);
+        cmd.env("CLAPSHOT_MEDIA_TYPE", md.media_type.as_ref())
+           .env("CLAPSHOT_ORIG_CODEC", &md.orig_codec)
+           .env("CLAPSHOT_CONTAINER", &container)
+           .env("CLAPSHOT_BITRATE", md.bitrate.to_string())
+           .env("CLAPSHOT_TARGET_BITRATE", target_max_bitrate.to_string())
+           .env("CLAPSHOT_DURATION", md.duration.to_string())
+           .env("CLAPSHOT_INPUT_FILE", md.src_file.to_string_lossy().to_string())
+           .env("CLAPSHOT_METADATA_JSON", &md.metadata_all);
+
+        tracing::debug!(script=%script_path, "Running transcode decision script");
+
+        let output = cmd.output()
+            .with_context(|| format!("Failed to execute transcode decision script: {}", script_path))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            bail!("Transcode decision script failed (exit code {:?}): {}", output.status.code(), stderr);
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        tracing::debug!(output=%stdout, "Transcode decision script output");
+
+        // Parse JSON output
+        let json: serde_json::Value = serde_json::from_str(&stdout)
+            .with_context(|| format!("Failed to parse transcode decision script JSON output: {}", stdout))?;
+
+        let transcode = json.get("transcode")
+            .and_then(|v| v.as_bool())
+            .ok_or_else(|| anyhow!("Missing or invalid 'transcode' field in script output"))?;
+
+        if transcode {
+            let reason = json.get("reason")
+                .and_then(|v| v.as_str())
+                .unwrap_or("transcoding required")
+                .to_string();
+            let bitrate = json.get("bitrate")
+                .and_then(|v| v.as_u64())
+                .map(|b| b as u32)
+                .unwrap_or(target_max_bitrate);
+            Ok(Some((reason, bitrate)))
+        } else {
+            Ok(None)
         }
     }
 
@@ -252,7 +289,7 @@ fn ingest_media_file(
         duration: md.duration,
     };
 
-    let transcode_req = match needs_transcoding(md, target_bitrate) {
+    let transcode_req = match run_transcode_decision_script(md, target_bitrate, transcode_decision_script)? {
         Some((reason, new_bitrate)) => {
             let video_dst_prefix = format!("transcoded_br{}_{}", new_bitrate, uuid::Uuid::new_v4());
             cmpr_tx.send(script_processor::CmprInput::Transcode {
@@ -353,7 +390,8 @@ pub fn run_forever(
     n_workers: usize,
     ingest_username_from: IngestUsernameFrom,
     transcode_script: String,
-    thumbnail_script: String)
+    thumbnail_script: String,
+    transcode_decision_script: String)
 {
     tracing::debug!("Starting media file processing pipeline.");
 
@@ -493,7 +531,7 @@ pub fn run_forever(
                                         }))
                                     },
                                     Ok(vid) => {
-                                        let ing_res = ingest_media_file(&vid, &md, &data_dir, &media_files_dir, target_bitrate, &db, &user_msg_tx, &cmpr_in_tx).map_err(|e| {
+                                        let ing_res = ingest_media_file(&vid, &md, &data_dir, &media_files_dir, target_bitrate, &db, &user_msg_tx, &cmpr_in_tx, &transcode_decision_script).map_err(|e| {
                                             DetailedMsg {
                                                 msg: "Media ingestion failed".into(),
                                                 details: e.to_string(),
