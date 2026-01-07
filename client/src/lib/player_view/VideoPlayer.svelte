@@ -201,9 +201,11 @@ async function handleMove(e: MouseEvent | TouchEvent, target: EventTarget|null) 
     if (!target) throw new Error("progress bar missing");
     const effectiveDuration = getEffectiveDuration();
     if (!effectiveDuration) return; // video not loaded yet
-    if (e instanceof MouseEvent && !(e.buttons & 1)) return; // mouse not down
+    // Check for touch event using 'touches' property (TouchEvent global may not exist on desktop Safari)
+    const isTouch = 'touches' in e;
+    if (!isTouch && !(e.buttons & 1)) return; // mouse not down
     videoElem.pause();
-    const clientX = e instanceof TouchEvent ? e.touches[0].clientX : e.clientX;
+    const clientX = isTouch ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const { left, right } = (target as HTMLProgressElement).getBoundingClientRect();
     const newTime = effectiveDuration * (clientX - left) / (right - left);
 
@@ -693,13 +695,15 @@ function handlePinClick(id: string) {
                 ontimeupdate={handleTimeUpdate}
 				bind:duration
 				bind:paused>
+                {#if $curSubtitle?.playbackUrl}
                 <track kind="captions"
-                    src="{$curSubtitle?.playbackUrl}"
+                    src="{$curSubtitle.playbackUrl}"
                     srclang="en"
-                    label="{$curSubtitle?.title}"
+                    label="{$curSubtitle.title}"
                     onloadedmetadata={() => offsetTextTracks()}
                     default
                 />
+                {/if}
 			</video>
 
 			<!--    TODO: maybe show actively controlling collaborator's avatar like this?
