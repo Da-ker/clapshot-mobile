@@ -442,7 +442,12 @@ export function getScreenshot() : string
         if (!ctx) throw new Error("Cannot get canvas context");
         // ctx.drawImage(videoElem, 0, 0);   // Removed, as bgr frame capture is now done when draw mode is entered
         ctx.drawImage(draw_canvas, 0, 0);
-        return comb.toDataURL("image/webp", 0.8);
+        // Try WebP first, fall back to JPEG if not supported (Safari doesn't support WebP encoding)
+        const webp = comb.toDataURL("image/webp", 0.8);
+        if (webp.startsWith("data:image/webp")) {
+            return webp;
+        }
+        return comb.toDataURL("image/jpeg", 0.85);
 }
 
 export async function collabPlay(seek_time: number, looping: boolean) {
