@@ -14,7 +14,15 @@ else
   PLATFORM_STR = --platform linux/$(TARGET_ARCH)
 endif
 
-DOCKER_IMG_NAME=clapshot_server_${ARCH}
+# Debian version and Python version (can be overridden via environment)
+DEBIAN_VER ?= bookworm
+ifeq ($(DEBIAN_VER),trixie)
+  PYTHON_VER ?= python3.13
+else
+  PYTHON_VER ?= python3.11
+endif
+
+DOCKER_IMG_NAME=clapshot_server_${DEBIAN_VER}_${ARCH}
 DEV_VERSION=$(shell (git rev-parse --short HEAD || date +"%Y-%m-%d" || echo "dev"))
 
 SERVER_CMD=target/debug/clapshot-server
@@ -45,7 +53,7 @@ docker: ${DEV_DATADIR}
 	@echo "NOTE! Creating current user and UID/GID in Docker so bind mount is owned by it."
 	@echo "Otherwise you wouldn't be able to access it without root privileges."
 	@echo "-------------------------------------------------------------------------------"
-	cd .. && DOCKER_BUILDKIT=1 docker build $(PLATFORM_STR) -t ${DOCKER_IMG_NAME}:${DEV_VERSION} --build-arg USER=${USER} --build-arg UID=${UID} --build-arg GID=${GID}  -f Dockerfile.server .
+	cd .. && DOCKER_BUILDKIT=1 docker build $(PLATFORM_STR) -t ${DOCKER_IMG_NAME}:${DEV_VERSION} --build-arg USER=${USER} --build-arg UID=${UID} --build-arg GID=${GID} --build-arg DEBIAN_VER=${DEBIAN_VER} --build-arg PYTHON_VER=${PYTHON_VER} -f Dockerfile.server .
 	docker tag ${DOCKER_IMG_NAME}:${DEV_VERSION} ${DOCKER_IMG_NAME}:latest
 
 debian-local: dist_deb/built.${ARCH}.target
@@ -57,18 +65,25 @@ dist_deb/built.${ARCH}.target: ${SERVER_CMD} ${DEB_DEPS}
 	find target/debian/ -maxdepth 1 -type f -exec cp {} dist_deb/ \;
 	touch $@
 
-debian-docker: dist_deb/built.${ARCH}.docker
+debian-docker: dist_deb/built.${DEBIAN_VER}.${ARCH}.docker
 
-dist_deb/built.${ARCH}.docker: ${RUST_DEPS} ${DEB_DEPS} ../Dockerfile.server
+dist_deb/built.${DEBIAN_VER}.${ARCH}.docker: ${RUST_DEPS} ${DEB_DEPS} ../Dockerfile.server
 	@echo "-------------------------------------------------------------------------------"
+	@echo "Building for Debian ${DEBIAN_VER} (${ARCH}) with ${PYTHON_VER}"
 	@echo "NOTE! Creating current user and UID/GID in Docker so bind mount is owned by it."
 	@echo "Otherwise you wouldn't be able to access it without root privileges."
 	@echo "-------------------------------------------------------------------------------"
 	mkdir -p dist_deb
-	cd .. && DOCKER_BUILDKIT=1 docker build $(PLATFORM_STR) -t ${DOCKER_IMG_NAME}:${DEV_VERSION} --build-arg USER=${USER} --build-arg UID=${UID} --build-arg GID=${GID}  -f Dockerfile.server .
+	cd .. && DOCKER_BUILDKIT=1 docker build $(PLATFORM_STR) -t ${DOCKER_IMG_NAME}:${DEV_VERSION} --build-arg USER=${USER} --build-arg UID=${UID} --build-arg GID=${GID} --build-arg DEBIAN_VER=${DEBIAN_VER} --build-arg PYTHON_VER=${PYTHON_VER} -f Dockerfile.server .
 	docker tag ${DOCKER_IMG_NAME}:${DEV_VERSION} ${DOCKER_IMG_NAME}:latest
-	$(eval CMD="cd /app/server && cp -r --preserve=mode,ownership,timestamps /deb ./dist_deb && ls -l ./dist_deb && make debian-local && cp dist_deb/*.* /deb/ && chown -R ${UID}:${GID} /deb")
-	docker run --rm --mount type=bind,source="$$(pwd)/dist_deb",target="/deb" --user root ${DOCKER_IMG_NAME}:latest  bash -c ${CMD}
+	docker run --rm $(PLATFORM_STR) --mount type=bind,source="$$(pwd)/dist_deb",target="/deb" --user root ${DOCKER_IMG_NAME}:latest \
+		bash -c "cd /app/server && cp -r --preserve=mode,ownership,timestamps /deb ./dist_deb && make debian-local && cp dist_deb/*.deb /deb/ && chown -R ${UID}:${GID} /deb"
+	@# Rename .deb files to include Debian version (skip if already renamed)
+	for f in dist_deb/*.deb; do \
+		case "$$f" in *_${DEBIAN_VER}_*) continue ;; esac; \
+		newname=$$(echo "$$f" | sed -E 's/(_[0-9.]+-?[0-9]*_)/\1${DEBIAN_VER}_/'); \
+		[ "$$f" != "$$newname" ] && mv "$$f" "$$newname" || true; \
+	done
 	touch $@
 
 

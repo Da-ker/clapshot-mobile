@@ -19,17 +19,39 @@ default:
 clean-debian:
 	rm -rf dist_deb
 
+# Helper function to test if a Docker base image is available
+define test_base_image
+	@docker build --platform linux/$(1) -q - <<< "FROM rust:1-slim-$(2)" >/dev/null 2>&1
+endef
+
 debian-docker:
-	for plat in arm64 amd64; do \
-		cd server; TARGET_ARCH=$$plat make debian-docker; cd ..; \
-		cd organizer; TARGET_ARCH=$$plat make debian-docker; cd ..; \
+	@echo "Building Debian packages for multiple distributions..."
+	rm -rf dist_deb && mkdir -p dist_deb
+	for debver in bookworm trixie; do \
+		echo ""; \
+		echo "=== Checking availability for Debian $$debver ==="; \
+		if docker build --platform linux/amd64 -q - <<< "FROM rust:1-slim-$$debver" >/dev/null 2>&1; then \
+			echo "=== Building packages for Debian $$debver ==="; \
+			rm -rf server/dist_deb client/dist_deb organizer/basic_folders/dist_deb; \
+			for plat in arm64 amd64; do \
+				echo "--- Building server for $$debver/$$plat ---"; \
+				(cd server && DEBIAN_VER=$$debver TARGET_ARCH=$$plat make debian-docker); \
+				echo "--- Building organizer for $$debver/$$plat ---"; \
+				(cd organizer && DEBIAN_VER=$$debver TARGET_ARCH=$$plat make debian-docker); \
+			done; \
+			echo "--- Building client for $$debver ---"; \
+			(cd client && DEBIAN_VER=$$debver make debian-docker); \
+			echo "--- Collecting $$debver packages ---"; \
+			cp client/dist_deb/*.deb dist_deb/ 2>/dev/null || true; \
+			cp server/dist_deb/*.deb dist_deb/ 2>/dev/null || true; \
+			cp organizer/basic_folders/dist_deb/*.deb dist_deb/ 2>/dev/null || true; \
+		else \
+			echo "=== Skipping $$debver (base image not available) ==="; \
+		fi; \
 	done
-	cd client && make debian-docker
-	mkdir -p dist_deb
-	cp client/dist_deb/* dist_deb/
-	cp server/dist_deb/* dist_deb/
-	cp organizer/basic_folders/dist_deb/* dist_deb/
-	rm dist_deb/*dbgsym* dist_deb/built.*.* 2>/dev/null || true
+	rm dist_deb/*dbgsym* 2>/dev/null || true
+	@echo ""
+	@echo "=== Built packages ==="
 	ls -l dist_deb/
 
 clean:	clean-debian
