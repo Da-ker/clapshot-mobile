@@ -1,0 +1,87 @@
+@import "tailwindcss";
+@plugin 'flowbite/plugin';
+@custom-variant dark (&:where(.dark, .dark *));
+@source "../node_modules/flowbite-svelte/dist";
+@source "../node_modules/flowbite-svelte-icons/dist";
+
+:root {
+	font-family: "Roboto Condensed", Inter, "Segoe UI", Helvetica, Arial, sans-serif;
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: 400;
+
+	color-scheme: dark;
+	color: rgba(229, 231, 235, 0.95);
+	background-color: #090b11;
+
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-text-size-adjust: 100%;
+
+	/* Fix FontAwesome 7 default fixed-width behavior */
+	--fa-width: auto;
+}
+
+html, body, #app {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+	background-color: #090b11;
+	color: rgba(229, 231, 235, 0.95);
+}
+
+.safe-area-pad {
+	padding-top: max(0.5rem, env(safe-area-inset-top));
+	padding-right: max(0.75rem, env(safe-area-inset-right));
+	padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+	padding-left: max(0.75rem, env(safe-area-inset-left));
+}
+
+.safe-area-bottom {
+	padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+button,
+[role="button"],
+input,
+select,
+textarea {
+	min-height: 2.5rem;
+}
+
+.popupContainer button.closeButton {
+	z-index: 1010;
+}
+
+.videolist_item_pump_anim {
+	animation-name: zoom_inout;
+	animation-duration: 0.2s;
+	animation-iteration-count: 2;
+	animation-direction: alternate;
+}
+@keyframes zoom_inout {
+	0% { transform: scale(1); }
+	100% { transform: scale(0.8); }
+}
+
+/* Comment card highlight animation */
+.highlighted_comment {
+	animation-name: glow;
+	animation-duration: 1s;
+}
+@keyframes glow {
+	0% { box-shadow: 0px 0px 0px 0px rgba(255, 162, 0, 0); }
+	50% { box-shadow: 0px 0px 15px 10px rgb(255, 162, 0); }
+	100% { box-shadow: 0px 0px 0px 0px rgba(255, 162, 0, 0); }
+}
+
+/* Fix Flowbite dropdown button width - make buttons behave like divs/anchors */
+.clapshot-dropdown button.block {
+	width: 100%;
+	text-align: left;
+}
+

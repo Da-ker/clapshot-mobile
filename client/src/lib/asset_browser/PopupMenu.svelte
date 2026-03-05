@@ -1,0 +1,145 @@
+<script lang="ts">
+    import { run, stopPropagation } from 'svelte/legacy';
+
+import { onMount } from 'svelte';
+import * as Proto3 from '@clapshot_protobuf/typescript';
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
+    interface Props {
+        x?: number;
+        y?: number;
+        menuLines?: Proto3.ActionDef[];
+        onaction?: (event: {action: Proto3.ActionDef}) => void;
+        onhide?: () => void;
+    }
+
+    let { x = $bindable(0), y = $bindable(0), menuLines = [], onaction, onhide }: Props = $props();
+
+let menu_el: HTMLElement | null = $state(null);
+let removed = $state(false);
+
+function moveKeepMenuOnScreen() {
+    if (!menu_el) return;
+    const rect = menu_el.getBoundingClientRect();
+        x = Math.min(window.innerWidth - rect.width, x);
+        if (y > window.innerHeight - rect.height) y -= rect.height;
+}
+run(() => {
+        moveKeepMenuOnScreen();
+    });  // $: = called on any dependency change
+
+export function hide() {
+    removed = true;
+    if (onhide) onhide();
+}
+
+function onClickItem(item: Proto3.ActionDef) {
+    if (onaction) onaction({action: item });
+    hide();
+}
+
+onMount(() => {
+    if (!menu_el) return;
+    // @ts-ignore
+    menu_el.hide = hide;    // Export hide() to the DOM element
+});
+
+function fmtColorToCSS(c: Proto3.Color | null | undefined) {
+    if (!c) return "black";
+    return `rgb(${c.r},${c.g},${c.b})`;
+}
+</script>
+
+
+{#if !removed}
+<nav style="position: absolute; z-index: 30; top:{y}px; left:{x}px"
+    bind:this={menu_el}
+>
+    <div class="popupmenu">
+        <ul>
+            {#each menuLines as it}
+                {#if it.uiProps?.label?.toLowerCase() == "hr" && !it.action?.code}
+                    <hr>
+                {:else if it.uiProps}
+                    <li><button onclick={stopPropagation(()=>{onClickItem(it)})}>
+                        {#if it.uiProps.icon?.faClass}<i class={it.uiProps.icon?.faClass.classes} style="color: {fmtColorToCSS(it.uiProps.icon?.faClass.color)}"></i>{/if}
+                        {#if it.uiProps.icon?.imgUrl}<img alt="" src={it.uiProps.icon?.imgUrl} style="max-width: 2em; max-height: 2em;"/>{/if}
+                        {it.uiProps.label}
+                    </button></li>
+                {/if}
+            {/each}
+        </ul>
+    </div>
+</nav>
+{/if}
+
+<svelte:window onclick={hide} />
+
+
+<style>
+* {
+    padding: 0;
+    margin: 0;
+}
+.popupmenu{
+    display: inline-flex;
+    border: 1px solid #2f3948;
+    width: 196px;
+    background-color: #161d29;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-direction: column;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+}
+.popupmenu ul{
+    margin: 6px;
+}
+ul li{
+    display: block;
+    list-style-type: none;
+    width: 1fr;
+}
+ul li button{
+    font-size: 0.95rem;
+    color: #e5e7eb;
+    width: 100%;
+    min-height: 40px;
+    text-align: left;
+    border: 0px;
+    background-color: transparent;
+    border-radius: 6px;
+    padding: 0 0.25rem;
+}
+@media (hover: hover) and (pointer: fine) {
+ul li button:hover{
+    color: #fff;
+    text-align: left;
+    border-radius: 5px;
+    background-color: #2a3343;
+}
+}
+ul li button i{
+    padding: 0px 15px 0px 10px;
+}
+ul li button i.fa-square{
+    color: #d1d5db;
+}
+@media (hover: hover) and (pointer: fine) {
+ul li button:hover > i.fa-square{
+    color: #eee;
+}
+}
+ul li button:hover > i.warning{
+    color: crimson;
+}
+@media (hover: hover) and (pointer: fine) {
+:global(ul li button.info:hover){
+    color: #93c5fd;
+}
+}
+hr{
+    border: none;
+    border-bottom: 1px solid #2f3948;
+    margin: 5px 0px;
+}
+</style>

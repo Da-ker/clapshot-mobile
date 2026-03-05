@@ -1,0 +1,128 @@
+<script lang="ts">
+    import { preventDefault } from 'svelte/legacy';
+
+import '@fortawesome/fontawesome-free/css/all.min.css';
+import { fade } from "svelte/transition";
+
+import { videoIsReady } from '@/stores';
+import { t } from '@/i18n';
+
+
+interface Props {
+    onbuttonclicked?: (event: {action: string, comment_text?: string, is_timed?: boolean, is_draw_mode?: boolean, color?: string}) => void;
+}
+
+let { onbuttonclicked }: Props = $props();
+
+let inputText: any = $state();
+let drawMode = $state(false);
+let timedComment = $state(true);
+let curColor = $state("red");
+
+export function forceDrawMode(on: boolean) {
+    drawMode = on;
+}
+
+function sendDrawModeToParent() {
+    if (onbuttonclicked) onbuttonclicked({'action': 'draw', 'is_draw_mode': drawMode});
+}
+function onClickSend() {
+    if (onbuttonclicked) onbuttonclicked({'action': 'send', 'comment_text': inputText, 'is_timed': timedComment});
+    inputText = "";
+    drawMode = false;
+    sendDrawModeToParent();
+}
+function onClickDraw() {
+    drawMode = !drawMode;
+    if (drawMode) { timedComment = true; }  // Drawings make no sense without a timecode.
+    sendDrawModeToParent();
+}
+function onColorSelected(c: string) {
+    curColor = c;
+    if (onbuttonclicked) onbuttonclicked({'action': 'color_select', 'color': c});
+}
+function onUndoRedo(is_undo: boolean) {
+    if (is_undo && onbuttonclicked) {
+        onbuttonclicked({'action': 'undo'});
+    } else if (!is_undo && onbuttonclicked) {
+        onbuttonclicked({'action': 'redo'});
+    }
+}
+
+function onTextChange(e: any) {
+    if (e.target.value.length > 0 && onbuttonclicked) {
+        onbuttonclicked({'action': 'text_input'});
+    }
+    return false;
+}
+
+</script>
+
+
+<div class="relative">
+    <!-- Color selector -->
+    {#if drawMode}
+        <div class="absolute w-full top-[-3em] bg-gray-900 h-10 rounded-md flex place-content-center" transition:fade="{{duration: 100}}">
+            <button type="button" class="fas fa-undo text-gray-500 hover:text-gray-100 active:text-gray-400 inline-block w-10 h-10 mx-2 rounded-lg" title={$t('comments.undo')} aria-label={$t('comments.undo')} onclick={()=>onUndoRedo(true)}></button>
+            <button type="button" class="fas fa-redo text-gray-500 hover:text-gray-100 active:text-gray-400 inline-block w-10 h-10 mx-2 rounded-lg" title={$t('comments.redo')} aria-label={$t('comments.redo')} onclick={()=>onUndoRedo(false)}></button>
+
+            {#each ["red", "green", "blue", "cyan", "yellow", "black", "white"] as c}
+                <button type="button" class="{(curColor==c) ? 'border-2 border-gray-100' : 'border border-gray-600'}  inline-block w-6 h-6 m-2 rounded-lg" style="background: {c};" aria-label="Select {c} color" onclick={() => onColorSelected(c)}></button>
+            {/each}
+        </div>
+    {/if}
+
+    <form onsubmit={preventDefault(onClickSend)} class="flex justify-left rounded-lg shadow-lg bg-gray-800 text-left p-2 w-full" >
+
+        <input
+            bind:value={inputText}
+            oninput={onTextChange}
+            class="flex-1 p-2 bg-gray-700 rounded-lg" placeholder={timedComment ? $t('comments.placeholderTimed') : $t('comments.placeholderUntimed')} />
+
+        {#if $videoIsReady}
+            <button type="button"
+                id="timedCommentButton"
+                title={$t('comments.timedToggleTitle')}
+                class="scale-90 {timedComment ? 'text-amber-600' : 'text-gray-500'}"
+                disabled={drawMode}
+                onclick={() => timedComment = !timedComment}>
+                <span class="fa-stack">
+                    <i class="fa-solid fa-stopwatch fa-stack-2x"></i>
+                    {#if !timedComment}
+                        <i class="fa-solid fa-x fa-stack-2x text-red-800"></i>
+                    {/if}
+                </span>
+            </button>
+
+            <button type="button"
+                onclick={onClickDraw}
+                class="{drawMode ? 'border-2' : ''} fas fa-pen-fancy inline-block h-9 px-3 py-2.5 ml-2 bg-cyan-700 text-white rounded-lg shadow-md hover:bg-cyan-500 hover:shadow-lg focus:bg-cyan-700 focus:shadow-lg focus:outline-none focus:ring-0 active:shadow-lg transition duration-150 ease-in-out"
+                title={$t('comments.drawOnVideo')} aria-label={$t('comments.drawOnVideo')}>
+            </button>
+        {/if}
+
+        <button type="submit"
+            id="sendButton"
+            disabled={!inputText && !drawMode}
+            class="inline-block h-9 px-4 py-2 ml-2 text-sm bg-blue-700 text-white rounded-lg shadow-md hover:bg-blue-500 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out">
+            {$t('comments.send')}
+        </button>
+
+    </form>
+</div>
+
+
+<style>
+
+button {
+    transition: 0.1s ease-in-out;
+}
+#sendButton:disabled {
+    opacity: 0.5;
+    background-color: gray;
+}
+#timedCommentButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>

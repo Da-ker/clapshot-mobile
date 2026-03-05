@@ -1,0 +1,18 @@
+{
+    "ws_url": "wss://www.banchi.top:1818/api/ws",
+    "upload_url": "https://www.banchi.top:1818/api/upload",
+    "user_menu_extra_items": [
+        { "label": "My Videos", "type": "url", "data": "/"}
+    ],
+    "user_menu_show_basic_auth_logout": false,
+
+    "skip_auth_check": true,
+
+    "logo_url": "clapshot-logo.svg",
+    "app_title": "Clapshot",
+
+    "default_locale": "en",
+    "supported_locales": ["en", "zh"],
+
+    "enable_mediabunny": false
+}
