@@ -840,34 +840,27 @@ function handlePinClick(id: string) {
 
 
 		<!-- playback controls -->
-		<div class="flex flex-wrap items-center gap-2 p-2 md:p-3 min-w-0 rounded-xl bg-slate-900/70 border border-slate-700/80 shadow-inner">
+		<div class="p-2 md:p-3 min-w-0 rounded-xl bg-slate-900/70 border border-slate-700/80 shadow-inner space-y-2">
 
-			<!-- Left block: transport + timecode + loop -->
-			<span class="flex-1 min-w-0 flex flex-wrap items-center gap-2 text-l">
+			<!-- Row 1: transport + duration -->
+			<div class="w-full flex items-center justify-between gap-2">
 				<span class="inline-flex items-center gap-1 rounded-lg bg-slate-800/80 px-1 py-1">
-					<button class="hover:text-amber-400 text-slate-200 fa-solid fa-chevron-left inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-md" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
-					<button class="hover:text-amber-400 text-slate-100 fa-solid {paused ? (loop ? 'fa-repeat' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-md bg-cyan-700/70" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
-					<button class="hover:text-amber-400 text-slate-200 fa-solid fa-chevron-right inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-md" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
+					<button class="hover:text-amber-400 text-slate-200 fa-solid fa-backward-step inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-md" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
+					<button class="hover:text-cyan-200 text-sky-100 fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-circle-play') : 'fa-circle-pause'} inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-full bg-gradient-to-br from-cyan-600/80 to-blue-700/80 shadow-md" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
+					<button class="hover:text-amber-400 text-slate-200 fa-solid fa-forward-step inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-md" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
 				</span>
 
-				<span class="inline-flex items-center gap-2 rounded-lg bg-slate-800/80 px-2 py-1 text-sm font-mono">
-					<input class="bg-transparent hover:bg-gray-700/60 rounded px-1 w-28 md:w-32" value="{currentTimecode}" onchange={(e) => onTimecodeEdited(e)}/>
-					<span class="text-slate-400">FR</span>
-					<input class="bg-transparent hover:bg-gray-700/60 rounded px-1 w-14 md:w-16" value="{currentFrame}" onchange={(e) => onFrameEdited(e)}/>
+				<span class="inline-flex items-center rounded-lg bg-slate-800/80 px-3 py-1 text-base md:text-lg font-mono text-slate-200 shrink-0">{format_tc(getEffectiveDuration())}</span>
+			</div>
+
+			<!-- Row 2: timecode + subtitle + volume + loop -->
+			<div class="w-full flex flex-wrap md:flex-nowrap items-center gap-2">
+				<span class="inline-flex items-center gap-2 rounded-lg bg-slate-800/80 px-2 py-1 text-sm font-mono min-w-0 flex-1">
+					<input class="bg-transparent hover:bg-gray-700/60 rounded px-1 w-24 md:w-32 min-w-0" value="{currentTimecode}" onchange={(e) => onTimecodeEdited(e)}/>
+					<span class="text-slate-400 text-xs">FR</span>
+					<input class="bg-transparent hover:bg-gray-700/60 rounded px-1 w-12 md:w-16" value="{currentFrame}" onchange={(e) => onFrameEdited(e)}/>
 				</span>
 
-               {#if !$collabId}
-                    <span class="inline-flex items-center gap-1 rounded-lg bg-slate-800/80 px-1 py-1 text-sm">
-                        <button class="fa-solid fa-square-caret-down hover:text-white {loopStartTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-md"
-                            onclick={() => setLoopPoint(true)} title="Set loop start to current frame" aria-label="Set loop start to current frame"></button>
-                        <button class="fa-solid fa-square-caret-up hover:text-white {loopEndTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-md"
-                            onclick={() => setLoopPoint(false)} title="Set loop end to current frame" aria-label="Set loop end to current frame"></button>
-                    </span>
-                {/if}
-			</span>
-
-            <!-- Right block: subtitle + volume + duration -->
-            <span class="flex-0 ml-auto inline-flex items-center gap-2">
                 <span class="inline-flex items-center rounded-lg bg-slate-800/80 px-1 py-1">
                 {#if ($curVideo?.subtitles?.length ?? 0) > 0}
                     <button
@@ -895,11 +888,18 @@ function handlePinClick(id: string) {
 						aria-label="{(audio_volume ?? 0)>0 ? 'Mute audio' : 'Unmute audio'}"
 						onclick={() => audio_volume = (audio_volume ?? 0)>0 ? 0 : 50}
 						></button>
-                <input class="w-20 md:w-28 accent-violet-500" id="vol-control" type="range" min="0" max="100" step="1" bind:value={audio_volume}/>
+                <input class="w-16 md:w-24 accent-violet-500" id="vol-control" type="range" min="0" max="100" step="1" bind:value={audio_volume}/>
 				</span>
 
-				<span class="inline-flex items-center rounded-lg bg-slate-800/80 px-3 py-1 text-base md:text-lg font-mono text-slate-200">{format_tc(getEffectiveDuration())}</span>
-            </span>
+               {#if !$collabId}
+                    <span class="inline-flex items-center gap-1 rounded-lg bg-slate-800/80 px-1 py-1 text-sm ml-auto md:ml-0">
+                        <button class="fa-solid fa-square-caret-down hover:text-white {loopStartTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-md"
+                            onclick={() => setLoopPoint(true)} title="Set loop start to current frame" aria-label="Set loop start to current frame"></button>
+                        <button class="fa-solid fa-square-caret-up hover:text-white {loopEndTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-10 w-10 md:h-9 md:w-9 rounded-md"
+                            onclick={() => setLoopPoint(false)} title="Set loop end to current frame" aria-label="Set loop end to current frame"></button>
+                    </span>
+                {/if}
+			</div>
 		</div>
 	</div>
 
