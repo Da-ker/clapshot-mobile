@@ -110,7 +110,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 
 <nav class="px-3 sm:px-5 py-2 rounded bg-gray-900/90 backdrop-blur-sm">
 
-	<div class="flex items-center gap-2 sm:gap-4 flex-wrap md:flex-nowrap">
+	<div class="flex items-center gap-2 sm:gap-4 flex-wrap md:flex-nowrap min-w-0">
 
 		<!-- logo with "home" link -->
 		<span class="shrink-0">
@@ -124,18 +124,22 @@ function addEDLComments(comments: Proto3.Comment[]) {
 		<div class="flex-1 min-w-0">
 			{#if $mediaFileId}
 			<span class="grid grid-flow-row auto-rows-max items-center text-gray-400 mx-1 sm:mx-4 min-w-0">
-					<h2 class="text-sm sm:text-lg text-left sm:text-center">
-						<span class="font-mono">{$mediaFileId}</span>
-
-						<div class="relative inline-block text-left">
-							<button type="button"
-							  	class="inline-flex justify-center w-full rounded-md shadow-sm px-2 py-0.5 {$collabId ? 'bg-green-500' : 'bg-gray-800'} text-sm font-medium text-gray-500 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-								aria-haspopup="true" aria-expanded="true" aria-label="Open menu"
+					<h2 class="text-sm sm:text-lg text-left sm:text-center min-w-0">
+						<span class="inline-flex items-center gap-2 min-w-0 align-middle">
+							<span class="font-mono truncate">{$mediaFileId}</span>
+							<button
+								type="button"
+								id="media-menu-button"
+								class="inline-flex shrink-0 items-center justify-center rounded-md px-2 py-1 {$collabId ? 'bg-green-500 text-black' : 'bg-gray-800 text-gray-300'} hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+								aria-haspopup="true"
+								aria-expanded="false"
+								aria-label="Open media menu"
 							>
 								<i class="fas fa-bars"></i>
 							</button>
+						</span>
 
-						<Dropdown class="w-64 text-sm clapshot-dropdown" simple>
+						<Dropdown class="w-64 text-sm clapshot-dropdown" simple triggeredBy="#media-menu-button">
 							<DropdownItem onclick={copyToClipboard}><i class="fas fa-share-square"></i> {$t('nav.shareToLoggedInUsers')}</DropdownItem>
 							{#if $curVideo?.origUrl}
 								<DropdownItem title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> {$t('nav.downloadOriginal')}</a></DropdownItem>
@@ -157,7 +161,6 @@ function addEDLComments(comments: Proto3.Comment[]) {
 								<ExportDialog bind:isOpen={isExportOpen}/>
 							</Dropdown>
 						</Dropdown>
-						</div>
 
 					</h2>
 				<span class="mx-1 sm:mx-4 text-xs text-left sm:text-center truncate">{$curVideo?.title}</span>
@@ -172,7 +175,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 		<div class="shrink-0" style="visibility: {$curUsername ? 'visible': 'hidden'}">
 			<span class="flex w-auto items-center gap-2">
 				<h6 class="hidden sm:block flex-1 mx-2 sm:mx-4 text-gray-400 font-semibold max-w-40 truncate">{$curUsername}</h6>
-				<button id="user-button" class="flex-0 ring-4 ring-slate-800 text-sm rounded-full" aria-haspopup="true" aria-expanded="true">
+				<button id="user-menu-button" class="flex-0 ring-4 ring-slate-800 text-sm rounded-full" aria-haspopup="true" aria-expanded="false">
 					{#if $curUserPic || $curUsername}
 					<div class="w-10 block"><Avatar username={$curUsername} /></div>
 					{/if}
@@ -180,7 +183,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 			</span>
 
 			{#if $userMenuItems != undefined && $userMenuItems.length > 0}
-				<Dropdown class="w-44 text-sm clapshot-dropdown" simple>
+				<Dropdown class="w-44 text-sm clapshot-dropdown" simple triggeredBy="#user-menu-button">
 					<DropdownItem class="flex items-center space-x-2">
 						<span>{$t('nav.language')}</span>
 						<select class="bg-gray-800 text-xs rounded px-2 py-1" value={$locale} onchange={onLocaleChange} aria-label={$t('nav.language')}>

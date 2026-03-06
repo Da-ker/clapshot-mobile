@@ -1024,9 +1024,9 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
 <main>
     <span id="popup-container"></span>
-    <div class="safe-area-pad flex flex-col bg-[#101016] w-screen min-h-screen min-h-[100dvh] {debugLayout?'border-2 border-yellow-300':''}">
+    <div class="safe-area-pad flex flex-col bg-[#101016] w-full min-h-screen min-h-[100dvh] overflow-x-hidden {debugLayout?'border-2 border-yellow-300':''}">
         <div class="flex-none w-full"><NavBar onbasicauthlogout={basicAuthLogout} onaddcomments={onAddCommentsBulk}/></div>
-        <div class="flex-grow w-full overflow-auto {debugLayout?'border-2 border-cyan-300':''}">
+        <div class="flex-grow w-full overflow-auto overflow-x-hidden {debugLayout?'border-2 border-cyan-300':''}">
             <Notifications />
 
         {#if !uiConnectedState}
@@ -1057,9 +1057,9 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         {:else if $mediaFileId && $curVideo && $curVideo.playbackUrl}
 
         <!-- ========== video review widgets ============= -->
-        <div class="flex flex-col min-h-[calc(100dvh-4rem)]">
+        <div class="flex flex-col min-h-[calc(100dvh-4rem)] h-full overflow-hidden">
             <!-- Video area -->
-            <div class="flex-1 bg-cyan-900 rounded-md overflow-hidden flex items-center justify-center min-h-[40vh]">
+            <div class="flex-1 bg-cyan-900 rounded-md overflow-hidden flex items-center justify-center min-h-[32vh] md:min-h-[40vh] min-w-0">
                 <VideoPlayer
                     bind:this={videoPlayer} src={$curVideo.playbackUrl}
                     onseeked={onPlayerSeeked}

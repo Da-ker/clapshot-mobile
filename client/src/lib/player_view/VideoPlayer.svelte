@@ -824,10 +824,10 @@ function handlePinClick(id: string) {
 
 
 		<!-- playback controls -->
-		<div class="flex p-1">
+		<div class="flex flex-wrap items-center gap-y-1 p-1 min-w-0">
 
 			<!-- Play/Pause -->
-			<span class="flex-1 text-left ml-8 space-x-3 text-l whitespace-nowrap">
+			<span class="flex-1 text-left ml-1 md:ml-8 space-x-1 md:space-x-3 text-l whitespace-nowrap min-w-0">
 				<button class="hover:text-amber-600 fa-solid fa-chevron-left inline-flex items-center justify-center h-11 w-11 md:h-9 md:w-9" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
 				<button class="hover:text-amber-600 fa-solid {paused ? (loop ? 'fa-repeat' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center h-11 w-11 md:h-9 md:w-9" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
 				<button class="hover:text-amber-600 fa-solid fa-chevron-right inline-flex items-center justify-center h-11 w-11 md:h-9 md:w-9" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
@@ -878,7 +878,7 @@ function handlePinClick(id: string) {
 					aria-label="{(audio_volume ?? 0)>0 ? 'Mute audio' : 'Unmute audio'}"
 					onclick={() => audio_volume = (audio_volume ?? 0)>0 ? 0 : 50}
 					></button>
-                <input class="mx-2" id="vol-control" type="range" min="0" max="100" step="1" bind:value={audio_volume}/>
+                <input class="mx-2 w-20 md:w-32" id="vol-control" type="range" min="0" max="100" step="1" bind:value={audio_volume}/>
 			</span>
 
 			<!-- Video duration -->
