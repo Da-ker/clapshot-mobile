@@ -801,15 +801,31 @@ function handlePinClick(id: string) {
 
 	<div class="flex-none relative {debug_layout?'border-2 border-red-600':''}">
 
-		<div class="flex-1 space-y-0 leading-none relative">
-			<progress value="{(time / getEffectiveDuration()) || 0}"
-				class="w-full h-[2em] hover:cursor-pointer"
-				onmousedown={preventDefault((e)=>handleMove(e as MouseEvent, e.target))}
-				onmousemove={(e)=>handleMove(e as MouseEvent, e.target)}
-				ontouchmove={preventDefault((e)=>handleMove(e as TouchEvent, e.target))}
-			></progress>
+		<div class="flex-1 space-y-0 leading-none relative py-2">
+			<div
+				role="slider"
+				aria-label="Seek"
+				aria-valuemin="0"
+				aria-valuemax={Math.floor(getEffectiveDuration())}
+				aria-valuenow={Math.floor(time)}
+				tabindex="0"
+				class="relative w-full h-3 md:h-2 rounded-full overflow-hidden bg-slate-700/70 hover:cursor-pointer"
+				onmousedown={preventDefault((e)=>handleMove(e as MouseEvent, e.currentTarget))}
+				onmousemove={(e)=>handleMove(e as MouseEvent, e.currentTarget)}
+				ontouchstart={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
+				ontouchmove={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
+			>
+				<div
+					class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 to-sky-500"
+					style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"
+				></div>
+				<div
+					class="absolute top-1/2 -translate-y-1/2 w-4 h-4 md:w-3 md:h-3 rounded-full bg-white shadow-[0_0_0_2px_rgba(14,116,144,0.5)]"
+					style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"
+				></div>
+			</div>
             {#if loopStartTime>0 || loopEndTime>0}
-                <div class="absolute bottom-1 border-2 h-0 pointer-events-none border-amber-600" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
+                <div class="absolute top-1/2 -translate-y-1/2 h-3 md:h-2 rounded-full pointer-events-none bg-amber-500/30 border border-amber-400/80" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
             {/if}
 			{#each commentsWithTc as item}
 				<CommentTimelinePin
@@ -894,12 +910,6 @@ function handlePinClick(id: string) {
 
 button:disabled {
     opacity: 0.3;
-}
-progress::-webkit-progress-bar {
-    background-color: rgba(0,0,0,0.2);
-}
-progress::-webkit-progress-value {
-    background-color: rgba(255,255,255,0.6);
 }
 
 </style>
