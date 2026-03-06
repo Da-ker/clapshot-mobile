@@ -1024,7 +1024,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
 <main>
     <span id="popup-container"></span>
-    <div class="safe-area-pad flex flex-col bg-[#101016] w-full min-h-screen min-h-[100dvh] overflow-x-hidden {debugLayout?'border-2 border-yellow-300':''}">
+    <div class="safe-area-pad box-border flex flex-col bg-[#101016] w-full min-h-screen min-h-[100dvh] overflow-x-hidden {debugLayout?'border-2 border-yellow-300':''}">
         <div class="flex-none w-full"><NavBar onbasicauthlogout={basicAuthLogout} onaddcomments={onAddCommentsBulk}/></div>
         <div class="flex-grow w-full overflow-auto overflow-x-hidden {debugLayout?'border-2 border-cyan-300':''}">
             <Notifications />

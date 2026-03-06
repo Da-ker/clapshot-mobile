@@ -827,13 +827,13 @@ function handlePinClick(id: string) {
 		<div class="flex flex-wrap items-center gap-y-1 p-1 min-w-0">
 
 			<!-- Play/Pause -->
-			<span class="flex-1 text-left ml-1 md:ml-8 space-x-1 md:space-x-3 text-l whitespace-nowrap min-w-0">
+			<span class="flex-1 text-left ml-1 md:ml-8 space-x-1 md:space-x-3 text-l whitespace-normal min-w-0">
 				<button class="hover:text-amber-600 fa-solid fa-chevron-left inline-flex items-center justify-center h-11 w-11 md:h-9 md:w-9" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
 				<button class="hover:text-amber-600 fa-solid {paused ? (loop ? 'fa-repeat' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center h-11 w-11 md:h-9 md:w-9" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
 				<button class="hover:text-amber-600 fa-solid fa-chevron-right inline-flex items-center justify-center h-11 w-11 md:h-9 md:w-9" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
 
 				<!-- Timecode -->
-				<span class="flex-0 mx-4 text-sm font-mono">
+				<span class="flex-0 mx-1 md:mx-4 text-sm font-mono">
 					<input class="bg-transparent hover:bg-gray-700 w-32" value="{currentTimecode}" onchange={(e) => onTimecodeEdited(e)}/>
 					FR <input class="bg-transparent hover:bg-gray-700 w-16" value="{currentFrame}" onchange={(e) => onFrameEdited(e)}/>
 				</span>
@@ -850,7 +850,7 @@ function handlePinClick(id: string) {
 			</span>
 
             <!-- Closed captioning -->
-            <span class="flex-0 text-center whitespace-nowrap">
+            <span class="flex-0 text-center whitespace-normal">
                 {#if ($curVideo?.subtitles?.length ?? 0) > 0}
                     <button
                         class={($curSubtitle ? 'fa-solid fa-closed-captioning text-amber-600' : 'fa-solid fa-closed-captioning text-gray-400') + ' inline-flex items-center justify-center h-11 w-11 md:h-9 md:w-9'}
@@ -872,7 +872,7 @@ function handlePinClick(id: string) {
             </span>
 
 			<!-- Audio volume -->
-			<span class="flex-0 text-center whitespace-nowrap">
+			<span class="flex-0 text-center whitespace-normal">
 				<button
 					class="fas {(audio_volume ?? 0)>0 ? 'fa-volume-high' : 'fa-volume-mute'} mx-2 inline-flex items-center justify-center h-11 w-11 md:h-9 md:w-9"
 					aria-label="{(audio_volume ?? 0)>0 ? 'Mute audio' : 'Unmute audio'}"

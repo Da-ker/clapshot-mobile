@@ -139,7 +139,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 							</button>
 						</span>
 
-						<Dropdown class="w-64 text-sm clapshot-dropdown" simple triggeredBy="#media-menu-button">
+						<Dropdown class="w-64 text-sm clapshot-dropdown z-50" triggeredBy="#media-menu-button">
 							<DropdownItem onclick={copyToClipboard}><i class="fas fa-share-square"></i> {$t('nav.shareToLoggedInUsers')}</DropdownItem>
 							{#if $curVideo?.origUrl}
 								<DropdownItem title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> {$t('nav.downloadOriginal')}</a></DropdownItem>
@@ -154,7 +154,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 								<i class="fas fa-cog"></i> {$t('nav.experimentalTools')}
 								<ChevronRightOutline class="w-6 h-6 ms-2 float-right" />
 							</DropdownItem>
-							<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown" simple>
+							<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown z-50">
 								<DropdownItem onclick={() => isEDLImportOpen = true}><i class="fas fa-file-import"></i> {$t('nav.importEdl')}</DropdownItem>
 								<DropdownItem onclick={() => isExportOpen = true}><i class="fas fa-file-export"></i> {$t('nav.exportComments')}</DropdownItem>
 								<EDLImport bind:isOpen={isEDLImportOpen} onaddcomments={addEDLComments}/>
@@ -183,7 +183,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 			</span>
 
 			{#if $userMenuItems != undefined && $userMenuItems.length > 0}
-				<Dropdown class="w-44 text-sm clapshot-dropdown" simple triggeredBy="#user-menu-button">
+				<Dropdown class="w-44 text-sm clapshot-dropdown z-50" triggeredBy="#user-menu-button">
 					<DropdownItem class="flex items-center space-x-2">
 						<span>{$t('nav.language')}</span>
 						<select class="bg-gray-800 text-xs rounded px-2 py-1" value={$locale} onchange={onLocaleChange} aria-label={$t('nav.language')}>
