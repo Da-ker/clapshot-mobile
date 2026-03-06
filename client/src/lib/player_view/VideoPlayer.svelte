@@ -194,6 +194,10 @@ onDestroy(async () => {
     }
     videoDecoder?.dispose();
     videoDecoder = null;
+    if (volumeHudTimer) {
+        clearTimeout(volumeHudTimer);
+        volumeHudTimer = null;
+    }
 });
 
 // Monitor video elem "loop" property in a timer.
@@ -290,6 +294,9 @@ let touchMoved = false;
 let gestureStartVideoTime = 0;
 let gestureStartVolume = 0;
 let lastTapAt = 0;
+let volumeHudVisible = $state(false);
+let volumeHudText = $state('');
+let volumeHudTimer: ReturnType<typeof setTimeout> | null = null;
 
 function clamp(v: number, min: number, max: number): number {
     return Math.min(Math.max(v, min), max);
@@ -304,6 +311,16 @@ function onVideoTouchStart(e: TouchEvent) {
     touchMoved = false;
     gestureStartVideoTime = videoElem?.currentTime ?? 0;
     gestureStartVolume = videoElem?.volume ?? 1;
+}
+
+function showVolumeHud(volume01: number) {
+    const pct = Math.round(clamp(volume01, 0, 1) * 100);
+    volumeHudText = `音量 ${pct}%`;
+    volumeHudVisible = true;
+    if (volumeHudTimer) clearTimeout(volumeHudTimer);
+    volumeHudTimer = setTimeout(() => {
+        volumeHudVisible = false;
+    }, 900);
 }
 
 function onVideoTouchMove(e: TouchEvent) {
@@ -333,6 +350,7 @@ function onVideoTouchMove(e: TouchEvent) {
         const newVol = clamp(gestureStartVolume + delta, 0, 1);
         videoElem.volume = newVol;
         audio_volume = Math.round(newVol * 100);
+        showVolumeHud(newVol);
     }
 }
 
@@ -766,14 +784,14 @@ function handlePinClick(id: string) {
 				crossOrigin="anonymous"
 				preload="auto"
 				playsinline
-				class="absolute inset-0 w-full h-full object-contain bg-black"
+				class="absolute inset-0 w-full h-full object-contain bg-black touch-none"
 				style="opacity: 1;"
 				bind:this={videoElem}
 				onloadedmetadata={prepare_drawing}
 				oncanplay={prepare_drawing}
 				onclick={clickOnVideo}
 				ontouchstart={onVideoTouchStart}
-				ontouchmove={onVideoTouchMove}
+				ontouchmove={preventDefault((e)=>onVideoTouchMove(e as TouchEvent))}
 				ontouchend={onVideoTouchEnd}
 				bind:currentTime={time}
                 ontimeupdate={handleTimeUpdate}
@@ -789,6 +807,12 @@ function handlePinClick(id: string) {
                 />
                 {/if}
 			</video>
+
+			{#if volumeHudVisible}
+				<div class="pointer-events-none absolute right-3 top-3 z-[120] rounded-md bg-black/70 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm">
+					<i class="fa-solid fa-volume-high mr-1 text-cyan-300"></i>{volumeHudText}
+				</div>
+			{/if}
 
 			<!--    TODO: maybe show actively controlling collaborator's avatar like this?
 			<div class="absolute top-0 left-0 w-full h-full z-1">
@@ -882,14 +906,6 @@ function handlePinClick(id: string) {
                 {/if}
                 </span>
 
-				<span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-800/85 px-1.5 py-0.5 shrink-0">
-					<button
-						class="fas {(audio_volume ?? 0)>0 ? 'fa-volume-high' : 'fa-volume-mute'} text-slate-200 inline-flex items-center justify-center h-8 w-8 rounded-md"
-						aria-label="{(audio_volume ?? 0)>0 ? 'Mute audio' : 'Unmute audio'}"
-						onclick={() => audio_volume = (audio_volume ?? 0)>0 ? 0 : 50}
-						></button>
-                <input class="w-14 md:w-20 accent-violet-500" id="vol-control" type="range" min="0" max="100" step="1" bind:value={audio_volume}/>
-				</span>
 
                {#if !$collabId}
                     <span class="inline-flex items-center gap-1 rounded-lg bg-slate-800/85 px-1 py-0.5 text-sm shrink-0">
