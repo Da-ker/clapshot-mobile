@@ -291,6 +291,7 @@ let touchStartX = 0;
 let touchStartY = 0;
 let touchStartTime = 0;
 let touchMoved = false;
+let lockedGestureAxis: 'x' | 'y' | null = null;
 let gestureStartVideoTime = 0;
 let gestureStartVolume = 0;
 let lastTapAt = 0;
@@ -309,6 +310,7 @@ function onVideoTouchStart(e: TouchEvent) {
     touchStartY = t.clientY;
     touchStartTime = Date.now();
     touchMoved = false;
+    lockedGestureAxis = null;
     gestureStartVideoTime = videoElem?.currentTime ?? 0;
     gestureStartVolume = videoElem?.volume ?? 1;
 }
@@ -328,15 +330,24 @@ function onVideoTouchMove(e: TouchEvent) {
     const t = e.touches[0];
     const dx = t.clientX - touchStartX;
     const dy = t.clientY - touchStartY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+    const moveThresholdPx = 8;
+    const axisLockThresholdPx = 12;
 
-    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+    if (absDx > moveThresholdPx || absDy > moveThresholdPx) {
         touchMoved = true;
     }
 
     if (!touchMoved) return;
 
+    // Lock gesture axis once movement is clear, to avoid cross-triggering volume/seek.
+    if (!lockedGestureAxis && (absDx > axisLockThresholdPx || absDy > axisLockThresholdPx)) {
+        lockedGestureAxis = absDx >= absDy ? 'x' : 'y';
+    }
+
     // Horizontal swipe: seek
-    if (Math.abs(dx) >= Math.abs(dy)) {
+    if (lockedGestureAxis === 'x') {
         const duration = getEffectiveDuration();
         if (duration > 0) {
             const deltaSeconds = (dx / window.innerWidth) * duration;
@@ -344,7 +355,7 @@ function onVideoTouchMove(e: TouchEvent) {
             videoElem.currentTime = newTime;
             time = newTime;
         }
-    } else {
+    } else if (lockedGestureAxis === 'y') {
         // Vertical swipe: volume
         const delta = -dy / Math.max(window.innerHeight, 1);
         const newVol = clamp(gestureStartVolume + delta, 0, 1);
@@ -357,6 +368,7 @@ function onVideoTouchMove(e: TouchEvent) {
 function onVideoTouchEnd() {
     const now = Date.now();
     const isTap = !touchMoved && (now - touchStartTime) < 250;
+    lockedGestureAxis = null;
     if (!isTap) return;
 
     // Double tap: play/pause
@@ -367,6 +379,25 @@ function onVideoTouchEnd() {
     }
 
     lastTapAt = now;
+}
+
+function onVideoWheel(e: WheelEvent) {
+    if (!videoElem) return;
+
+    // Normalize delta across wheel/trackpad modes (pixel/line/page)
+    const unit = e.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? 16
+        : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? window.innerHeight
+            : 1;
+
+    const delta = e.deltaY * unit;
+    const step = clamp(Math.abs(delta) / 500, 0.01, 0.12);
+    const newVol = clamp((videoElem.volume ?? 1) - Math.sign(delta) * step, 0, 1);
+
+    videoElem.volume = newVol;
+    audio_volume = Math.round(newVol * 100);
+    showVolumeHud(newVol);
 }
 
 function format_tc(seconds: number) : string {
@@ -790,6 +821,7 @@ function handlePinClick(id: string) {
 				onloadedmetadata={prepare_drawing}
 				oncanplay={prepare_drawing}
 				onclick={clickOnVideo}
+				onwheel={preventDefault((e)=>onVideoWheel(e as WheelEvent))}
 				ontouchstart={onVideoTouchStart}
 				ontouchmove={preventDefault((e)=>onVideoTouchMove(e as TouchEvent))}
 				ontouchend={onVideoTouchEnd}
