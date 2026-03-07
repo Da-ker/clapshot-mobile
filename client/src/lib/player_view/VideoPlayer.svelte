@@ -303,6 +303,13 @@ function clamp(v: number, min: number, max: number): number {
     return Math.min(Math.max(v, min), max);
 }
 
+function getCurrentVolume01(): number {
+    if (typeof audio_volume === 'number' && !Number.isNaN(audio_volume)) {
+        return clamp(audio_volume / 100, 0, 1);
+    }
+    return clamp(videoElem?.volume ?? 1, 0, 1);
+}
+
 function onVideoTouchStart(e: TouchEvent) {
     if (!e.touches || e.touches.length !== 1) return;
     const t = e.touches[0];
@@ -312,7 +319,7 @@ function onVideoTouchStart(e: TouchEvent) {
     touchMoved = false;
     lockedGestureAxis = null;
     gestureStartVideoTime = videoElem?.currentTime ?? 0;
-    gestureStartVolume = videoElem?.volume ?? 1;
+    gestureStartVolume = getCurrentVolume01();
 }
 
 function showVolumeHud(volume01: number) {
@@ -369,6 +376,7 @@ function onVideoTouchEnd() {
     const now = Date.now();
     const isTap = !touchMoved && (now - touchStartTime) < 250;
     lockedGestureAxis = null;
+    gestureStartVolume = getCurrentVolume01();
     if (!isTap) return;
 
     // Double tap: play/pause
