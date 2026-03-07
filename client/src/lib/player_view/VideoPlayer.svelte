@@ -198,6 +198,15 @@ onDestroy(async () => {
         clearTimeout(volumeHudTimer);
         volumeHudTimer = null;
     }
+
+    try {
+        volumeMediaSource?.disconnect();
+        volumeGainNode?.disconnect();
+        volumeAudioContext?.close();
+    } catch {}
+    volumeMediaSource = null;
+    volumeGainNode = null;
+    volumeAudioContext = null;
 });
 
 // Monitor video elem "loop" property in a timer.
@@ -299,19 +308,79 @@ let volumeHudVisible = $state(false);
 let volumeHudText = $state('');
 let volumeHudTimer: ReturnType<typeof setTimeout> | null = null;
 
+let volumeAudioContext: AudioContext | null = null;
+let volumeGainNode: GainNode | null = null;
+let volumeMediaSource: MediaElementAudioSourceNode | null = null;
+
+function isIOSDevice(): boolean {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    return /iPad|iPhone|iPod/.test(ua)
+        || (navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1);
+}
+
+async function ensureIOSVolumeGainReady() {
+    if (!videoElem || !isIOSDevice()) return;
+
+    try {
+        if (!volumeAudioContext) {
+            const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+            if (!Ctx) return;
+            volumeAudioContext = new Ctx();
+        }
+
+        if (volumeAudioContext.state === 'suspended') {
+            await volumeAudioContext.resume();
+        }
+
+        if (!volumeGainNode) {
+            volumeGainNode = volumeAudioContext.createGain();
+            volumeGainNode.connect(volumeAudioContext.destination);
+        }
+
+        if (!volumeMediaSource) {
+            volumeMediaSource = volumeAudioContext.createMediaElementSource(videoElem as HTMLMediaElement);
+            volumeMediaSource.connect(volumeGainNode);
+        }
+
+        const initialVolume = typeof audio_volume === 'number'
+            ? clamp(audio_volume / 100, 0, 1)
+            : clamp(videoElem.volume ?? 1, 0, 1);
+        volumeGainNode.gain.value = initialVolume;
+    } catch (err) {
+        // iOS audio graph can fail in edge cases; fallback to native volume behavior.
+    }
+}
+
 function clamp(v: number, min: number, max: number): number {
     return Math.min(Math.max(v, min), max);
 }
 
 function getCurrentVolume01(): number {
+    if (volumeGainNode) {
+        return clamp(volumeGainNode.gain.value, 0, 1);
+    }
     if (typeof audio_volume === 'number' && !Number.isNaN(audio_volume)) {
         return clamp(audio_volume / 100, 0, 1);
     }
     return clamp(videoElem?.volume ?? 1, 0, 1);
 }
 
+function setEffectiveVolume(newVol: number) {
+    const vol = clamp(newVol, 0, 1);
+    if (volumeGainNode) {
+        volumeGainNode.gain.value = vol;
+    }
+    if (videoElem) {
+        videoElem.volume = vol;
+    }
+    audio_volume = Math.round(vol * 100);
+    showVolumeHud(vol);
+}
+
 function onVideoTouchStart(e: TouchEvent) {
     if (!e.touches || e.touches.length !== 1) return;
+    void ensureIOSVolumeGainReady();
     const t = e.touches[0];
     touchStartX = t.clientX;
     touchStartY = t.clientY;
@@ -366,9 +435,7 @@ function onVideoTouchMove(e: TouchEvent) {
         // Vertical swipe: volume
         const delta = -dy / Math.max(window.innerHeight, 1);
         const newVol = clamp(gestureStartVolume + delta, 0, 1);
-        videoElem.volume = newVol;
-        audio_volume = Math.round(newVol * 100);
-        showVolumeHud(newVol);
+        setEffectiveVolume(newVol);
     }
 }
 
@@ -392,20 +459,17 @@ function onVideoTouchEnd() {
 function onVideoWheel(e: WheelEvent) {
     if (!videoElem) return;
 
-    // Normalize delta across wheel/trackpad modes (pixel/line/page)
-    const unit = e.deltaMode === WheelEvent.DOM_DELTA_LINE
-        ? 16
-        : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
-            ? window.innerHeight
-            : 1;
+    void ensureIOSVolumeGainReady();
 
-    const delta = e.deltaY * unit;
-    const step = clamp(Math.abs(delta) / 500, 0.01, 0.12);
-    const newVol = clamp((videoElem.volume ?? 1) - Math.sign(delta) * step, 0, 1);
+    // Default wheel notch adjusts volume by 5%
+    const step = 0.05;
 
-    videoElem.volume = newVol;
-    audio_volume = Math.round(newVol * 100);
-    showVolumeHud(newVol);
+    // Normalize wheel/trackpad direction only; keep fixed step for precision
+    const direction = Math.sign(e.deltaY);
+    if (direction === 0) return;
+
+    const newVol = clamp(getCurrentVolume01() - direction * step, 0, 1);
+    setEffectiveVolume(newVol);
 }
 
 function format_tc(seconds: number) : string {
