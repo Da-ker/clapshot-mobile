@@ -167,7 +167,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 						</span>
 
 						{#if !isMobileViewport}
-							<Dropdown class="w-64 text-sm clapshot-dropdown z-50" triggeredBy="#media-menu-button">
+							<Dropdown class="w-64 text-sm clapshot-dropdown media-dropdown z-50" triggeredBy="#media-menu-button">
 								<DropdownItem onclick={copyToClipboard}><i class="fas fa-share-square"></i> {$t('nav.shareToLoggedInUsers')}</DropdownItem>
 								{#if $curVideo?.origUrl}
 									<DropdownItem title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> {$t('nav.downloadOriginal')}</a></DropdownItem>
@@ -182,7 +182,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 									<i class="fas fa-cog"></i> {$t('nav.experimentalTools')}
 									<ChevronRightOutline class="w-6 h-6 ms-2 float-right" />
 								</DropdownItem>
-								<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown z-50">
+								<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown media-dropdown z-50">
 									<DropdownItem onclick={() => isEDLImportOpen = true}><i class="fas fa-file-import"></i> {$t('nav.importEdl')}</DropdownItem>
 									<DropdownItem onclick={() => isExportOpen = true}><i class="fas fa-file-export"></i> {$t('nav.exportComments')}</DropdownItem>
 								</Dropdown>
@@ -209,23 +209,27 @@ function addEDLComments(comments: Proto3.Comment[]) {
 			</span>
 
 			{#if $userMenuItems != undefined && $userMenuItems.length > 0}
-				<Dropdown class="w-44 text-sm clapshot-dropdown z-50" triggeredBy="#user-menu-button">
-					<DropdownItem class="flex items-center space-x-2">
-						<span>{$t('nav.language')}</span>
-						<select class="bg-gray-800 text-xs rounded px-2 py-1" value={$locale} onchange={onLocaleChange} aria-label={$t('nav.language')}>
-							{#each localeOptions as loc}
-								<option value={loc.id} selected={loc.id === $locale}>{loc.label}</option>
-							{/each}
-						</select>
-					</DropdownItem>
+				<Dropdown class="w-56 text-sm clapshot-dropdown user-dropdown z-50" triggeredBy="#user-menu-button">
+					<div class="px-3 py-2">
+						<div class="flex items-center justify-between gap-3 rounded-lg bg-slate-700/60 px-3 py-2">
+							<span class="text-gray-200">{$t('nav.language')}</span>
+							<select class="min-w-24 rounded-md border border-slate-500 bg-slate-800 px-2 py-1 text-sm text-gray-100" value={$locale} onchange={onLocaleChange} aria-label={$t('nav.language')}>
+								{#each localeOptions as loc}
+									<option value={loc.id} selected={loc.id === $locale}>{loc.label}</option>
+								{/each}
+							</select>
+						</div>
+					</div>
 					<DropdownDivider />
-					{#each $userMenuItems as item}
+					{#each $userMenuItems as item, index}
 						{#if item.type === "logout-basic-auth"}
 							<DropdownItem onclick={() => logoutBasicAuth()}>{$t('nav.logout')}</DropdownItem>
 						{:else if item.type === "about"}
 							<DropdownItem onclick={showAbout}>{$t('nav.about')}</DropdownItem>
 						{:else if item.type === "divider"}
-							<DropdownDivider />
+							{#if index !== 0}
+								<DropdownDivider />
+							{/if}
 						{:else if item.type === "url"}
 							<DropdownItem href={item.data || "#"}>{item.label}</DropdownItem>
 						{:else}

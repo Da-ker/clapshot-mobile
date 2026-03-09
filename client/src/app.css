@@ -104,13 +104,22 @@ textarea {
 	content: '';
 }
 
-/* Center align dropdown options in hamburger/user menus */
-.clapshot-dropdown li > a,
-.clapshot-dropdown li > button {
+/* Center align dropdown options only in media (hamburger) menu */
+.media-dropdown li > a,
+.media-dropdown li > button {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 0.5rem;
 	text-align: center;
+}
+
+/* User menu: cleaner spacing and left-aligned actions */
+.user-dropdown li > a,
+.user-dropdown li > button {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	text-align: left;
 }
 
