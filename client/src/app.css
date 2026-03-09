@@ -92,3 +92,10 @@ textarea {
 	text-align: left;
 }
 
+/* Remove default list bullets inside Flowbite dropdown menus */
+.clapshot-dropdown ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
