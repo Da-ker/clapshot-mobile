@@ -432,8 +432,9 @@ function onVideoTouchMove(e: TouchEvent) {
             time = newTime;
         }
     } else if (lockedGestureAxis === 'y') {
-        // Vertical swipe: volume
-        const delta = -dy / Math.max(window.innerHeight, 1);
+        // Vertical swipe: volume (higher sensitivity for mobile)
+        const volumeSwipeSensitivity = 2.2;
+        const delta = (-dy / Math.max(window.innerHeight, 1)) * volumeSwipeSensitivity;
         const newVol = clamp(gestureStartVolume + delta, 0, 1);
         setEffectiveVolume(newVol);
     }
