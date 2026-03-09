@@ -1,6 +1,6 @@
 <script lang="ts">
 
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 import { curUsername, curUserPic, curVideo, mediaFileId, collabId, userMenuItems } from "@/stores";
 import Avatar from '@/lib/Avatar.svelte';
 import {latestProgressReports, clientConfig} from '@/stores';
@@ -99,6 +99,32 @@ const randomSessionId = Math.random().toString(36).substring(2, 15);
 
 let isEDLImportOpen = $state(false);
 let isExportOpen = $state(false);
+let isMobileViewport = $state(false);
+let isMobileMediaMenuOpen = $state(false);
+
+function updateViewport() {
+	isMobileViewport = window.matchMedia('(max-width: 639px)').matches;
+	if (!isMobileViewport) isMobileMediaMenuOpen = false;
+}
+
+function toggleMediaMenu() {
+	if (isMobileViewport) {
+		isMobileMediaMenuOpen = !isMobileMediaMenuOpen;
+	}
+}
+
+function closeMobileMediaMenu() {
+	isMobileMediaMenuOpen = false;
+}
+
+onMount(() => {
+	updateViewport();
+	window.addEventListener('resize', updateViewport, { passive: true });
+});
+
+onDestroy(() => {
+	window.removeEventListener('resize', updateViewport);
+});
 
 function addEDLComments(comments: Proto3.Comment[]) {
 	console.debug("addEDLComments", comments);
@@ -130,38 +156,38 @@ function addEDLComments(comments: Proto3.Comment[]) {
 							<button
 								type="button"
 								id="media-menu-button"
+								onclick={toggleMediaMenu}
 								class="inline-flex shrink-0 items-center justify-center rounded-md px-2 py-1 {$collabId ? 'bg-green-500 text-black' : 'bg-gray-800 text-gray-300'} hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
 								aria-haspopup="true"
-								aria-expanded="false"
+								aria-expanded={isMobileViewport ? isMobileMediaMenuOpen : false}
 								aria-label="Open media menu"
 							>
 								<i class="fas fa-bars"></i>
 							</button>
 						</span>
 
-						<Dropdown class="w-64 text-sm clapshot-dropdown z-50" triggeredBy="#media-menu-button">
-							<DropdownItem onclick={copyToClipboard}><i class="fas fa-share-square"></i> {$t('nav.shareToLoggedInUsers')}</DropdownItem>
-							{#if $curVideo?.origUrl}
-								<DropdownItem title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> {$t('nav.downloadOriginal')}</a></DropdownItem>
-							{/if}
-							{#if $collabId}
-								<DropdownItem href="?vid={$mediaFileId}" class="text-green-400"><i class="fas fa-users"></i> {$t('nav.leaveCollab')}</DropdownItem>
-							{:else}
-								<DropdownItem href="?vid={$mediaFileId}&collab={randomSessionId}" title="Start collaborative session"><i class="fas fa-user-plus"></i> {$t('nav.startCollab')}</DropdownItem>
-							{/if}
+						{#if !isMobileViewport}
+							<Dropdown class="w-64 text-sm clapshot-dropdown z-50" triggeredBy="#media-menu-button">
+								<DropdownItem onclick={copyToClipboard}><i class="fas fa-share-square"></i> {$t('nav.shareToLoggedInUsers')}</DropdownItem>
+								{#if $curVideo?.origUrl}
+									<DropdownItem title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> {$t('nav.downloadOriginal')}</a></DropdownItem>
+								{/if}
+								{#if $collabId}
+									<DropdownItem href="?vid={$mediaFileId}" class="text-green-400"><i class="fas fa-users"></i> {$t('nav.leaveCollab')}</DropdownItem>
+								{:else}
+									<DropdownItem href="?vid={$mediaFileId}&collab={randomSessionId}" title="Start collaborative session"><i class="fas fa-user-plus"></i> {$t('nav.startCollab')}</DropdownItem>
+								{/if}
 
-							<DropdownItem>
-								<i class="fas fa-cog"></i> {$t('nav.experimentalTools')}
-								<ChevronRightOutline class="w-6 h-6 ms-2 float-right" />
-							</DropdownItem>
-							<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown z-50">
-								<DropdownItem onclick={() => isEDLImportOpen = true}><i class="fas fa-file-import"></i> {$t('nav.importEdl')}</DropdownItem>
-								<DropdownItem onclick={() => isExportOpen = true}><i class="fas fa-file-export"></i> {$t('nav.exportComments')}</DropdownItem>
-								<EDLImport bind:isOpen={isEDLImportOpen} onaddcomments={addEDLComments}/>
-								<ExportDialog bind:isOpen={isExportOpen}/>
+								<DropdownItem>
+									<i class="fas fa-cog"></i> {$t('nav.experimentalTools')}
+									<ChevronRightOutline class="w-6 h-6 ms-2 float-right" />
+								</DropdownItem>
+								<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown z-50">
+									<DropdownItem onclick={() => isEDLImportOpen = true}><i class="fas fa-file-import"></i> {$t('nav.importEdl')}</DropdownItem>
+									<DropdownItem onclick={() => isExportOpen = true}><i class="fas fa-file-export"></i> {$t('nav.exportComments')}</DropdownItem>
+								</Dropdown>
 							</Dropdown>
-						</Dropdown>
-
+						{/if}
 					</h2>
 				<span class="mx-1 sm:mx-4 text-xs text-left sm:text-center truncate">{$curVideo?.title}</span>
 				{#if videoProgressMsg}
@@ -211,6 +237,37 @@ function addEDLComments(comments: Proto3.Comment[]) {
 		</div>
 	</div>
 </nav>
+
+{#if isMobileViewport && isMobileMediaMenuOpen}
+	<div class="fixed inset-0 z-40 bg-black/50" role="button" tabindex="0" aria-label="Close media menu" onclick={closeMobileMediaMenu} onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && closeMobileMediaMenu()}></div>
+	<div class="fixed bottom-0 left-0 right-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-gray-700 bg-gray-900 p-4 shadow-2xl">
+		<div class="mb-3 flex items-center justify-between">
+			<h3 class="text-base font-semibold text-gray-200">{$t('nav.experimentalTools')}</h3>
+			<button type="button" class="rounded px-2 py-1 text-gray-300 hover:bg-gray-800" aria-label="Close media menu" onclick={closeMobileMediaMenu}><i class="fas fa-times"></i></button>
+		</div>
+
+		<div class="space-y-2 text-sm">
+			<button type="button" class="w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" onclick={async () => { await copyToClipboard(); closeMobileMediaMenu(); }}><i class="fas fa-share-square mr-2"></i>{$t('nav.shareToLoggedInUsers')}</button>
+
+			{#if $curVideo?.origUrl}
+				<a class="block w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" href={$curVideo?.origUrl} download onclick={closeMobileMediaMenu}><i class="fas fa-download mr-2"></i>{$t('nav.downloadOriginal')}</a>
+			{/if}
+
+			{#if $collabId}
+				<a class="block w-full rounded bg-gray-800 px-3 py-2 text-left text-green-300" href="?vid={$mediaFileId}" onclick={closeMobileMediaMenu}><i class="fas fa-users mr-2"></i>{$t('nav.leaveCollab')}</a>
+			{:else}
+				<a class="block w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" href="?vid={$mediaFileId}&collab={randomSessionId}" onclick={closeMobileMediaMenu}><i class="fas fa-user-plus mr-2"></i>{$t('nav.startCollab')}</a>
+			{/if}
+
+			<div class="my-2 border-t border-gray-700"></div>
+			<button type="button" class="w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" onclick={() => { isEDLImportOpen = true; closeMobileMediaMenu(); }}><i class="fas fa-file-import mr-2"></i>{$t('nav.importEdl')}</button>
+			<button type="button" class="w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" onclick={() => { isExportOpen = true; closeMobileMediaMenu(); }}><i class="fas fa-file-export mr-2"></i>{$t('nav.exportComments')}</button>
+		</div>
+	</div>
+{/if}
+
+<EDLImport bind:isOpen={isEDLImportOpen} onaddcomments={addEDLComments}/>
+<ExportDialog bind:isOpen={isExportOpen}/>
 
 <Modal title={$t('nav.logout')} dismissable={false} bind:open={loggedOut} class="w-96">
 	<p><i class="fas fa fa-sign-in"></i> {$t('status.reloadToLogin')}</p>
