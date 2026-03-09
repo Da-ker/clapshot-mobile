@@ -247,21 +247,21 @@ function addEDLComments(comments: Proto3.Comment[]) {
 		</div>
 
 		<div class="space-y-2 text-sm">
-			<button type="button" class="w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" onclick={async () => { await copyToClipboard(); closeMobileMediaMenu(); }}><i class="fas fa-share-square mr-2"></i>{$t('nav.shareToLoggedInUsers')}</button>
+			<button type="button" class="flex w-full items-center justify-center rounded bg-gray-800 px-3 py-2 text-center text-gray-100" onclick={async () => { await copyToClipboard(); closeMobileMediaMenu(); }}><i class="fas fa-share-square mr-2"></i>{$t('nav.shareToLoggedInUsers')}</button>
 
 			{#if $curVideo?.origUrl}
-				<a class="block w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" href={$curVideo?.origUrl} download onclick={closeMobileMediaMenu}><i class="fas fa-download mr-2"></i>{$t('nav.downloadOriginal')}</a>
+				<a class="flex w-full items-center justify-center rounded bg-gray-800 px-3 py-2 text-center text-gray-100" href={$curVideo?.origUrl} download onclick={closeMobileMediaMenu}><i class="fas fa-download mr-2"></i>{$t('nav.downloadOriginal')}</a>
 			{/if}
 
 			{#if $collabId}
-				<a class="block w-full rounded bg-gray-800 px-3 py-2 text-left text-green-300" href="?vid={$mediaFileId}" onclick={closeMobileMediaMenu}><i class="fas fa-users mr-2"></i>{$t('nav.leaveCollab')}</a>
+				<a class="flex w-full items-center justify-center rounded bg-gray-800 px-3 py-2 text-center text-green-300" href="?vid={$mediaFileId}" onclick={closeMobileMediaMenu}><i class="fas fa-users mr-2"></i>{$t('nav.leaveCollab')}</a>
 			{:else}
-				<a class="block w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" href="?vid={$mediaFileId}&collab={randomSessionId}" onclick={closeMobileMediaMenu}><i class="fas fa-user-plus mr-2"></i>{$t('nav.startCollab')}</a>
+				<a class="flex w-full items-center justify-center rounded bg-gray-800 px-3 py-2 text-center text-gray-100" href="?vid={$mediaFileId}&collab={randomSessionId}" onclick={closeMobileMediaMenu}><i class="fas fa-user-plus mr-2"></i>{$t('nav.startCollab')}</a>
 			{/if}
 
 			<div class="my-2 border-t border-gray-700"></div>
-			<button type="button" class="w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" onclick={() => { isEDLImportOpen = true; closeMobileMediaMenu(); }}><i class="fas fa-file-import mr-2"></i>{$t('nav.importEdl')}</button>
-			<button type="button" class="w-full rounded bg-gray-800 px-3 py-2 text-left text-gray-100" onclick={() => { isExportOpen = true; closeMobileMediaMenu(); }}><i class="fas fa-file-export mr-2"></i>{$t('nav.exportComments')}</button>
+			<button type="button" class="flex w-full items-center justify-center rounded bg-gray-800 px-3 py-2 text-center text-gray-100" onclick={() => { isEDLImportOpen = true; closeMobileMediaMenu(); }}><i class="fas fa-file-import mr-2"></i>{$t('nav.importEdl')}</button>
+			<button type="button" class="flex w-full items-center justify-center rounded bg-gray-800 px-3 py-2 text-center text-gray-100" onclick={() => { isExportOpen = true; closeMobileMediaMenu(); }}><i class="fas fa-file-export mr-2"></i>{$t('nav.exportComments')}</button>
 		</div>
 	</div>
 {/if}
