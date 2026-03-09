@@ -92,10 +92,15 @@ textarea {
 	text-align: left;
 }
 
-/* Remove default list bullets inside Flowbite dropdown menus */
-.clapshot-dropdown ul {
-	list-style: none;
+/* Remove default list bullets/markers inside Flowbite dropdown menus */
+.clapshot-dropdown ul,
+.clapshot-dropdown li {
+	list-style: none !important;
 	margin: 0;
-	padding: 0;
+	padding-left: 0;
+}
+
+.clapshot-dropdown li::marker {
+	content: '';
 }
 
