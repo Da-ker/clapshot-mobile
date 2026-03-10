@@ -972,11 +972,11 @@ function handlePinClick(id: string) {
 		<div class="p-1.5 md:p-2 min-w-0 rounded-xl bg-slate-900/70 border border-slate-700/80 shadow-inner space-y-1.5">
 
 			<!-- Row 1: centered transport + duration -->
-			<div class="relative w-full flex items-center justify-center min-h-[3rem]">
-				<span class="inline-flex items-center gap-1.5 rounded-full bg-slate-800/85 px-1.5 py-0.5">
-					<button class="hover:text-amber-400 text-slate-200 fa-solid fa-backward-step inline-flex items-center justify-center h-8 w-8 rounded-full" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
-					<button class="text-cyan-200 fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center h-12 w-12 rounded-full border-2 border-cyan-300/60 bg-transparent shadow-[inset_0_0_0_1px_rgba(56,189,248,0.25)] hover:bg-cyan-400/10" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
-					<button class="hover:text-amber-400 text-slate-200 fa-solid fa-forward-step inline-flex items-center justify-center h-8 w-8 rounded-full" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
+			<div class="relative w-full flex items-center justify-center min-h-[5.4rem]">
+				<span class="inline-flex items-center gap-8 md:gap-10 px-2">
+					<button class="text-sky-500 hover:text-sky-400 fa-solid fa-backward-step inline-flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full text-4xl transition-colors" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
+					<button class="text-sky-500 fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[5.00rem] min-w-[5.00rem] min-h-[5.00rem] aspect-square p-0 leading-none rounded-full bg-slate-600/70 text-[2.8rem] hover:bg-slate-600/80 transition-all shrink-0 box-border" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
+					<button class="text-sky-500 hover:text-sky-400 fa-solid fa-forward-step inline-flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full text-4xl transition-colors" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
 				</span>
 
 				<span class="absolute right-0 top-1/2 -translate-y-1/2 inline-flex items-center rounded-lg bg-slate-800/85 px-2 py-0.5 text-xs md:text-sm font-mono text-slate-100 shrink-0 min-w-[6.1rem] justify-center">{format_tc(getEffectiveDuration())}</span>
