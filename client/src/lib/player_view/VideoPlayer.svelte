@@ -348,7 +348,6 @@ function onOverlaySurfaceTap(event: Event) {
 
 function onPlayerSurfaceTap(event: Event) {
     // Any tap on the player surface should bring controls back when hidden.
-    if (Date.now() < suppressClickUntil) return;
     if (!overlayVisible) {
         event.stopPropagation();
         revealOverlayFromHidden();
@@ -356,8 +355,6 @@ function onPlayerSurfaceTap(event: Event) {
 }
 
 function clickOnVideo(event: MouseEvent ) {
-    if (Date.now() < suppressClickUntil) return;
-
     if ($curVideo?.mediaType.toLowerCase().startsWith("audio")) {
         // Audio file videos show a waveform, so use clicks for seeking instead of play/pause
         const videoElem = event.target as HTMLVideoElement;
@@ -370,6 +367,7 @@ function clickOnVideo(event: MouseEvent ) {
             suppressClickUntil = Date.now() + 260;
             return;
         }
+        if (Date.now() < suppressClickUntil) return;
         // Visible-state click toggles controls.
         toggleOverlayVisibility();
     }
