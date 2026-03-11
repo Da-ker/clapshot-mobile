@@ -103,9 +103,17 @@ function formatDurationShort(sec: number | undefined): string {
     return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+function normalizeTimecodeForDisplay(tc: string): string {
+    // Ensure HH:MM:SS:FF style zero-padding in top info bar
+    const parts = (tc || '').split(':');
+    if (parts.length !== 4) return tc;
+    const [hh, mm, ss, ff] = parts;
+    return `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}:${ff.padStart(2, '0')}`;
+}
+
 function refreshTopVideoMeta() {
     if (!videoPlayer) return;
-    topTimecode = videoPlayer.getCurTimecode();
+    topTimecode = normalizeTimecodeForDisplay(videoPlayer.getCurTimecode());
     topFrame = String(videoPlayer.getCurFrame());
 }
 
