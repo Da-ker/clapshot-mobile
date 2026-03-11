@@ -925,6 +925,9 @@ function handlePinClick(id: string) {
 			</div>
 		-->
 
+			<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+				<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[5.8rem] md:size-[6.4rem] rounded-full bg-black/50 text-white text-[2.8rem] md:text-[3rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)] pointer-events-auto" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
+			</div>
 		</div>
 	</div>
 
@@ -969,81 +972,12 @@ function handlePinClick(id: string) {
 
 
 		<!-- playback controls -->
-		<div class="p-1.5 md:p-2 min-w-0 rounded-xl bg-slate-900/70 border border-slate-700/80 shadow-inner space-y-1.5">
-
-			<!-- Row 1: centered transport + duration -->
-			<div class="relative w-full flex items-center justify-center min-h-[5.4rem]">
-				<span class="inline-flex items-center gap-4 md:gap-10 px-2">
-					<button class="text-sky-500 hover:text-sky-400 fa-solid fa-backward-step inline-flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full text-4xl transition-colors" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
-					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[5.4rem] min-w-[5.4rem] min-h-[5.4rem] aspect-square p-0 leading-none rounded-full bg-black/55 text-white text-[2.6rem] hover:bg-black/65 transition-all shrink-0 box-border shadow-[0_8px_24px_rgba(0,0,0,0.35)]" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
-					<button class="text-sky-500 hover:text-sky-400 fa-solid fa-forward-step inline-flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full text-4xl transition-colors" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
-
-					<!-- Mobile: subtitle + loop controls inline with transport -->
-					<span class="md:hidden inline-flex items-center rounded-lg bg-slate-800/85 px-1 py-1">
-					{#if ($curVideo?.subtitles?.length ?? 0) > 0}
-						<button
-							class={($curSubtitle ? 'fa-solid fa-closed-captioning text-amber-500' : 'fa-solid fa-closed-captioning text-gray-400') + ' inline-flex items-center justify-center h-8 w-8 rounded-md'}
-							title="Toggle closed captioning"
-							aria-label="Toggle closed captioning"
-							onclick={() => toggleSubtitle()}
-						></button>
-					{:else}
-						<button bind:this={uploadSubtitlesButton}
-							class="fa-solid fa-closed-captioning text-gray-400 inline-flex items-center justify-center h-8 w-8 rounded-md" title="Upload subtitles"
-							aria-label="Upload subtitles"
-							onmouseover={() => { changeSubtitleUploadIcon(true); }}
-							onfocus={() => { changeSubtitleUploadIcon(true); }}
-							onmouseout={() => { changeSubtitleUploadIcon(false); }}
-							onblur={() => { changeSubtitleUploadIcon(false); }}
-							onclick={() => { if (onuploadsubtitles) onuploadsubtitles(); }}
-						></button>
-					{/if}
-					</span>
-
-					{#if !$collabId}
-					<span class="md:hidden inline-flex items-center gap-1 rounded-lg bg-slate-800/85 px-1 py-0.5 text-sm shrink-0">
-						<button class="fa-solid fa-square-caret-down hover:text-white {loopStartTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-8 w-8 rounded-md"
-							onclick={() => setLoopPoint(true)} title="Set loop start to current frame" aria-label="Set loop start to current frame"></button>
-						<button class="fa-solid fa-square-caret-up hover:text-white {loopEndTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-8 w-8 rounded-md"
-							onclick={() => setLoopPoint(false)} title="Set loop end to current frame" aria-label="Set loop end to current frame"></button>
-					</span>
-					{/if}
+		<div class="p-1.5 md:p-2 min-w-0 rounded-xl bg-black/35 backdrop-blur-[1px]">
+			<div class="relative w-full flex items-center justify-center min-h-[4.8rem]">
+				<span class="inline-flex items-center gap-12 md:gap-14 px-2">
+					<button class="text-white/90 hover:text-white fa-solid fa-backward-step inline-flex items-center justify-center h-11 w-11 md:h-12 md:w-12 rounded-full text-3xl transition-colors" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
+					<button class="text-white/90 hover:text-white fa-solid fa-forward-step inline-flex items-center justify-center h-11 w-11 md:h-12 md:w-12 rounded-full text-3xl transition-colors" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
 				</span>
-			</div>
-
-			<!-- Row 2: details + secondary actions -->
-			<div class="hidden md:flex w-full flex-nowrap items-center justify-between gap-1.5 overflow-x-auto">
-
-                <span class="inline-flex items-center rounded-lg bg-slate-800/85 px-1 py-1">
-                {#if ($curVideo?.subtitles?.length ?? 0) > 0}
-                    <button
-                        class={($curSubtitle ? 'fa-solid fa-closed-captioning text-amber-500' : 'fa-solid fa-closed-captioning text-gray-400') + ' inline-flex items-center justify-center h-8 w-8 rounded-md'}
-                        title="Toggle closed captioning"
-                        aria-label="Toggle closed captioning"
-                        onclick={() => toggleSubtitle()}
-                    ></button>
-                {:else}
-                    <button bind:this={uploadSubtitlesButton}
-                        class="fa-solid fa-closed-captioning text-gray-400 inline-flex items-center justify-center h-8 w-8 rounded-md" title="Upload subtitles"
-                        aria-label="Upload subtitles"
-                        onmouseover={() => { changeSubtitleUploadIcon(true); }}
-                        onfocus={() => { changeSubtitleUploadIcon(true); }}
-                        onmouseout={() => { changeSubtitleUploadIcon(false); }}
-                        onblur={() => { changeSubtitleUploadIcon(false); }}
-                        onclick={() => { if (onuploadsubtitles) onuploadsubtitles(); }}
-                    ></button>
-                {/if}
-                </span>
-
-
-               {#if !$collabId}
-                    <span class="inline-flex items-center gap-1 rounded-lg bg-slate-800/85 px-1 py-0.5 text-sm shrink-0">
-                        <button class="fa-solid fa-square-caret-down hover:text-white {loopStartTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-8 w-8 rounded-md"
-                            onclick={() => setLoopPoint(true)} title="Set loop start to current frame" aria-label="Set loop start to current frame"></button>
-                        <button class="fa-solid fa-square-caret-up hover:text-white {loopEndTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-8 w-8 rounded-md"
-                            onclick={() => setLoopPoint(false)} title="Set loop end to current frame" aria-label="Set loop end to current frame"></button>
-                    </span>
-                {/if}
 			</div>
 		</div>
 	</div>
