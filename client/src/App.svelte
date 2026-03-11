@@ -1126,15 +1126,15 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         {:else if $mediaFileId && $curVideo && $curVideo.playbackUrl}
 
         <!-- ========== video review widgets ============= -->
-        <div class="relative h-full min-h-0 overflow-hidden">
+        <div class="relative h-full min-h-0 overflow-y-auto overflow-x-hidden md:overflow-hidden">
             <div class="px-2 md:px-6 pt-1 pb-0">
                 <div class="rounded-xl border border-slate-800/90 bg-gradient-to-b from-slate-900/95 to-slate-900/70 px-3 py-2">
-                    <div class="flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
-                        <span class="inline-flex flex-[0_1_70%] md:flex-[0_1_74%] items-center rounded-md bg-slate-800/85 px-2 py-1.5 text-slate-100 font-mono text-sm md:text-base min-w-0">
-                            <input class="bg-transparent rounded px-1 w-[13ch] md:w-[14ch] min-w-[13ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
-                            <span class="inline-flex items-center gap-1.5 ml-5 md:ml-6 shrink-0">
+                    <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
+                        <span class="top-left-controls inline-flex flex-[0_1_70%] md:flex-[0_1_74%] items-center rounded-md bg-slate-800/85 px-2 py-1.5 text-slate-100 font-mono text-sm md:text-base min-w-0">
+                            <input class="top-timecode-input bg-transparent rounded px-1 w-[13ch] md:w-[14ch] min-w-[13ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
+                            <span class="top-fr-group inline-flex items-center gap-1.5 ml-5 md:ml-6 shrink-0">
                                 <span class="text-slate-300 text-xs shrink-0">FR</span>
-                                <input class="bg-transparent rounded px-1 w-[5ch] md:w-[6ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
+                                <input class="top-frame-input bg-transparent rounded px-1 w-[5ch] md:w-[6ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                             </span>
                         </span>
                         <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200 ml-auto shrink-0 text-sm md:text-base font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
@@ -1158,7 +1158,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
 
             <!-- Floating comments panel -->
-            <div class="relative md:absolute z-20 left-0 right-0 md:left-auto md:right-4 mt-0 md:mt-0 bottom-0 md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] md:w-[26rem] h-[40vh] md:h-auto flex flex-col rounded-t-2xl md:rounded-xl border border-slate-700/80 bg-[#0c1018]/95 backdrop-blur shadow-2xl transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}">
+            <div class="relative md:absolute z-20 left-0 right-0 md:left-auto md:right-4 mt-0 md:mt-0 bottom-0 md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] md:w-[26rem] h-[clamp(13rem,34dvh,20rem)] md:h-auto flex flex-col rounded-t-2xl md:rounded-xl border border-slate-700/80 bg-[#0c1018]/95 backdrop-blur shadow-2xl transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}">
                 <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                     <div class="mx-auto mb-1 h-1 w-10 rounded-full bg-slate-600/80"></div>
                     <div class="hidden md:flex justify-end">
@@ -1357,6 +1357,30 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         :global(.organizer_page h3){
             font-size: 1.1rem;
             line-height: 1.4rem;
+        }
+    }
+
+    /* iPhone SE / extra small screens */
+    @media (max-width: 380px) {
+        .top-info-row {
+            gap: 0.35rem;
+            font-size: 0.82rem;
+        }
+        .top-left-controls {
+            flex-basis: 68%;
+            padding: 0.35rem 0.4rem;
+        }
+        .top-timecode-input {
+            width: 12ch;
+            min-width: 12ch;
+        }
+        .top-fr-group {
+            margin-left: 0.55rem;
+            gap: 0.2rem;
+        }
+        .top-frame-input {
+            width: 4ch;
+            min-width: 4ch;
         }
     }
 </style>
