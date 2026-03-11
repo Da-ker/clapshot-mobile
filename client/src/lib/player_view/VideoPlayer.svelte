@@ -124,6 +124,7 @@ function showOverlay(autoHide: boolean = true) {
 function revealOverlayFromHidden() {
     // First tap when hidden: reveal controls only.
     showOverlay(true);
+    suppressClickUntil = Date.now() + 260;
 }
 
 $effect(() => {
@@ -1004,6 +1005,16 @@ function handlePinClick(id: string) {
 				<div class="pointer-events-none absolute right-3 top-3 z-[120] rounded-md bg-black/70 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm">
 					<i class="fa-solid fa-volume-high mr-1 text-cyan-300"></i>{volumeHudText}
 				</div>
+			{/if}
+
+			{#if !overlayVisible}
+				<button
+					type="button"
+					class="absolute inset-0 z-40 bg-transparent"
+					onclick={(e) => { e.stopPropagation(); revealOverlayFromHidden(); }}
+					ontouchend={(e) => { e.stopPropagation(); revealOverlayFromHidden(); }}
+					aria-label="Show playback controls"
+				></button>
 			{/if}
 
 			<!--    TODO: maybe show actively controlling collaborator's avatar like this?
