@@ -83,6 +83,7 @@ let animationFrameId: number = 0;
 let audio_volume: number | undefined = $state();
 let overlayVisible: boolean = $state(true);
 let overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
+let suppressAutoShowOverlayUntil = 0;
 
 
 function initializeVolume() {
@@ -129,6 +130,11 @@ function revealOverlayFromHidden() {
 
 $effect(() => {
     if (!paused) {
+        if (Date.now() < suppressAutoShowOverlayUntil) {
+            clearOverlayHideTimer();
+            overlayVisible = false;
+            return;
+        }
         showOverlay(true);
     } else {
         clearOverlayHideTimer();
@@ -440,8 +446,11 @@ let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
 function onVideoSurfaceDoubleClick(event: MouseEvent) {
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
-    togglePlay();
     const preserveVisibility = overlayVisibilityBeforeMultiClick ?? overlayVisible;
+    if (!preserveVisibility) {
+        suppressAutoShowOverlayUntil = Date.now() + 600;
+    }
+    togglePlay();
     showOverlay(preserveVisibility);
     overlayVisibilityBeforeMultiClick = null;
 }
