@@ -113,10 +113,10 @@ function onClickShare() {
 
 </script>
 
-<div transition:scale
+<div transition:scale class="w-full min-w-0 box-border" style="padding-left: {indent*1.5}em;">
+<div
     id="comment_card_{comment.id}"
-    class="block box-border min-w-0 max-w-full overflow-hidden text-ellipsis rounded-lg bg-gray-800 {!!comment.timecode ? 'hover:bg-gray-700' : ''} border border-slate-700/70"
-    style="margin-left: {indent*1.5}em;"
+    class="block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis rounded-lg bg-gray-800 {!!comment.timecode ? 'hover:bg-gray-700' : ''} border border-slate-700/70"
     tabindex="0"
     role="link"
     onfocus={() => showActions=true}
@@ -195,7 +195,7 @@ function onClickShare() {
         </form>
     {/if}
 </div>
-
+</div>
 
 <style>
 .hyphenate {
