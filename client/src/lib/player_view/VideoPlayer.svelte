@@ -446,12 +446,22 @@ let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
 function onVideoSurfaceDoubleClick(event: MouseEvent) {
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
+
     const preserveVisibility = overlayVisibilityBeforeMultiClick ?? overlayVisible;
     if (!preserveVisibility) {
         suppressAutoShowOverlayUntil = Date.now() + 600;
     }
+
     togglePlay();
-    showOverlay(preserveVisibility);
+
+    if (preserveVisibility) {
+        // Keep controls visible after double-click when they were visible before.
+        showOverlay(true);
+    } else {
+        // Keep controls hidden after double-click when they were hidden before.
+        hideOverlayQuick();
+    }
+
     overlayVisibilityBeforeMultiClick = null;
 }
 let volumeHudVisible = $state(false);
