@@ -1129,12 +1129,12 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         <div class="relative h-full min-h-0 overflow-hidden">
             <div class="px-2 md:px-6 pt-1 pb-0">
                 <div class="rounded-xl border border-slate-800/90 bg-gradient-to-b from-slate-900/95 to-slate-900/70 px-3 py-2">
-                    <div class="flex flex-nowrap items-center gap-1.5 text-xs md:text-sm min-w-0">
-                        <span class="inline-flex flex-[0_1_58%] md:flex-[0_1_62%] items-center rounded-md bg-slate-800/85 px-1 py-1 text-slate-200 font-mono text-xs md:text-sm min-w-0">
-                            <input class="bg-transparent rounded px-1 w-[13ch] md:w-32 min-w-[13ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
-                            <span class="inline-flex items-center gap-1 ml-4 md:ml-5 shrink-0">
-                                <span class="text-slate-400 text-[10px] shrink-0">FR</span>
-                                <input class="bg-transparent rounded px-1 w-[3ch] md:w-10 min-w-[3ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
+                    <div class="flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
+                        <span class="inline-flex flex-[0_1_66%] md:flex-[0_1_70%] items-center rounded-md bg-slate-800/85 px-2 py-1.5 text-slate-100 font-mono text-sm md:text-base min-w-0">
+                            <input class="bg-transparent rounded px-1 w-[14ch] md:w-[15ch] min-w-[14ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
+                            <span class="inline-flex items-center gap-1.5 ml-4 md:ml-5 shrink-0">
+                                <span class="text-slate-300 text-xs shrink-0">FR</span>
+                                <input class="bg-transparent rounded px-1 w-[4ch] md:w-[5ch] min-w-[4ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                             </span>
                         </span>
                         <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200 ml-auto shrink-0 text-sm md:text-base font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
