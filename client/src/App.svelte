@@ -1121,13 +1121,13 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         <div class="relative h-full min-h-0 overflow-hidden">
             <div class="px-2 md:px-6 pt-1 pb-0">
                 <div class="rounded-xl border border-slate-800/90 bg-gradient-to-b from-slate-900/95 to-slate-900/70 px-3 py-2">
-                    <div class="flex items-center gap-2 text-xs md:text-sm min-w-0">
-                        <span class="inline-flex items-center gap-1.5 rounded-md bg-slate-800/85 px-2 py-1 text-slate-200 font-mono text-xs md:text-sm min-w-0 shrink">
-                            <input class="bg-transparent rounded px-1 w-[9.5ch] md:w-32 min-w-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
+                    <div class="flex flex-wrap md:flex-nowrap items-center gap-2 text-xs md:text-sm min-w-0">
+                        <span class="inline-flex items-center gap-1.5 rounded-md bg-slate-800/85 px-2 py-1 text-slate-200 font-mono text-xs md:text-sm w-full md:w-auto min-w-0">
+                            <input class="bg-transparent rounded px-1 w-[12ch] md:w-32 min-w-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
                             <span class="text-slate-400 text-[10px] shrink-0">FR</span>
                             <input class="bg-transparent rounded px-1 w-[5ch] md:w-12 min-w-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                         </span>
-                        <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-300 ml-auto shrink-0">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
+                        <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-300 md:ml-auto shrink-0">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
                         <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-300 shrink-0">{$curVideo?.duration?.fps ?? '-'} fps</span>
                     </div>
                 </div>
