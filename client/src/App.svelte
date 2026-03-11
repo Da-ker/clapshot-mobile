@@ -1165,7 +1165,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     </div>
                 </div>
 
-                <div class="flex-1 {commentsPanelMode === 'full' ? 'max-h-[74vh]' : 'max-h-[44vh]'} md:max-h-[52vh] overflow-y-auto overflow-x-hidden px-2 py-2 pb-24 md:pb-2 space-y-2">
+                <div class="flex-1 {commentsPanelMode === 'full' ? 'max-h-[74vh]' : 'max-h-[44vh]'} md:max-h-[52vh] overflow-y-auto overflow-x-hidden px-1 py-2 pb-24 md:pb-2 space-y-2">
                     {#if $allComments.length > 0}
                         {#each $allComments as c (c.comment.id)}
                             <CommentCard
