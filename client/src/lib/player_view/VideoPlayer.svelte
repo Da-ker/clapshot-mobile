@@ -81,6 +81,8 @@ let commentsWithTc: Proto3.Comment[] = $derived(
 
 let animationFrameId: number = 0;
 let audio_volume: number | undefined = $state();
+let overlayVisible: boolean = $state(true);
+let overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
 
 
 function initializeVolume() {
@@ -94,6 +96,27 @@ run(() => {
     if (videoElem && audio_volume !== undefined) {
         videoElem.volume = audio_volume / 100;
         LocalStorageCookies.set('audio_volume', audio_volume.toString(), null);
+    }
+});
+
+function showOverlay(autoHide: boolean = true) {
+    overlayVisible = true;
+    if (overlayHideTimer) {
+        clearTimeout(overlayHideTimer);
+        overlayHideTimer = null;
+    }
+    if (autoHide && !paused) {
+        overlayHideTimer = setTimeout(() => {
+            overlayVisible = false;
+        }, 1600);
+    }
+}
+
+$effect(() => {
+    if (paused) {
+        showOverlay(false);
+    } else {
+        showOverlay(true);
     }
 });
 
@@ -291,8 +314,8 @@ function clickOnVideo(event: MouseEvent ) {
         let frac = (event.clientX - videoElem.getBoundingClientRect().left) / videoElem.offsetWidth;
         time = getEffectiveDuration() * frac;
     } else {
-        const should_play = paused;
-        setPlayback(should_play, "VideoPlayer");
+        // YouTube-like behavior: single tap/click only reveals controls.
+        showOverlay(true);
     }
 }
 
@@ -380,6 +403,7 @@ function setEffectiveVolume(newVol: number) {
 
 function onVideoTouchStart(e: TouchEvent) {
     if (!e.touches || e.touches.length !== 1) return;
+    showOverlay(true);
     void ensureIOSVolumeGainReady();
     const t = e.touches[0];
     touchStartX = t.clientX;
@@ -926,7 +950,7 @@ function handlePinClick(id: string) {
 		-->
 
 			<!-- YouTube-like overlay controls -->
-			<div class="absolute inset-0 z-30 pointer-events-none">
+			<div class="absolute inset-0 z-30 pointer-events-none transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}">
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
 					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={() => step_video(-1)} aria-label="Step backwards"></button>
