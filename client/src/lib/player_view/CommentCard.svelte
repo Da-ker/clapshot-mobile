@@ -116,7 +116,7 @@ function onClickShare() {
 <div transition:scale
     id="comment_card_{comment.id}"
     class="block box-border min-w-0 max-w-full overflow-hidden text-ellipsis rounded-lg bg-gray-800 {!!comment.timecode ? 'hover:bg-gray-700' : ''} border border-slate-700/70"
-    style="margin-left: {indent*1.5}em; width: calc(100% - {indent*1.5}em);"
+    style="margin-left: {indent*1.5}em;"
     tabindex="0"
     role="link"
     onfocus={() => showActions=true}
