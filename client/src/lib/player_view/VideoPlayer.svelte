@@ -316,6 +316,25 @@ function togglePlay() {
     setPlayback(should_play, "VideoPlayer");
 }
 
+function toggleOverlayVisibility() {
+    if (overlayVisible) {
+        hideOverlayQuick();
+    } else {
+        showOverlay(true);
+    }
+}
+
+function onOverlaySurfaceTap(event: Event) {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest('button') || target.closest('[role="slider"]')) return;
+    if ('changedTouches' in (event as any)) {
+        suppressClickUntil = Date.now() + 350;
+    }
+    event.stopPropagation();
+    toggleOverlayVisibility();
+}
+
 function clickOnVideo(event: MouseEvent ) {
     if (Date.now() < suppressClickUntil) return;
 
@@ -326,11 +345,7 @@ function clickOnVideo(event: MouseEvent ) {
         time = getEffectiveDuration() * frac;
     } else {
         // Always allow tap to toggle controls visibility, even while paused.
-        if (overlayVisible) {
-            hideOverlayQuick();
-        } else {
-            showOverlay(true);
-        }
+        toggleOverlayVisibility();
     }
 }
 
@@ -489,11 +504,7 @@ function onVideoTouchEnd() {
     suppressClickUntil = now + 350;
 
     // Touch tap should only toggle controls, never change playback state.
-    if (overlayVisible) {
-        hideOverlayQuick();
-    } else {
-        showOverlay(true);
-    }
+    toggleOverlayVisibility();
 }
 
 function onVideoWheel(e: WheelEvent) {
@@ -965,7 +976,7 @@ function handlePinClick(id: string) {
 		-->
 
 			<!-- YouTube-like overlay controls -->
-			<div class="absolute inset-0 z-30 pointer-events-none transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}">
+			<div class="absolute inset-0 z-30 pointer-events-auto transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}" onclick={onOverlaySurfaceTap} ontouchend={onOverlaySurfaceTap}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
 					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
