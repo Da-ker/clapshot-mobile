@@ -925,59 +925,61 @@ function handlePinClick(id: string) {
 			</div>
 		-->
 
-			<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-				<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center h-16 w-16 md:h-20 md:w-20 text-white text-[3.2rem] md:text-[3.6rem] pointer-events-auto drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
-			</div>
-		</div>
-	</div>
+			<!-- YouTube-like overlay controls -->
+			<div class="absolute inset-0 z-30 pointer-events-none">
+				<div class="absolute top-2 md:top-3 inset-x-3 md:inset-x-4 flex items-center justify-between pointer-events-auto">
+					<button class="fa-solid fa-chevron-down text-white/95 text-2xl h-9 w-9 inline-flex items-center justify-center" aria-label="Back"></button>
+					<div class="inline-flex items-center gap-3 md:gap-4">
+						<button class="inline-flex items-center gap-1.5 rounded-full bg-white/25 px-2.5 py-1 text-white text-sm" aria-label="Toggle playback">
+							<i class="fa-solid {paused ? 'fa-play' : 'fa-pause'}"></i>
+						</button>
+						<button class="fa-solid fa-tower-broadcast text-white/95 text-2xl h-9 w-9 inline-flex items-center justify-center" aria-label="Cast"></button>
+						<button class="fa-regular fa-closed-captioning text-white/95 text-2xl h-9 w-9 inline-flex items-center justify-center" aria-label="CC"></button>
+						<button class="fa-solid fa-gear text-white/95 text-2xl h-9 w-9 inline-flex items-center justify-center" aria-label="Settings"></button>
+					</div>
+				</div>
 
-	<div class="absolute inset-x-3 md:inset-x-6 top-1/2 -translate-y-1/2 z-30 pointer-events-none {debug_layout?'border-2 border-red-600':''}">
+				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
+					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={() => step_video(-1)} aria-label="Step backwards"></button>
+					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[6.6rem] md:size-[7.2rem] rounded-full bg-white/28 text-white text-[3.1rem] md:text-[3.4rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
+					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={() => step_video(1)} aria-label="Step forwards"></button>
+				</div>
 
-		<div class="flex-1 space-y-0 leading-none relative py-0 pointer-events-auto">
-			<div
-				role="slider"
-				aria-label="Seek"
-				aria-valuemin="0"
-				aria-valuemax={Math.floor(getEffectiveDuration())}
-				aria-valuenow={Math.floor(time)}
-				tabindex="0"
-				class="relative w-full h-3 md:h-2 rounded-full overflow-hidden bg-slate-700/70 hover:cursor-pointer"
-				onmousedown={preventDefault((e)=>handleMove(e as MouseEvent, e.currentTarget))}
-				onmousemove={(e)=>handleMove(e as MouseEvent, e.currentTarget)}
-				ontouchstart={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
-				ontouchmove={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
-			>
-				<div
-					class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 to-sky-500"
-					style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"
-				></div>
-				<div
-					class="absolute top-1/2 -translate-y-1/2 w-4 h-4 md:w-3 md:h-3 rounded-full bg-white shadow-[0_0_0_2px_rgba(14,116,144,0.5)]"
-					style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"
-				></div>
-			</div>
-            {#if loopStartTime>0 || loopEndTime>0}
-                <div class="absolute top-1/2 -translate-y-1/2 h-3 md:h-2 rounded-full pointer-events-none bg-amber-500/30 border border-amber-400/80" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
-            {/if}
-			{#each commentsWithTc as item}
-				<CommentTimelinePin
-					id={item.id}
-					username={item.usernameIfnull || item.userId || '?'}
-					comment={item.comment}
-					x_loc={tcToDurationFract(item.timecode)}
-					onclick={(event) => handlePinClick(event.id)}
-					/>
-			{/each}
-		</div>
+				<button class="absolute right-3 md:right-4 bottom-14 md:bottom-16 fa-solid fa-expand text-white/95 text-2xl h-12 w-12 rounded-full bg-white/20 inline-flex items-center justify-center pointer-events-auto" aria-label="Fullscreen"></button>
 
-
-		<!-- playback controls -->
-		<div class="pt-6 md:pt-7 pointer-events-auto">
-			<div class="relative w-full flex items-center justify-center">
-				<span class="inline-flex items-center gap-14 md:gap-16 px-2">
-					<button class="text-white/90 hover:text-white fa-solid fa-backward-step inline-flex items-center justify-center h-10 w-10 md:h-12 md:w-12 text-3xl transition-colors" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
-					<button class="text-white/90 hover:text-white fa-solid fa-forward-step inline-flex items-center justify-center h-10 w-10 md:h-12 md:w-12 text-3xl transition-colors" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
-				</span>
+				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
+					<div class="mb-1.5 text-white text-[2rem] md:text-[2.2rem] leading-none font-semibold drop-shadow">{format_tc(time)} / {format_tc(getEffectiveDuration())}</div>
+					<div class="relative h-2">
+						<div
+							role="slider"
+							aria-label="Seek"
+							aria-valuemin="0"
+							aria-valuemax={Math.floor(getEffectiveDuration())}
+							aria-valuenow={Math.floor(time)}
+							tabindex="0"
+							class="relative w-full h-1 rounded-full overflow-hidden bg-white/45 hover:cursor-pointer"
+							onmousedown={preventDefault((e)=>handleMove(e as MouseEvent, e.currentTarget))}
+							onmousemove={(e)=>handleMove(e as MouseEvent, e.currentTarget)}
+							ontouchstart={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
+							ontouchmove={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
+						>
+							<div class="absolute inset-y-0 left-0 bg-red-600" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
+							<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-red-600" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.35rem);"></div>
+						</div>
+						{#if loopStartTime>0 || loopEndTime>0}
+							<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
+						{/if}
+						{#each commentsWithTc as item}
+							<CommentTimelinePin
+								id={item.id}
+								username={item.usernameIfnull || item.userId || '?'}
+								comment={item.comment}
+								x_loc={tcToDurationFract(item.timecode)}
+								onclick={(event) => handlePinClick(event.id)}
+							/>
+						{/each}
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
