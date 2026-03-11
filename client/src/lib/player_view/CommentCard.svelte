@@ -113,7 +113,7 @@ function onClickShare() {
 
 </script>
 
-<div transition:scale class="w-full min-w-0 box-border" style="padding-left: {indent*1.5}em;">
+<div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.5}em;">
 <div
     id="comment_card_{comment.id}"
     class="block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis rounded-lg bg-gray-800 {!!comment.timecode ? 'hover:bg-gray-700' : ''} border border-slate-700/70"
@@ -207,5 +207,12 @@ function onClickShare() {
 }
 button {
     cursor: pointer;
+}
+
+/* Aggressive overflow guard for narrow/mobile screens */
+@media (max-width: 767px) {
+    .comment-indent-shell {
+        padding-left: 0 !important;
+    }
 }
 </style>
