@@ -1137,8 +1137,8 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                 <input class="bg-transparent rounded px-1 w-[3ch] md:w-10 min-w-[3ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                             </span>
                         </span>
-                        <span class="rounded-md bg-slate-800/80 px-1.5 py-1 text-slate-300 ml-auto shrink-0 text-[11px] md:text-sm">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
-                        <span class="rounded-md bg-slate-800/80 px-1.5 py-1 text-slate-300 shrink-0 text-[11px] md:text-sm">{$curVideo?.duration?.fps ?? '-'} fps</span>
+                        <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200 ml-auto shrink-0 text-sm md:text-base font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
+                        <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200 shrink-0 text-sm md:text-base font-semibold">{$curVideo?.duration?.fps ?? '-'} fps</span>
                     </div>
                 </div>
             </div>
