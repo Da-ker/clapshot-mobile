@@ -1166,7 +1166,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     </div>
                 </div>
 
-                <div class="flex-1 {commentsPanelMode === 'full' ? 'max-h-[74vh]' : 'max-h-[44vh]'} md:max-h-[52vh] overflow-y-auto overflow-x-hidden p-2 space-y-2">
+                <div class="flex-1 {commentsPanelMode === 'full' ? 'max-h-[74vh]' : 'max-h-[44vh]'} md:max-h-[52vh] overflow-y-auto overflow-x-hidden p-2 pb-24 md:pb-2 space-y-2">
                     {#if $allComments.length > 0}
                         {#each $allComments as c (c.comment.id)}
                             <CommentCard
@@ -1183,7 +1183,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     {/if}
                 </div>
 
-                <div class="p-2 border-t border-slate-800/90">
+                <div class="fixed md:static left-0 right-0 bottom-[max(0px,env(safe-area-inset-bottom))] z-40 p-2 border-t border-slate-800/90 bg-[#0c1018]/95 backdrop-blur">
                     <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
                 </div>
             </div>
