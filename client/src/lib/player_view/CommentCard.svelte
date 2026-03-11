@@ -115,8 +115,8 @@ function onClickShare() {
 
 <div transition:scale
     id="comment_card_{comment.id}"
-    class="block overflow-hidden text-ellipsis rounded-lg bg-gray-800 {!!comment.timecode ? 'hover:bg-gray-700' : ''} border border-slate-700/70"
-    style="margin-left: {indent*1.5}em; max-width: calc(100% - {indent*1.5}em);"
+    class="block box-border overflow-hidden text-ellipsis rounded-lg bg-gray-800 {!!comment.timecode ? 'hover:bg-gray-700' : ''} border border-slate-700/70"
+    style="margin-left: {indent*1.5}em; width: calc(100% - {indent*1.5}em);"
     tabindex="0"
     role="link"
     onfocus={() => showActions=true}
@@ -160,7 +160,7 @@ function onClickShare() {
     </div>
 
     {#if showActions}
-    <div class="p-2 flex items-center justify-between" transition:slide="{{ duration: 200 }}">
+    <div class="p-2 flex flex-wrap items-center justify-between gap-2" transition:slide="{{ duration: 200 }}">
         <!-- Left: share icon -->
         <div class="flex-none">
             <button
