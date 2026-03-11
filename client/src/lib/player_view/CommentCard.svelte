@@ -115,7 +115,7 @@ function onClickShare() {
 
 <div transition:scale
     id="comment_card_{comment.id}"
-    class="block box-border overflow-hidden text-ellipsis rounded-lg bg-gray-800 {!!comment.timecode ? 'hover:bg-gray-700' : ''} border border-slate-700/70"
+    class="block box-border min-w-0 max-w-full overflow-hidden text-ellipsis rounded-lg bg-gray-800 {!!comment.timecode ? 'hover:bg-gray-700' : ''} border border-slate-700/70"
     style="margin-left: {indent*1.5}em; width: calc(100% - {indent*1.5}em);"
     tabindex="0"
     role="link"
@@ -130,11 +130,11 @@ function onClickShare() {
     }}
 >
 
-    <div class="flex mx-2 pt-3">
+    <div class="flex mx-2 pt-3 min-w-0">
         <div class="flex-none w-10 h-10 md:w-9 md:h-9 block"><Avatar username={comment.userId || comment.usernameIfnull}/></div>
-        <h5 class="flex-1 ml-3 text-gray-500 self-end">{comment.usernameIfnull}</h5>
+        <h5 class="flex-1 min-w-0 ml-3 text-gray-500 self-end truncate">{comment.usernameIfnull}</h5>
         <span class="flex-none hidden text-xs font-mono">[{comment.id}@{comment.parentId}]</span>
-        <span class="pl-2 flex-0 text-xs text-right overflow-clip text-ellipsis italic whitespace-nowrap  self-end">
+        <span class="pl-2 flex-none max-w-[45%] text-xs text-right overflow-hidden text-ellipsis italic whitespace-nowrap self-end">
                 <span class="text-yellow-700 hover:text-yellow-500 hover:underline cursor-pointer">
                     {comment.timecode ? comment.timecode : ""}
                 </span>
