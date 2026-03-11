@@ -346,6 +346,15 @@ function onOverlaySurfaceTap(event: Event) {
     toggleOverlayVisibility();
 }
 
+function onPlayerSurfaceTap(event: Event) {
+    // Any tap on the player surface should bring controls back when hidden.
+    if (Date.now() < suppressClickUntil) return;
+    if (!overlayVisible) {
+        event.stopPropagation();
+        revealOverlayFromHidden();
+    }
+}
+
 function clickOnVideo(event: MouseEvent ) {
     if (Date.now() < suppressClickUntil) return;
 
@@ -355,7 +364,13 @@ function clickOnVideo(event: MouseEvent ) {
         let frac = (event.clientX - videoElem.getBoundingClientRect().left) / videoElem.offsetWidth;
         time = getEffectiveDuration() * frac;
     } else {
-        // Always allow tap to toggle controls visibility, even while paused.
+        // Hidden-state first click: reveal only (never trigger playback logic).
+        if (!overlayVisible) {
+            revealOverlayFromHidden();
+            suppressClickUntil = Date.now() + 260;
+            return;
+        }
+        // Visible-state click toggles controls.
         toggleOverlayVisibility();
     }
 }
@@ -514,7 +529,11 @@ function onVideoTouchEnd() {
     // Prevent synthetic click from immediately toggling twice after touchend.
     suppressClickUntil = now + 350;
 
-    // Touch tap should only toggle controls, never change playback state.
+    // Hidden-state first tap: reveal only. Visible-state tap: toggle controls.
+    if (!overlayVisible) {
+        revealOverlayFromHidden();
+        return;
+    }
     toggleOverlayVisibility();
 }
 
@@ -942,7 +961,7 @@ function handlePinClick(id: string) {
 >
 	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
 			 style="{debug_layout?'border: 2px solid orange;':''}">
-		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}">
+		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap} ontouchend={onPlayerSurfaceTap}>
 			<video
 				transition:scale
 				src="{src}"
