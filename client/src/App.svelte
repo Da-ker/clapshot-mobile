@@ -1158,9 +1158,8 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
 
             <!-- Floating comments panel -->
-            <div class="relative md:absolute z-20 left-0 right-0 md:left-auto md:right-4 mt-0 md:mt-0 bottom-0 md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] md:w-[26rem] h-[clamp(13rem,34dvh,20rem)] md:h-auto flex flex-col rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}">
+            <div class="relative md:absolute z-20 left-2 right-2 md:left-auto md:right-4 mt-0 md:mt-0 bottom-0 md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] md:w-[26rem] h-[clamp(13rem,34dvh,20rem)] md:h-auto flex flex-col rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}">
                 <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
-                    <div class="mx-auto mb-1 h-1 w-10 rounded-full bg-slate-600/80"></div>
                     <div class="hidden md:flex justify-end">
                         <button class="fa-solid {commentsPanelMode === 'half' ? 'fa-up-down' : 'fa-minimize'} text-slate-400 hover:text-slate-200 h-8 w-8" onclick={toggleCommentsPanelMode} aria-label="Toggle comments drawer size"></button>
                     </div>
@@ -1186,7 +1185,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
             </div>
 
-            <div class="fixed md:static left-0 right-0 bottom-[max(0px,env(safe-area-inset-bottom))] z-40 p-2 bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)] md:shadow-none">
+            <div class="fixed md:static left-2 right-2 md:left-auto md:right-auto bottom-[max(0px,env(safe-area-inset-bottom))] z-40 p-2 rounded-t-xl md:rounded-none bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)] md:shadow-none">
                 <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
             </div>
 
