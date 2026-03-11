@@ -1130,11 +1130,11 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
             <div class="px-2 md:px-6 pt-1 pb-0">
                 <div class="rounded-xl border border-slate-800/90 bg-gradient-to-b from-slate-900/95 to-slate-900/70 px-3 py-2">
                     <div class="flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
-                        <span class="inline-flex flex-[0_1_66%] md:flex-[0_1_70%] items-center rounded-md bg-slate-800/85 px-2 py-1.5 text-slate-100 font-mono text-sm md:text-base min-w-0">
-                            <input class="bg-transparent rounded px-1 w-[14ch] md:w-[15ch] min-w-[14ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
-                            <span class="inline-flex items-center gap-1.5 ml-4 md:ml-5 shrink-0">
+                        <span class="inline-flex flex-[0_1_70%] md:flex-[0_1_74%] items-center rounded-md bg-slate-800/85 px-2 py-1.5 text-slate-100 font-mono text-sm md:text-base min-w-0">
+                            <input class="bg-transparent rounded px-1 w-[13ch] md:w-[14ch] min-w-[13ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
+                            <span class="inline-flex items-center gap-1.5 ml-5 md:ml-6 shrink-0">
                                 <span class="text-slate-300 text-xs shrink-0">FR</span>
-                                <input class="bg-transparent rounded px-1 w-[4ch] md:w-[5ch] min-w-[4ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
+                                <input class="bg-transparent rounded px-1 w-[5ch] md:w-[6ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                             </span>
                         </span>
                         <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200 ml-auto shrink-0 text-sm md:text-base font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
