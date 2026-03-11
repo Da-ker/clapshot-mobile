@@ -958,7 +958,7 @@ function handlePinClick(id: string) {
 >
 	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
 			 style="{debug_layout?'border: 2px solid orange;':''}">
-		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap} ontouchend={onPlayerSurfaceTap}>
+		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap}>
 			<video
 				transition:scale
 				src="{src}"
@@ -1003,7 +1003,7 @@ function handlePinClick(id: string) {
 		-->
 
 			<!-- YouTube-like overlay controls -->
-			<div class="absolute inset-0 z-30 pointer-events-auto transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}" onclick={onOverlaySurfaceTap} ontouchend={onOverlaySurfaceTap}>
+			<div class="absolute inset-0 z-30 pointer-events-auto transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}" onclick={onOverlaySurfaceTap}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
 					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
