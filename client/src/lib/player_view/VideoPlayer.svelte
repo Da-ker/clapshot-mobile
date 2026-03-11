@@ -317,6 +317,8 @@ function togglePlay() {
 }
 
 function clickOnVideo(event: MouseEvent ) {
+    if (Date.now() < suppressClickUntil) return;
+
     if ($curVideo?.mediaType.toLowerCase().startsWith("audio")) {
         // Audio file videos show a waveform, so use clicks for seeking instead of play/pause
         const videoElem = event.target as HTMLVideoElement;
@@ -339,7 +341,7 @@ let touchMoved = false;
 let lockedGestureAxis: 'x' | 'y' | null = null;
 let gestureStartVideoTime = 0;
 let gestureStartVolume = 0;
-let lastTapAt = 0;
+let suppressClickUntil = 0;
 let volumeHudVisible = $state(false);
 let volumeHudText = $state('');
 let volumeHudTimer: ReturnType<typeof setTimeout> | null = null;
@@ -484,14 +486,15 @@ function onVideoTouchEnd() {
     gestureStartVolume = getCurrentVolume01();
     if (!isTap) return;
 
-    // Double tap: play/pause
-    if (now - lastTapAt < 320) {
-        togglePlay();
-        lastTapAt = 0;
-        return;
-    }
+    // Prevent synthetic click from immediately toggling twice after touchend.
+    suppressClickUntil = now + 350;
 
-    lastTapAt = now;
+    // Touch tap should only toggle controls, never change playback state.
+    if (overlayVisible) {
+        hideOverlayQuick();
+    } else {
+        showOverlay(true);
+    }
 }
 
 function onVideoWheel(e: WheelEvent) {
