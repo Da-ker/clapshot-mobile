@@ -1183,9 +1183,11 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     {/if}
                 </div>
 
-                <div class="fixed md:static left-0 right-0 bottom-[max(0px,env(safe-area-inset-bottom))] z-40 p-2 border-t border-slate-800/90 bg-[#0c1018]/95 backdrop-blur">
-                    <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
-                </div>
+
+            </div>
+
+            <div class="fixed md:static left-0 right-0 bottom-[max(0px,env(safe-area-inset-bottom))] z-40 p-2 border-t border-slate-800/90 bg-[#0c1018]/95 backdrop-blur">
+                <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
             </div>
 
             {#if !commentsPanelOpen}
