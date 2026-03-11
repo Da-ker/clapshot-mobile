@@ -334,6 +334,9 @@ function onOverlaySurfaceTap(event: Event) {
     const target = event.target as HTMLElement | null;
     if (!target) return;
     if (target.closest('button') || target.closest('[role="slider"]')) return;
+    if ((event as MouseEvent).detail === 1) {
+        overlayVisibilityBeforeMultiClick = overlayVisible;
+    }
     if ('changedTouches' in (event as any)) {
         suppressClickUntil = Date.now() + 350;
     }
@@ -343,6 +346,9 @@ function onOverlaySurfaceTap(event: Event) {
 
 function onPlayerSurfaceTap(event: Event) {
     // Hidden -> show controls. Visible -> hide controls (YouTube-like toggle on non-control surface).
+    if ((event as MouseEvent).detail === 1) {
+        overlayVisibilityBeforeMultiClick = overlayVisible;
+    }
     event.stopPropagation();
     if (!overlayVisible) {
         revealOverlayFromHidden();
@@ -368,6 +374,9 @@ function clickOnVideo(event: MouseEvent ) {
         let frac = (event.clientX - videoElem.getBoundingClientRect().left) / videoElem.offsetWidth;
         time = getEffectiveDuration() * frac;
     } else {
+        if (event.detail === 1) {
+            overlayVisibilityBeforeMultiClick = overlayVisible;
+        }
         event.stopPropagation();
         // Hidden-state first click: reveal only (never trigger playback logic).
         if (!overlayVisible) {
@@ -389,6 +398,15 @@ let lockedGestureAxis: 'x' | 'y' | null = null;
 let gestureStartVideoTime = 0;
 let gestureStartVolume = 0;
 let suppressClickUntil = 0;
+let overlayVisibilityBeforeMultiClick: boolean | null = null;
+
+function onVideoSurfaceDoubleClick(event: MouseEvent) {
+    event.stopPropagation();
+    togglePlay();
+    const preserveVisibility = overlayVisibilityBeforeMultiClick ?? overlayVisible;
+    showOverlay(preserveVisibility);
+    overlayVisibilityBeforeMultiClick = null;
+}
 let volumeHudVisible = $state(false);
 let volumeHudText = $state('');
 let volumeHudTimer: ReturnType<typeof setTimeout> | null = null;
@@ -983,7 +1001,7 @@ function handlePinClick(id: string) {
 				oncanplay={prepare_drawing}
 				onclick={clickOnVideo}
 				onwheel={preventDefault((e)=>onVideoWheel(e as WheelEvent))}
-				ondblclick={(e) => { e.stopPropagation(); togglePlay(); showOverlay(true); }}
+				ondblclick={onVideoSurfaceDoubleClick}
 				ontouchstart={onVideoTouchStart}
 				ontouchmove={preventDefault((e)=>onVideoTouchMove(e as TouchEvent))}
 				ontouchend={onVideoTouchEnd}
@@ -1025,7 +1043,7 @@ function handlePinClick(id: string) {
 		-->
 
 			<!-- YouTube-like overlay controls -->
-			<div class="absolute inset-0 z-30 pointer-events-auto transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; e.stopPropagation(); togglePlay(); showOverlay(true); }}>
+			<div class="absolute inset-0 z-30 pointer-events-auto transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
 					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
