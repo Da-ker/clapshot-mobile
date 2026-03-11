@@ -1127,24 +1127,24 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
         <!-- ========== video review widgets ============= -->
         <div class="relative h-full min-h-0 overflow-hidden">
-            <div class="px-2 md:px-6 pt-1 pb-0">
-                <div class="rounded-xl border border-slate-800/90 bg-gradient-to-b from-slate-900/95 to-slate-900/70 px-3 py-2">
+            <div class="px-2 md:px-6 pt-2 pb-1">
+                <div class="rounded-xl bg-slate-900/55 px-2.5 md:px-3 py-2 backdrop-blur-sm">
                     <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
-                        <span class="top-left-controls inline-flex flex-[0_1_70%] md:flex-[0_1_74%] items-center rounded-md bg-slate-800/85 px-2 py-1.5 text-slate-100 font-mono text-sm md:text-base min-w-0">
+                        <span class="top-left-controls inline-flex flex-[0_1_70%] md:flex-[0_1_74%] items-center rounded-lg bg-slate-800/60 px-2 py-1.5 text-slate-100 font-mono text-sm md:text-base min-w-0">
                             <input class="top-timecode-input bg-transparent rounded px-1 w-[13ch] md:w-[14ch] min-w-[13ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
                             <span class="top-fr-group inline-flex items-center gap-1.5 ml-5 md:ml-6 shrink-0">
                                 <span class="text-slate-300 text-xs shrink-0">FR</span>
                                 <input class="top-frame-input bg-transparent rounded px-1 w-[5ch] md:w-[6ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                             </span>
                         </span>
-                        <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200 ml-auto shrink-0 text-sm md:text-base font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
-                        <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200 shrink-0 text-sm md:text-base font-semibold">{$curVideo?.duration?.fps ?? '-'} fps</span>
+                        <span class="rounded-lg bg-slate-800/55 px-2 py-1 text-slate-200 ml-auto shrink-0 text-sm md:text-base font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
+                        <span class="rounded-lg bg-slate-800/55 px-2 py-1 text-slate-200 shrink-0 text-sm md:text-base font-semibold">{$curVideo?.duration?.fps ?? '-'} fps</span>
                     </div>
                 </div>
             </div>
             <!-- Video stays centered as primary focus -->
             <div class="h-auto md:h-[calc(100%-0.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
-                <div class="w-full max-w-[1400px] rounded-xl border border-slate-700/80 bg-[#0c1324]/90 p-1.5 md:p-2 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+                <div class="w-full max-w-[1400px] rounded-2xl bg-[#0b1220]/88 p-1.5 md:p-2 shadow-[0_14px_36px_rgba(0,0,0,0.35)]">
                     <VideoPlayer
                         bind:this={videoPlayer} src={$curVideo.playbackUrl}
                         onseeked={onPlayerSeeked}
@@ -1158,7 +1158,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
 
             <!-- Floating comments panel -->
-            <div class="relative md:absolute z-20 left-0 right-0 md:left-auto md:right-4 mt-0 md:mt-0 bottom-0 md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] md:w-[26rem] h-[clamp(13rem,34dvh,20rem)] md:h-auto flex flex-col rounded-t-2xl md:rounded-xl border border-slate-700/80 bg-[#0c1018]/95 backdrop-blur shadow-2xl transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}">
+            <div class="relative md:absolute z-20 left-0 right-0 md:left-auto md:right-4 mt-0 md:mt-0 bottom-0 md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] md:w-[26rem] h-[clamp(13rem,34dvh,20rem)] md:h-auto flex flex-col rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}">
                 <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                     <div class="mx-auto mb-1 h-1 w-10 rounded-full bg-slate-600/80"></div>
                     <div class="hidden md:flex justify-end">
@@ -1186,7 +1186,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
             </div>
 
-            <div class="fixed md:static left-0 right-0 bottom-[max(0px,env(safe-area-inset-bottom))] z-40 p-2 border-t border-slate-800/90 bg-[#0c1018]/95 backdrop-blur">
+            <div class="fixed md:static left-0 right-0 bottom-[max(0px,env(safe-area-inset-bottom))] z-40 p-2 bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)] md:shadow-none">
                 <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
             </div>
 
