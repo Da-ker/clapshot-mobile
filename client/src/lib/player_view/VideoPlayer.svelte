@@ -122,10 +122,10 @@ function showOverlay(autoHide: boolean = true) {
 }
 
 $effect(() => {
-    if (paused) {
-        showOverlay(false);
-    } else {
+    if (!paused) {
         showOverlay(true);
+    } else {
+        clearOverlayHideTimer();
     }
 });
 
@@ -325,7 +325,7 @@ function clickOnVideo(event: MouseEvent ) {
         let frac = (event.clientX - videoElem.getBoundingClientRect().left) / videoElem.offsetWidth;
         time = getEffectiveDuration() * frac;
     } else {
-        // YouTube-like behavior: tap toggles overlay visibility without changing playback.
+        // Always allow tap to toggle controls visibility, even while paused.
         if (overlayVisible) {
             hideOverlayQuick();
         } else {
