@@ -30,11 +30,17 @@ let uiConnectedState: boolean = $state(false); // true if UI should look like we
 
 let collabDialogAck = $state(false);  // true if user has clicked "OK" on the collab dialog
 let lastCollabControllingUser: string | null = null;    // last user to control the video in a collab session
+let commentsPanelOpen = $state(false);
+let commentsPanelMode = $state<'half' | 'full'>('half');
+const randomSessionId = Math.random().toString(36).substring(2, 15);
 
 let forceBadBasicAuth = false;
 
 let wsSocket: WebSocket | undefined;
 let sendQueue: any[] = [];
+let topTimecode = $state('00:00:00:00');
+let topFrame = $state('0');
+
 
 
 function logAbbrev(...strs: any[]) {
@@ -83,6 +89,58 @@ function showConnectionError(msg: string) {
     console.error("[CONNECTION ERROR]", msg);
 }
 
+function toggleCommentsPanelMode() {
+    commentsPanelMode = commentsPanelMode === 'half' ? 'full' : 'half';
+}
+
+function formatDurationShort(sec: number | undefined): string {
+    if (sec == null || Number.isNaN(sec)) return '--:--';
+    const total = Math.max(0, Math.floor(sec));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function refreshTopVideoMeta() {
+    if (!videoPlayer) return;
+    topTimecode = videoPlayer.getCurTimecode();
+    topFrame = String(videoPlayer.getCurFrame());
+}
+
+async function onTopTimecodeEdited(e: Event) {
+    if (!videoPlayer) return;
+    await videoPlayer.seekToSMPTE((e.target as HTMLInputElement).value);
+    refreshTopVideoMeta();
+}
+
+async function onTopFrameEdited(e: Event) {
+    if (!videoPlayer) return;
+    const v = parseInt((e.target as HTMLInputElement).value);
+    if (!Number.isNaN(v)) await videoPlayer.seekToFrame(v);
+    refreshTopVideoMeta();
+}
+
+$effect(() => {
+    if (!$mediaFileId || !$curVideo) return;
+    refreshTopVideoMeta();
+    const timer = setInterval(refreshTopVideoMeta, 250);
+    return () => clearInterval(timer);
+});
+
+let drawerTouchStartY = 0;
+function onDrawerTouchStart(e: TouchEvent) {
+    drawerTouchStartY = e.touches[0]?.clientY ?? 0;
+}
+function onDrawerTouchEnd(e: TouchEvent) {
+    const endY = e.changedTouches[0]?.clientY ?? drawerTouchStartY;
+    const delta = endY - drawerTouchStartY;
+    if (Math.abs(delta) < 40) return;
+    if (delta < 0) commentsPanelMode = 'full';
+    else commentsPanelMode = 'half';
+}
+
 // Messages from CommentInput component
 function onCommentInputButton(e: any) {
 
@@ -101,13 +159,16 @@ function onCommentInputButton(e: any) {
 
     if (e.action == "send")
     {
-        if (videoPlayer && (e.comment_text != "" || videoPlayer.hasDrawing()))
+        const commentText = (e.comment_text ?? "").trim();
+        const hasDrawing = videoPlayer ? videoPlayer.hasDrawing() : false;
+
+        if (videoPlayer && (commentText !== "" || hasDrawing))
         {
             wsEmit({addComment: {
                 mediaFileId: $mediaFileId!,
-                comment: e.comment_text,
-                drawing: videoPlayer ? videoPlayer.getScreenshot() : "",
-                timecode: e.is_timed && videoPlayer ? videoPlayer.getCurTimecode() : "",
+                comment: commentText,
+                drawing: videoPlayer.getScreenshot(),
+                timecode: e.is_timed ? videoPlayer.getCurTimecode() : "",
                 subtitleId: $curSubtitle?.id
             }});
         }
@@ -1057,25 +1118,76 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         {:else if $mediaFileId && $curVideo && $curVideo.playbackUrl}
 
         <!-- ========== video review widgets ============= -->
-        <div class="flex flex-col h-full min-h-0 overflow-hidden">
-            <!-- Video area -->
-            <div class="flex-1 bg-cyan-900 rounded-md overflow-hidden flex items-center justify-center min-h-[32vh] md:min-h-[40vh] min-w-0">
-                <VideoPlayer
-                    bind:this={videoPlayer} src={$curVideo.playbackUrl}
-                    onseeked={onPlayerSeeked}
-                    oncollabreport={onCollabReport}
-                    oncommentpinclicked={activateComment}
-                    onuploadsubtitles={onUploadSubtitles}
-                    onchangesubtitle={onSubtitleChange}
-                />
+        <div class="relative h-full min-h-0 overflow-hidden">
+            <div class="px-2 md:px-6 pt-1 pb-0">
+                <div class="rounded-xl border border-slate-800/90 bg-gradient-to-b from-slate-900/95 to-slate-900/70 px-3 py-2">
+                    <div class="flex items-center gap-2 text-xs md:text-sm min-w-0">
+                        <span class="inline-flex items-center gap-1.5 rounded-md bg-slate-800/85 px-2 py-1 text-slate-200 font-mono text-xs md:text-sm min-w-0 shrink">
+                            <input class="bg-transparent rounded px-1 w-20 md:w-32 min-w-0" value={topTimecode} onchange={onTopTimecodeEdited} />
+                            <span class="text-slate-400 text-[10px] shrink-0">FR</span>
+                            <input class="bg-transparent rounded px-1 w-8 md:w-12 min-w-0" value={topFrame} onchange={onTopFrameEdited} />
+                        </span>
+                        <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-300 ml-auto shrink-0">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
+                        <span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-300 shrink-0">{$curVideo?.duration?.fps ?? '-'} fps</span>
+                    </div>
+                </div>
             </div>
-            
-            <!-- Comment input - fixed at bottom -->
-            <div class="flex-none w-full bg-[#101016]/95 backdrop-blur safe-area-bottom sticky bottom-0 z-10">
-                <div class="p-2">
+            <!-- Video stays centered as primary focus -->
+            <div class="h-[50vh] md:h-[calc(100%-0.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
+                <div class="w-full max-w-[1400px]">
+                    <VideoPlayer
+                        bind:this={videoPlayer} src={$curVideo.playbackUrl}
+                        onseeked={onPlayerSeeked}
+                        oncollabreport={onCollabReport}
+                        oncommentpinclicked={activateComment}
+                        onuploadsubtitles={onUploadSubtitles}
+                        onchangesubtitle={onSubtitleChange}
+                    />
+                </div>
+            </div>
+
+
+            <!-- Floating comments panel -->
+            <div class="relative md:absolute z-20 left-0 right-0 md:left-auto md:right-4 mt-0 md:mt-0 bottom-0 md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] md:w-[26rem] h-[40vh] md:h-auto flex flex-col rounded-t-2xl md:rounded-xl border border-slate-700/80 bg-[#0c1018]/95 backdrop-blur shadow-2xl transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}">
+                <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
+                    <div class="mx-auto mb-1 h-1 w-10 rounded-full bg-slate-600/80"></div>
+                    <div class="hidden md:flex justify-end">
+                        <button class="fa-solid {commentsPanelMode === 'half' ? 'fa-up-down' : 'fa-minimize'} text-slate-400 hover:text-slate-200 h-8 w-8" onclick={toggleCommentsPanelMode} aria-label="Toggle comments drawer size"></button>
+                    </div>
+                </div>
+
+                <div class="flex-1 {commentsPanelMode === 'full' ? 'max-h-[74vh]' : 'max-h-[44vh]'} md:max-h-[52vh] overflow-y-auto overflow-x-hidden p-2 space-y-2">
+                    {#if $allComments.length > 0}
+                        {#each $allComments as c (c.comment.id)}
+                            <CommentCard
+                                indent={c.indent}
+                                comment={c.comment}
+                                ondisplaycomment={onDisplayComment}
+                                ondeletecomment={onDeleteComment}
+                                onreplytocomment={onReplyComment}
+                                oneditcomment={onEditComment}
+                            />
+                        {/each}
+                    {:else}
+                        <div class="text-sm text-slate-400 px-2 py-4">No comments yet</div>
+                    {/if}
+                </div>
+
+                <div class="p-2 border-t border-slate-800/90">
                     <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
                 </div>
             </div>
+
+            {#if !commentsPanelOpen}
+                <button
+                    class="hidden md:inline-flex absolute z-20 right-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] items-center gap-2 rounded-full bg-[#0c1018]/92 border border-slate-700/80 px-3 py-2 text-sm text-slate-200 shadow-xl"
+                    onclick={() => { commentsPanelOpen = true; commentsPanelMode = 'half'; }}
+                    aria-label="Open comments"
+                >
+                    <i class="fa-regular fa-comments"></i>
+                    <span>Comments ({$allComments.length})</span>
+                </button>
+            {/if}
         </div>
 
         {#if $collabId && !collabDialogAck}
