@@ -927,17 +927,6 @@ function handlePinClick(id: string) {
 
 			<!-- YouTube-like overlay controls -->
 			<div class="absolute inset-0 z-30 pointer-events-none">
-				<div class="absolute top-2 md:top-3 inset-x-3 md:inset-x-4 flex items-center justify-between pointer-events-auto">
-					<button class="fa-solid fa-chevron-down text-white/95 text-2xl h-9 w-9 inline-flex items-center justify-center" aria-label="Back"></button>
-					<div class="inline-flex items-center gap-3 md:gap-4">
-						<button class="inline-flex items-center gap-1.5 rounded-full bg-white/25 px-2.5 py-1 text-white text-sm" aria-label="Toggle playback">
-							<i class="fa-solid {paused ? 'fa-play' : 'fa-pause'}"></i>
-						</button>
-						<button class="fa-solid fa-tower-broadcast text-white/95 text-2xl h-9 w-9 inline-flex items-center justify-center" aria-label="Cast"></button>
-						<button class="fa-regular fa-closed-captioning text-white/95 text-2xl h-9 w-9 inline-flex items-center justify-center" aria-label="CC"></button>
-						<button class="fa-solid fa-gear text-white/95 text-2xl h-9 w-9 inline-flex items-center justify-center" aria-label="Settings"></button>
-					</div>
-				</div>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
 					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={() => step_video(-1)} aria-label="Step backwards"></button>
