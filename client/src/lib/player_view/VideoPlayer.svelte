@@ -350,6 +350,16 @@ function onPlayerSurfaceTap(event: Event) {
     }
 }
 
+function swallowIfHiddenFirstTap(event: Event): boolean {
+    if (!overlayVisible) {
+        event.stopPropagation();
+        revealOverlayFromHidden();
+        suppressClickUntil = Date.now() + 260;
+        return true;
+    }
+    return false;
+}
+
 function clickOnVideo(event: MouseEvent ) {
     if ($curVideo?.mediaType.toLowerCase().startsWith("audio")) {
         // Audio file videos show a waveform, so use clicks for seeking instead of play/pause
@@ -1006,9 +1016,9 @@ function handlePinClick(id: string) {
 			<div class="absolute inset-0 z-30 pointer-events-auto transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}" onclick={onOverlaySurfaceTap}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
-					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
-					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[6.6rem] md:size-[7.2rem] rounded-full bg-white/28 text-white text-[3.1rem] md:text-[3.4rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={(e) => { e.stopPropagation(); togglePlay(); }} title="Play/Pause" aria-label="Play/Pause"></button>
-					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { e.stopPropagation(); step_video(1); }} aria-label="Step forwards"></button>
+					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
+					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[6.6rem] md:size-[7.2rem] rounded-full bg-white/28 text-white text-[3.1rem] md:text-[3.4rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); togglePlay(); }} title="Play/Pause" aria-label="Play/Pause"></button>
+					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(1); }} aria-label="Step forwards"></button>
 				</div>
 
 				<button class="absolute right-3 md:right-4 bottom-14 md:bottom-16 fa-solid fa-expand text-white/95 text-2xl h-12 w-12 rounded-full bg-white/20 inline-flex items-center justify-center pointer-events-auto" onclick={(e) => { e.stopPropagation(); }} aria-label="Fullscreen"></button>
