@@ -1126,7 +1126,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         {:else if $mediaFileId && $curVideo && $curVideo.playbackUrl}
 
         <!-- ========== video review widgets ============= -->
-        <div class="relative h-full min-h-0 overflow-y-auto overflow-x-hidden md:overflow-hidden">
+        <div class="relative h-full min-h-0 overflow-hidden">
             <div class="px-2 md:px-6 pt-1 pb-0">
                 <div class="rounded-xl border border-slate-800/90 bg-gradient-to-b from-slate-900/95 to-slate-900/70 px-3 py-2">
                     <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
