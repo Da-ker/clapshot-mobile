@@ -926,14 +926,14 @@ function handlePinClick(id: string) {
 		-->
 
 			<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-				<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[5.8rem] md:size-[6.4rem] rounded-full bg-black/50 text-white text-[2.8rem] md:text-[3rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)] pointer-events-auto" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
+				<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center h-16 w-16 md:h-20 md:w-20 text-white text-[3.2rem] md:text-[3.6rem] pointer-events-auto drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
 			</div>
 		</div>
 	</div>
 
-	<div class="absolute inset-x-2 md:inset-x-3 bottom-2 md:bottom-3 z-30 {debug_layout?'border-2 border-red-600':''}">
+	<div class="absolute inset-x-3 md:inset-x-6 top-1/2 -translate-y-1/2 z-30 pointer-events-none {debug_layout?'border-2 border-red-600':''}">
 
-		<div class="flex-1 space-y-0 leading-none relative py-2">
+		<div class="flex-1 space-y-0 leading-none relative py-0 pointer-events-auto">
 			<div
 				role="slider"
 				aria-label="Seek"
@@ -972,11 +972,11 @@ function handlePinClick(id: string) {
 
 
 		<!-- playback controls -->
-		<div class="p-1.5 md:p-2 min-w-0 rounded-xl bg-black/35 backdrop-blur-[1px]">
-			<div class="relative w-full flex items-center justify-center min-h-[4.8rem]">
-				<span class="inline-flex items-center gap-12 md:gap-14 px-2">
-					<button class="text-white/90 hover:text-white fa-solid fa-backward-step inline-flex items-center justify-center h-11 w-11 md:h-12 md:w-12 rounded-full text-3xl transition-colors" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
-					<button class="text-white/90 hover:text-white fa-solid fa-forward-step inline-flex items-center justify-center h-11 w-11 md:h-12 md:w-12 rounded-full text-3xl transition-colors" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
+		<div class="pt-6 md:pt-7 pointer-events-auto">
+			<div class="relative w-full flex items-center justify-center">
+				<span class="inline-flex items-center gap-14 md:gap-16 px-2">
+					<button class="text-white/90 hover:text-white fa-solid fa-backward-step inline-flex items-center justify-center h-10 w-10 md:h-12 md:w-12 text-3xl transition-colors" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
+					<button class="text-white/90 hover:text-white fa-solid fa-forward-step inline-flex items-center justify-center h-10 w-10 md:h-12 md:w-12 text-3xl transition-colors" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
 				</span>
 			</div>
 		</div>
