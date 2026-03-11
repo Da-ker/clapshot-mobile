@@ -1132,7 +1132,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     <div class="flex flex-nowrap items-center gap-1.5 text-xs md:text-sm min-w-0">
                         <span class="inline-flex flex-1 items-center rounded-md bg-slate-800/85 px-1.5 py-1 text-slate-200 font-mono text-xs md:text-sm min-w-0">
                             <input class="bg-transparent rounded px-1 w-[12ch] md:w-32 min-w-[12ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
-                            <span class="inline-flex items-center gap-1 ml-3 shrink-0">
+                            <span class="inline-flex items-center gap-1 ml-6 md:ml-8 shrink-0">
                                 <span class="text-slate-400 text-[10px] shrink-0">FR</span>
                                 <input class="bg-transparent rounded px-1 w-[4ch] md:w-12 min-w-[4ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                             </span>
