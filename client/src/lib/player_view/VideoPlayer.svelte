@@ -879,7 +879,7 @@ function handlePinClick(id: string) {
     class="w-full h-full flex flex-col object-contain"
     role="main"
 >
-	<div  class="flex-1 flex items-center justify-center relative min-h-[12em]"
+	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
 			 style="{debug_layout?'border: 2px solid orange;':''}">
 		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video {debug_layout?'border-4 border-x-zinc-50':''}">
 			<video
@@ -973,22 +973,46 @@ function handlePinClick(id: string) {
 
 			<!-- Row 1: centered transport + duration -->
 			<div class="relative w-full flex items-center justify-center min-h-[5.4rem]">
-				<span class="inline-flex items-center gap-8 md:gap-10 px-2">
+				<span class="inline-flex items-center gap-4 md:gap-10 px-2">
 					<button class="text-sky-500 hover:text-sky-400 fa-solid fa-backward-step inline-flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full text-4xl transition-colors" onclick={() => step_video(-1)} disabled={time==0} title="Step backwards" aria-label="Step backwards"></button>
 					<button class="text-sky-500 fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[5.00rem] min-w-[5.00rem] min-h-[5.00rem] aspect-square p-0 leading-none rounded-full bg-slate-600/70 text-[2.8rem] hover:bg-slate-600/80 transition-all shrink-0 box-border" id="playbutton" onclick={togglePlay} title="Play/Pause" aria-label="Play/Pause"></button>
 					<button class="text-sky-500 hover:text-sky-400 fa-solid fa-forward-step inline-flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full text-4xl transition-colors" onclick={() => step_video(1)} title="Step forwards" aria-label="Step forwards"></button>
-				</span>
 
-				<span class="absolute right-0 top-1/2 -translate-y-1/2 inline-flex items-center rounded-lg bg-slate-800/85 px-2 py-0.5 text-xs md:text-sm font-mono text-slate-100 shrink-0 min-w-[6.1rem] justify-center">{format_tc(getEffectiveDuration())}</span>
+					<!-- Mobile: subtitle + loop controls inline with transport -->
+					<span class="md:hidden inline-flex items-center rounded-lg bg-slate-800/85 px-1 py-1">
+					{#if ($curVideo?.subtitles?.length ?? 0) > 0}
+						<button
+							class={($curSubtitle ? 'fa-solid fa-closed-captioning text-amber-500' : 'fa-solid fa-closed-captioning text-gray-400') + ' inline-flex items-center justify-center h-8 w-8 rounded-md'}
+							title="Toggle closed captioning"
+							aria-label="Toggle closed captioning"
+							onclick={() => toggleSubtitle()}
+						></button>
+					{:else}
+						<button bind:this={uploadSubtitlesButton}
+							class="fa-solid fa-closed-captioning text-gray-400 inline-flex items-center justify-center h-8 w-8 rounded-md" title="Upload subtitles"
+							aria-label="Upload subtitles"
+							onmouseover={() => { changeSubtitleUploadIcon(true); }}
+							onfocus={() => { changeSubtitleUploadIcon(true); }}
+							onmouseout={() => { changeSubtitleUploadIcon(false); }}
+							onblur={() => { changeSubtitleUploadIcon(false); }}
+							onclick={() => { if (onuploadsubtitles) onuploadsubtitles(); }}
+						></button>
+					{/if}
+					</span>
+
+					{#if !$collabId}
+					<span class="md:hidden inline-flex items-center gap-1 rounded-lg bg-slate-800/85 px-1 py-0.5 text-sm shrink-0">
+						<button class="fa-solid fa-square-caret-down hover:text-white {loopStartTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-8 w-8 rounded-md"
+							onclick={() => setLoopPoint(true)} title="Set loop start to current frame" aria-label="Set loop start to current frame"></button>
+						<button class="fa-solid fa-square-caret-up hover:text-white {loopEndTime>=0 ? 'text-amber-500' : 'text-gray-400'} inline-flex items-center justify-center h-8 w-8 rounded-md"
+							onclick={() => setLoopPoint(false)} title="Set loop end to current frame" aria-label="Set loop end to current frame"></button>
+					</span>
+					{/if}
+				</span>
 			</div>
 
 			<!-- Row 2: details + secondary actions -->
-			<div class="w-full flex flex-nowrap items-center justify-between gap-1.5 overflow-x-auto">
-				<span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-800/85 px-1.5 py-0.5 text-xs font-mono shrink-0">
-					<input class="bg-transparent hover:bg-gray-700/60 rounded px-1 w-28" value="{currentTimecode}" onchange={(e) => onTimecodeEdited(e)}/>
-					<span class="text-slate-400 text-[10px]">FR</span>
-					<input class="bg-transparent hover:bg-gray-700/60 rounded px-1 w-12" value="{currentFrame}" onchange={(e) => onFrameEdited(e)}/>
-				</span>
+			<div class="hidden md:flex w-full flex-nowrap items-center justify-between gap-1.5 overflow-x-auto">
 
                 <span class="inline-flex items-center rounded-lg bg-slate-800/85 px-1 py-1">
                 {#if ($curVideo?.subtitles?.length ?? 0) > 0}

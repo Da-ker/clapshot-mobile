@@ -1143,7 +1143,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 </div>
             </div>
             <!-- Video stays centered as primary focus -->
-            <div class="h-[50vh] md:h-[calc(100%-0.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
+            <div class="h-auto md:h-[calc(100%-0.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
                 <div class="w-full max-w-[1400px]">
                     <VideoPlayer
                         bind:this={videoPlayer} src={$curVideo.playbackUrl}
