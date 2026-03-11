@@ -330,31 +330,61 @@ function toggleOverlayVisibility() {
     }
 }
 
+function scheduleSingleSurfaceTap(action: () => void) {
+    if (pendingSurfaceTapTimer) {
+        clearTimeout(pendingSurfaceTapTimer);
+        pendingSurfaceTapTimer = null;
+    }
+    pendingSurfaceTapTimer = setTimeout(() => {
+        pendingSurfaceTapTimer = null;
+        action();
+    }, 240);
+}
+
+function cancelPendingSingleSurfaceTap() {
+    if (!pendingSurfaceTapTimer) return;
+    clearTimeout(pendingSurfaceTapTimer);
+    pendingSurfaceTapTimer = null;
+}
+
 function onOverlaySurfaceTap(event: Event) {
     const target = event.target as HTMLElement | null;
     if (!target) return;
     if (target.closest('button') || target.closest('[role="slider"]')) return;
-    if ((event as MouseEvent).detail === 1) {
-        overlayVisibilityBeforeMultiClick = overlayVisible;
+
+    const mouseEvent = event as MouseEvent;
+    event.stopPropagation();
+
+    if (mouseEvent.detail > 1) {
+        cancelPendingSingleSurfaceTap();
+        return;
     }
+
+    overlayVisibilityBeforeMultiClick = overlayVisible;
     if ('changedTouches' in (event as any)) {
         suppressClickUntil = Date.now() + 350;
     }
-    event.stopPropagation();
-    toggleOverlayVisibility();
+    scheduleSingleSurfaceTap(() => toggleOverlayVisibility());
 }
 
 function onPlayerSurfaceTap(event: Event) {
     // Hidden -> show controls. Visible -> hide controls (YouTube-like toggle on non-control surface).
-    if ((event as MouseEvent).detail === 1) {
-        overlayVisibilityBeforeMultiClick = overlayVisible;
-    }
+    const mouseEvent = event as MouseEvent;
     event.stopPropagation();
-    if (!overlayVisible) {
-        revealOverlayFromHidden();
-    } else {
-        hideOverlayQuick();
+
+    if (mouseEvent.detail > 1) {
+        cancelPendingSingleSurfaceTap();
+        return;
     }
+
+    overlayVisibilityBeforeMultiClick = overlayVisible;
+    scheduleSingleSurfaceTap(() => {
+        if (!overlayVisible) {
+            revealOverlayFromHidden();
+        } else {
+            hideOverlayQuick();
+        }
+    });
 }
 
 function swallowIfHiddenFirstTap(event: Event): boolean {
@@ -374,19 +404,25 @@ function clickOnVideo(event: MouseEvent ) {
         let frac = (event.clientX - videoElem.getBoundingClientRect().left) / videoElem.offsetWidth;
         time = getEffectiveDuration() * frac;
     } else {
-        if (event.detail === 1) {
-            overlayVisibilityBeforeMultiClick = overlayVisible;
-        }
         event.stopPropagation();
-        // Hidden-state first click: reveal only (never trigger playback logic).
-        if (!overlayVisible) {
-            revealOverlayFromHidden();
-            suppressClickUntil = Date.now() + 260;
+
+        if (event.detail > 1) {
+            cancelPendingSingleSurfaceTap();
             return;
         }
-        if (Date.now() < suppressClickUntil) return;
-        // Visible-state click toggles controls.
-        toggleOverlayVisibility();
+
+        overlayVisibilityBeforeMultiClick = overlayVisible;
+        scheduleSingleSurfaceTap(() => {
+            // Hidden-state first click: reveal only (never trigger playback logic).
+            if (!overlayVisible) {
+                revealOverlayFromHidden();
+                suppressClickUntil = Date.now() + 260;
+                return;
+            }
+            if (Date.now() < suppressClickUntil) return;
+            // Visible-state click toggles controls.
+            toggleOverlayVisibility();
+        });
     }
 }
 
@@ -399,9 +435,11 @@ let gestureStartVideoTime = 0;
 let gestureStartVolume = 0;
 let suppressClickUntil = 0;
 let overlayVisibilityBeforeMultiClick: boolean | null = null;
+let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
 
 function onVideoSurfaceDoubleClick(event: MouseEvent) {
     event.stopPropagation();
+    cancelPendingSingleSurfaceTap();
     togglePlay();
     const preserveVisibility = overlayVisibilityBeforeMultiClick ?? overlayVisible;
     showOverlay(preserveVisibility);
@@ -1030,7 +1068,16 @@ function handlePinClick(id: string) {
 				<button
 					type="button"
 					class="absolute inset-0 z-40 bg-transparent"
-					onclick={(e) => { e.stopPropagation(); revealOverlayFromHidden(); }}
+					onclick={(e) => {
+						e.stopPropagation();
+						if ((e as MouseEvent).detail > 1) {
+							cancelPendingSingleSurfaceTap();
+							return;
+						}
+						overlayVisibilityBeforeMultiClick = overlayVisible;
+						scheduleSingleSurfaceTap(() => revealOverlayFromHidden());
+					}}
+					ondblclick={onVideoSurfaceDoubleClick}
 					ontouchend={(e) => { e.stopPropagation(); revealOverlayFromHidden(); }}
 					aria-label="Show playback controls"
 				></button>
