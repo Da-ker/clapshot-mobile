@@ -418,7 +418,6 @@ function setEffectiveVolume(newVol: number) {
 
 function onVideoTouchStart(e: TouchEvent) {
     if (!e.touches || e.touches.length !== 1) return;
-    showOverlay(true);
     void ensureIOSVolumeGainReady();
     const t = e.touches[0];
     touchStartX = t.clientX;
