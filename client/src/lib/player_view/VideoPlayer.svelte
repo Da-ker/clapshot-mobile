@@ -876,7 +876,7 @@ function handlePinClick(id: string) {
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
     onkeydown={onWindowKeyPress}
-    class="w-full h-full flex flex-col object-contain"
+    class="relative w-full h-full flex flex-col object-contain"
     role="main"
 >
 	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
@@ -928,7 +928,7 @@ function handlePinClick(id: string) {
 		</div>
 	</div>
 
-	<div class="flex-none relative {debug_layout?'border-2 border-red-600':''}">
+	<div class="absolute inset-x-2 md:inset-x-3 bottom-2 md:bottom-3 z-30 {debug_layout?'border-2 border-red-600':''}">
 
 		<div class="flex-1 space-y-0 leading-none relative py-2">
 			<div
