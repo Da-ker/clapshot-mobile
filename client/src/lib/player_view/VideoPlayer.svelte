@@ -347,10 +347,12 @@ function onOverlaySurfaceTap(event: Event) {
 }
 
 function onPlayerSurfaceTap(event: Event) {
-    // Any tap on the player surface should bring controls back when hidden.
+    // Hidden -> show controls. Visible -> hide controls (YouTube-like toggle on non-control surface).
+    event.stopPropagation();
     if (!overlayVisible) {
-        event.stopPropagation();
         revealOverlayFromHidden();
+    } else {
+        hideOverlayQuick();
     }
 }
 
