@@ -363,6 +363,7 @@ function clickOnVideo(event: MouseEvent ) {
         let frac = (event.clientX - videoElem.getBoundingClientRect().left) / videoElem.offsetWidth;
         time = getEffectiveDuration() * frac;
     } else {
+        event.stopPropagation();
         // Hidden-state first click: reveal only (never trigger playback logic).
         if (!overlayVisible) {
             revealOverlayFromHidden();
@@ -519,12 +520,14 @@ function onVideoTouchMove(e: TouchEvent) {
     }
 }
 
-function onVideoTouchEnd() {
+function onVideoTouchEnd(e: TouchEvent) {
     const now = Date.now();
     const isTap = !touchMoved && (now - touchStartTime) < 250;
     lockedGestureAxis = null;
     gestureStartVolume = getCurrentVolume01();
     if (!isTap) return;
+
+    e.stopPropagation();
 
     // Prevent synthetic click from immediately toggling twice after touchend.
     suppressClickUntil = now + 350;
