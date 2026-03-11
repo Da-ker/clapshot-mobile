@@ -928,7 +928,53 @@ function handlePinClick(id: string) {
 		</div>
 	</div>
 
-	<div class="absolute inset-x-2 md:inset-x-3 bottom-2 md:bottom-3 z-30 {debug_layout?'border-2 border-red-600':''}">
+	<div class="absolute inset-x-2 md:inset-x-3 bottom-2 md:bottom-3 z-30 pointer-events-none">
+		<!-- YouTube-like overlay controls -->
+		<div class="absolute inset-x-1 md:inset-x-2 top-1 md:top-2 flex items-center justify-between pointer-events-auto">
+			<button class="fa-solid fa-chevron-down text-white/90 text-xl md:text-2xl h-9 w-9 inline-flex items-center justify-center" onclick={() => history.back()} aria-label="Back"></button>
+			<div class="inline-flex items-center gap-2 md:gap-3">
+				<button class="fa-solid fa-closed-captioning text-white/90 text-xl md:text-2xl h-9 w-9 inline-flex items-center justify-center" onclick={() => toggleSubtitle()} aria-label="Toggle subtitles"></button>
+				<button class="fa-solid fa-gear text-white/90 text-xl md:text-2xl h-9 w-9 inline-flex items-center justify-center" aria-label="Settings"></button>
+			</div>
+		</div>
+
+		<div class="absolute inset-0 flex items-center justify-center gap-8 md:gap-12 pointer-events-auto">
+			<button class="fa-solid fa-backward-step text-white/85 text-3xl md:text-4xl h-12 w-12 md:h-14 md:w-14 inline-flex items-center justify-center" onclick={() => step_video(-1)} aria-label="Step backward"></button>
+			<button class="fa-solid {paused ? 'fa-play' : 'fa-pause'} text-white text-4xl md:text-5xl h-24 w-24 md:h-28 md:w-28 rounded-full inline-flex items-center justify-center bg-black/35 backdrop-blur-[1px]" onclick={togglePlay} aria-label="Play/Pause"></button>
+			<button class="fa-solid fa-forward-step text-white/85 text-3xl md:text-4xl h-12 w-12 md:h-14 md:w-14 inline-flex items-center justify-center" onclick={() => step_video(1)} aria-label="Step forward"></button>
+		</div>
+
+		<div class="absolute inset-x-1 md:inset-x-2 bottom-1 md:bottom-2 pointer-events-auto">
+			<div class="mb-1 text-white font-semibold text-[11px] md:text-sm drop-shadow">{format_tc(time)} / {format_tc(getEffectiveDuration())}</div>
+			<div
+				role="slider"
+				aria-label="Seek"
+				aria-valuemin="0"
+				aria-valuemax={Math.floor(getEffectiveDuration())}
+				aria-valuenow={Math.floor(time)}
+				tabindex="0"
+				class="relative w-full h-1.5 rounded-full overflow-hidden bg-white/35 hover:cursor-pointer"
+				onmousedown={preventDefault((e)=>handleMove(e as MouseEvent, e.currentTarget))}
+				onmousemove={(e)=>handleMove(e as MouseEvent, e.currentTarget)}
+				ontouchstart={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
+				ontouchmove={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
+			>
+				<div class="absolute inset-y-0 left-0 bg-red-600" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
+				<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-red-600" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.35rem);"></div>
+				{#each commentsWithTc as item}
+					<CommentTimelinePin
+						id={item.id}
+						username={item.usernameIfnull || item.userId || '?'}
+						comment={item.comment}
+						x_loc={tcToDurationFract(item.timecode)}
+						onclick={(event) => handlePinClick(event.id)}
+					/>
+				{/each}
+			</div>
+		</div>
+	</div>
+
+	<div class="hidden absolute inset-x-2 md:inset-x-3 bottom-2 md:bottom-3 z-30 {debug_layout?'border-2 border-red-600':''}">
 
 		<div class="flex-1 space-y-0 leading-none relative py-2">
 			<div
