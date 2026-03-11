@@ -83,6 +83,7 @@ let animationFrameId: number = 0;
 let audio_volume: number | undefined = $state();
 let overlayVisible: boolean = $state(true);
 let overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
+let controlsArmedUntil = 0;
 
 
 function initializeVolume() {
@@ -119,6 +120,16 @@ function showOverlay(autoHide: boolean = true) {
             overlayVisible = false;
         }, 2200);
     }
+}
+
+function revealOverlayFromHidden() {
+    // First tap when hidden: reveal controls only, do not trigger any control action.
+    showOverlay(true);
+    controlsArmedUntil = Date.now() + 260;
+}
+
+function controlsAreArmed(): boolean {
+    return Date.now() >= controlsArmedUntil;
 }
 
 $effect(() => {
@@ -320,7 +331,7 @@ function toggleOverlayVisibility() {
     if (overlayVisible) {
         hideOverlayQuick();
     } else {
-        showOverlay(true);
+        revealOverlayFromHidden();
     }
 }
 
@@ -979,12 +990,12 @@ function handlePinClick(id: string) {
 			<div class="absolute inset-0 z-30 pointer-events-auto transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}" onclick={onOverlaySurfaceTap} ontouchend={onOverlaySurfaceTap}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
-					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
-					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[6.6rem] md:size-[7.2rem] rounded-full bg-white/28 text-white text-[3.1rem] md:text-[3.4rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={(e) => { e.stopPropagation(); togglePlay(); }} title="Play/Pause" aria-label="Play/Pause"></button>
-					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { e.stopPropagation(); step_video(1); }} aria-label="Step forwards"></button>
+					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { e.stopPropagation(); if (!controlsAreArmed()) return; step_video(-1); }} aria-label="Step backwards"></button>
+					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center size-[6.6rem] md:size-[7.2rem] rounded-full bg-white/28 text-white text-[3.1rem] md:text-[3.4rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={(e) => { e.stopPropagation(); if (!controlsAreArmed()) return; togglePlay(); }} title="Play/Pause" aria-label="Play/Pause"></button>
+					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { e.stopPropagation(); if (!controlsAreArmed()) return; step_video(1); }} aria-label="Step forwards"></button>
 				</div>
 
-				<button class="absolute right-3 md:right-4 bottom-14 md:bottom-16 fa-solid fa-expand text-white/95 text-2xl h-12 w-12 rounded-full bg-white/20 inline-flex items-center justify-center pointer-events-auto" onclick={(e) => e.stopPropagation()} aria-label="Fullscreen"></button>
+				<button class="absolute right-3 md:right-4 bottom-14 md:bottom-16 fa-solid fa-expand text-white/95 text-2xl h-12 w-12 rounded-full bg-white/20 inline-flex items-center justify-center pointer-events-auto" onclick={(e) => { e.stopPropagation(); if (!controlsAreArmed()) return; }} aria-label="Fullscreen"></button>
 
 				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
 					<div class="mb-1.5 text-white text-[2rem] md:text-[2.2rem] leading-none font-semibold drop-shadow">{format_tc(time)} / {format_tc(getEffectiveDuration())}</div>
@@ -998,10 +1009,10 @@ function handlePinClick(id: string) {
 							tabindex="0"
 							class="relative w-full h-1 rounded-full overflow-hidden bg-white/45 hover:cursor-pointer"
 							onclick={(e) => e.stopPropagation()}
-							onmousedown={preventDefault((e)=>handleMove(e as MouseEvent, e.currentTarget))}
-							onmousemove={(e)=>handleMove(e as MouseEvent, e.currentTarget)}
-							ontouchstart={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
-							ontouchmove={preventDefault((e)=>handleMove(e as TouchEvent, e.currentTarget))}
+							onmousedown={preventDefault((e)=>{ if (!controlsAreArmed()) return; handleMove(e as MouseEvent, e.currentTarget); })}
+							onmousemove={(e)=>{ if (!controlsAreArmed()) return; handleMove(e as MouseEvent, e.currentTarget); }}
+							ontouchstart={preventDefault((e)=>{ if (!controlsAreArmed()) return; handleMove(e as TouchEvent, e.currentTarget); })}
+							ontouchmove={preventDefault((e)=>{ if (!controlsAreArmed()) return; handleMove(e as TouchEvent, e.currentTarget); })}
 						>
 							<div class="absolute inset-y-0 left-0 bg-red-600" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
 							<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-red-600" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.35rem);"></div>
