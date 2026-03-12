@@ -150,7 +150,7 @@ function onDrawerTouchEnd(e: TouchEvent) {
 }
 
 // Messages from CommentInput component
-function onCommentInputButton(e: any) {
+async function onCommentInputButton(e: any) {
 
     const PLAYBACK_REQ_SOURCE = "comment_input";
     function resumePlayer() {
@@ -168,15 +168,38 @@ function onCommentInputButton(e: any) {
     if (e.action == "send")
     {
         const commentText = (e.comment_text ?? "").trim();
-        const hasDrawing = videoPlayer ? videoPlayer.hasDrawing() : false;
 
-        if (videoPlayer && (commentText !== "" || hasDrawing))
+        let drawingData = "";
+        let hasValidDrawing = false;
+        if (videoPlayer) {
+            try {
+                const wantsDrawing = !!videoPlayer.hasDrawing();
+                if (wantsDrawing) {
+                    drawingData = await videoPlayer.getScreenshotForComment();
+                    hasValidDrawing = drawingData.startsWith("data:image/");
+                }
+            } catch (err) {
+                console.warn("Failed to capture drawing screenshot, falling back to text-only comment", err);
+            }
+        }
+
+        // Never block text comments on player/drawing/timecode failures.
+        if (commentText !== "" || hasValidDrawing)
         {
+            let timecode = "";
+            if (e.is_timed && videoPlayer) {
+                try {
+                    timecode = videoPlayer.getCurTimecode() || "";
+                } catch (err) {
+                    console.warn("Failed to resolve timecode, sending as untimed comment", err);
+                }
+            }
+
             wsEmit({addComment: {
                 mediaFileId: $mediaFileId!,
                 comment: commentText,
-                drawing: videoPlayer.getScreenshot(),
-                timecode: e.is_timed ? videoPlayer.getCurTimecode() : "",
+                drawing: hasValidDrawing ? drawingData : undefined,
+                timecode,
                 subtitleId: $curSubtitle?.id
             }});
         }
@@ -205,7 +228,18 @@ function onCommentInputButton(e: any) {
 
 function onDisplayComment(e: any) {
     if (!$curVideo) { throw Error("No video loaded"); }
-    if (videoPlayer) videoPlayer.seekToSMPTE(e.timecode);
+    // Always pause immediately when jumping to a comment frame during playback.
+    if (videoPlayer) {
+        videoPlayer.setPlayback(false, "comment_review");
+    }
+    if (videoPlayer) {
+        videoPlayer.seekToSMPTE(e.timecode);
+        if (e.timecode) {
+            // Enter review mode for all comment-review entry paths (pin/card/hash)
+            // so first tap in hidden state always reveals controls.
+            videoPlayer.enterCommentReviewTapMode();
+        }
+    }
     // Close draw mode while showing (drawing from a saved) comment
     if (videoPlayer && e.drawing) { videoPlayer.setDrawing(e.drawing); }
     if (e.subtitleId) { $curSubtitle = $curVideo.subtitles.find((s) => s.id == e.subtitleId) ?? null; }
@@ -291,6 +325,7 @@ function activateComment(e: any) {
     // If comment has a timecode, activate it on the timeline (seek, set loop points)
     if (c.comment.timecode && videoPlayer) {
         videoPlayer.activateCommentOnTimeline(commentId);
+        videoPlayer.enterCommentReviewTapMode();
     }
 
     // Handle all the display logic (drawing, subtitle, collab, etc.)

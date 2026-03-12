@@ -69,6 +69,14 @@ let videoCanvasContainer: any = $state();
 let videoDecoder: HybridVideoDecoder | null = null;
 
 let debug_layout: boolean = false; // Set to true to show CSS layout boxes
+let debugTapHud = $state(false);
+let debugTapHudLines = $state<string[]>([]);
+function pushTapHud(message: string) {
+    if (!debugTapHud) return;
+    const line = `${new Date().toLocaleTimeString()} | ${message}`;
+    debugTapHudLines = [line, ...debugTapHudLines].slice(0, 10);
+}
+
 let commentsWithTc: Proto3.Comment[] = $derived(
     $allComments
         .filter(c => c.comment.timecode)
@@ -113,6 +121,8 @@ function hideOverlayQuick() {
 }
 
 function showOverlay(autoHide: boolean = true) {
+    // Any explicit request to show controls should cancel review-mode auto-hide suppression.
+    suppressAutoShowOverlayUntil = 0;
     overlayVisible = true;
     clearOverlayHideTimer();
     if (autoHide && !paused) {
@@ -354,6 +364,10 @@ function cancelPendingSingleSurfaceTap() {
 }
 
 function onOverlaySurfaceTap(event: Event) {
+    if (Date.now() < suppressClickUntil) {
+        event.stopPropagation();
+        return;
+    }
     const target = event.target as HTMLElement | null;
     if (!target) return;
     if (target.closest('button') || target.closest('[role="slider"]')) return;
@@ -366,6 +380,15 @@ function onOverlaySurfaceTap(event: Event) {
         return;
     }
 
+    if (isInCommentReviewTapMode()) {
+        if (overlayVisible) {
+            hideOverlayQuick();
+        } else {
+            revealOverlayFromHidden();
+        }
+        return;
+    }
+
     overlayVisibilityBeforeMultiClick = overlayVisible;
     if ('changedTouches' in (event as any)) {
         suppressClickUntil = Date.now() + 350;
@@ -375,6 +398,11 @@ function onOverlaySurfaceTap(event: Event) {
 
 function onPlayerSurfaceTap(event: Event) {
     // Hidden -> show controls. Visible -> hide controls (YouTube-like toggle on non-control surface).
+    pushTapHud(`onPlayerSurfaceTap type=${event.type} overlay=${overlayVisible} suppress=${Date.now() < suppressClickUntil}`);
+    if (Date.now() < suppressClickUntil) {
+        event.stopPropagation();
+        return;
+    }
     const mouseEvent = event as MouseEvent;
     event.stopPropagation();
 
@@ -383,27 +411,110 @@ function onPlayerSurfaceTap(event: Event) {
         return;
     }
 
-    overlayVisibilityBeforeMultiClick = overlayVisible;
+    const wasVisible = overlayVisible;
+
+    // In comment review mode, hidden-state tap should only reveal controls.
+    if (isInCommentReviewTapMode() && !wasVisible) {
+        cancelPendingSingleSurfaceTap();
+        revealOverlayFromHidden();
+        return;
+    }
+
+    // Always treat hidden-state tap as reveal-only using state snapshot,
+    // to avoid delayed callbacks accidentally hiding controls again.
+    if (!wasVisible) {
+        cancelPendingSingleSurfaceTap();
+        revealOverlayFromHidden();
+        return;
+    }
+
+    overlayVisibilityBeforeMultiClick = wasVisible;
     scheduleSingleSurfaceTap(() => {
-        if (!overlayVisible) {
-            revealOverlayFromHidden();
-        } else {
-            hideOverlayQuick();
-        }
+        hideOverlayQuick();
     });
 }
 
+function onHiddenOverlayTap(event: Event) {
+    // In hidden state, first tap should ONLY reveal controls and never trigger playback actions.
+    pushTapHud(`onHiddenOverlayTap type=${event.type} overlay=${overlayVisible}`);
+    event.stopPropagation();
+    cancelPendingSingleSurfaceTap();
+    consumeReviewTapUntil = 0;
+    revealOverlayFromHidden();
+    suppressClickUntil = Date.now() + 260;
+}
+
+function onCommentReviewRevealTap(event: Event) {
+    pushTapHud(`onCommentReviewRevealTap type=${event.type} overlay=${overlayVisible}`);
+    event.preventDefault();
+    event.stopPropagation();
+    cancelPendingSingleSurfaceTap();
+    consumeReviewTapUntil = 0;
+    reviewFirstTapGuard = false;
+    revealOverlayFromHidden();
+    // iOS may emit a follow-up synthetic click after touch/pointer; swallow it.
+    suppressClickUntil = Date.now() + 600;
+}
+
+function onReviewHiddenCaptureTap(event: Event) {
+    // Hard interception path: whenever controls are hidden, first tap anywhere
+    // must only reveal controls and never fall through to play/pause handlers.
+    if (overlayVisible) return;
+    onCommentReviewRevealTap(event);
+}
+
+function onRootRevealTap(event: Event) {
+    // Final fallback: capture taps at player root level.
+    pushTapHud(`onRootRevealTap type=${event.type} overlay=${overlayVisible}`);
+
+    // In comment-review mode:
+    // - hidden controls: first tap forces reveal
+    // - visible controls: allow normal click flow (so next tap can hide)
+    if (isInCommentReviewTapMode()) {
+        if (overlayVisible) return;
+        event.preventDefault();
+        event.stopPropagation();
+        cancelPendingSingleSurfaceTap();
+        reviewFirstTapGuard = false;
+        showOverlay(true);
+        suppressClickUntil = Date.now() + 350;
+        pushTapHud(`force showOverlay from root type=${event.type}`);
+        return;
+    }
+
+    if (overlayVisible) return;
+    onCommentReviewRevealTap(event);
+}
+
+$effect(() => {
+    if (!videoCanvasContainer) return;
+
+    const captureHandler = (event: Event) => onReviewHiddenCaptureTap(event);
+    videoCanvasContainer.addEventListener('pointerdown', captureHandler, true);
+    videoCanvasContainer.addEventListener('touchstart', captureHandler, true);
+    videoCanvasContainer.addEventListener('click', captureHandler, true);
+
+    return () => {
+        videoCanvasContainer?.removeEventListener('pointerdown', captureHandler, true);
+        videoCanvasContainer?.removeEventListener('touchstart', captureHandler, true);
+        videoCanvasContainer?.removeEventListener('click', captureHandler, true);
+    };
+});
+
 function swallowIfHiddenFirstTap(event: Event): boolean {
     if (!overlayVisible) {
-        event.stopPropagation();
-        revealOverlayFromHidden();
-        suppressClickUntil = Date.now() + 260;
+        onHiddenOverlayTap(event);
         return true;
     }
     return false;
 }
 
 function clickOnVideo(event: MouseEvent ) {
+    pushTapHud(`clickOnVideo type=${event.type} detail=${event.detail} overlay=${overlayVisible}`);
+    if (Date.now() < suppressClickUntil) {
+        event.stopPropagation();
+        return;
+    }
     if ($curVideo?.mediaType.toLowerCase().startsWith("audio")) {
         // Audio file videos show a waveform, so use clicks for seeking instead of play/pause
         const videoElem = event.target as HTMLVideoElement;
@@ -417,14 +528,24 @@ function clickOnVideo(event: MouseEvent ) {
             return;
         }
 
-        overlayVisibilityBeforeMultiClick = overlayVisible;
+        const wasVisible = overlayVisible;
+
+        if (isInCommentReviewTapMode() && !wasVisible) {
+            cancelPendingSingleSurfaceTap();
+            revealOverlayFromHidden();
+            return;
+        }
+
+        // Hidden-state first click: reveal only (never trigger playback logic).
+        if (!wasVisible) {
+            cancelPendingSingleSurfaceTap();
+            revealOverlayFromHidden();
+            suppressClickUntil = Date.now() + 260;
+            return;
+        }
+
+        overlayVisibilityBeforeMultiClick = wasVisible;
         scheduleSingleSurfaceTap(() => {
-            // Hidden-state first click: reveal only (never trigger playback logic).
-            if (!overlayVisible) {
-                revealOverlayFromHidden();
-                suppressClickUntil = Date.now() + 260;
-                return;
-            }
             if (Date.now() < suppressClickUntil) return;
             // Visible-state click toggles controls.
             toggleOverlayVisibility();
@@ -442,25 +563,43 @@ let gestureStartVolume = 0;
 let suppressClickUntil = 0;
 let overlayVisibilityBeforeMultiClick: boolean | null = null;
 let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
+let forceRevealOverlayUntil = 0;
+let consumeReviewTapUntil = 0;
+let reviewFirstTapGuard = $state(false);
+
+function isInCommentReviewTapMode() {
+    return Date.now() < forceRevealOverlayUntil;
+}
+
+function shouldConsumeReviewTap() {
+    return Date.now() < consumeReviewTapUntil;
+}
+
+export function enterCommentReviewTapMode(durationMs: number = 60000) {
+    forceRevealOverlayUntil = Date.now() + durationMs;
+    // First tap in review mode should only reveal controls, never trigger playback.
+    consumeReviewTapUntil = Date.now() + Math.min(durationMs, 1500);
+    reviewFirstTapGuard = true;
+    // Keep controls hidden by default while reviewing comments.
+    suppressAutoShowOverlayUntil = Date.now() + durationMs;
+    hideOverlayQuick();
+}
 
 function onVideoSurfaceDoubleClick(event: MouseEvent) {
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
+    // Swallow follow-up synthetic/single click chain to avoid overlay flicker.
+    suppressClickUntil = Date.now() + 450;
 
-    const preserveVisibility = overlayVisibilityBeforeMultiClick ?? overlayVisible;
-    if (!preserveVisibility) {
-        suppressAutoShowOverlayUntil = Date.now() + 600;
+    // In comment review hidden-state, first interaction must reveal controls only.
+    if (isInCommentReviewTapMode() && (!overlayVisible || shouldConsumeReviewTap())) {
+        consumeReviewTapUntil = 0;
+        revealOverlayFromHidden();
+        return;
     }
 
+    // Double-click should only toggle playback and preserve current overlay visibility.
     togglePlay();
-
-    if (preserveVisibility) {
-        // Keep controls visible after double-click when they were visible before.
-        showOverlay(true);
-    } else {
-        // Keep controls hidden after double-click when they were hidden before.
-        hideOverlayQuick();
-    }
 
     overlayVisibilityBeforeMultiClick = null;
 }
@@ -611,6 +750,11 @@ function onVideoTouchEnd(e: TouchEvent) {
 
     // Prevent synthetic click from immediately toggling twice after touchend.
     suppressClickUntil = now + 350;
+
+    if (isInCommentReviewTapMode()) {
+        revealOverlayFromHidden();
+        return;
+    }
 
     // Hidden-state first tap: reveal only. Visible-state tap: toggle controls.
     if (!overlayVisible) {
@@ -792,8 +936,7 @@ export function hasDrawing() {
 }
 
 // Capture current video frame + drawing as a data URL (base64 encoded image)
-export function getScreenshot() : string
-{
+function composeDrawingCanvas(): HTMLCanvasElement {
         let comb = document.createElement('canvas');
         comb.width  = videoElem.videoWidth;
         comb.height = videoElem.videoHeight;
@@ -801,7 +944,48 @@ export function getScreenshot() : string
         if (!ctx) throw new Error("Cannot get canvas context");
         // ctx.drawImage(videoElem, 0, 0);   // Removed, as bgr frame capture is now done when draw mode is entered
         ctx.drawImage(draw_canvas, 0, 0);
-        // Try WebP first, fall back to JPEG if not supported (Safari doesn't support WebP encoding)
+        return comb;
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string) || "");
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+    });
+}
+
+export async function getScreenshotForComment() : Promise<string> {
+        const comb = composeDrawingCanvas();
+        // First attempt: fast sync path
+        const webp = comb.toDataURL("image/webp", 0.8);
+        if (webp.startsWith("data:image/webp")) {
+            return webp;
+        }
+
+        // iOS fallback: some Safari builds fail toDataURL(webp) but can still encode via toBlob(webp)
+        const webpBlob = await new Promise<Blob | null>((resolve) => {
+            try {
+                comb.toBlob((blob) => resolve(blob), "image/webp", 0.8);
+            } catch {
+                resolve(null);
+            }
+        });
+        if (webpBlob && webpBlob.type === "image/webp") {
+            const webpDataUrl = await blobToDataUrl(webpBlob);
+            if (webpDataUrl.startsWith("data:image/webp")) {
+                return webpDataUrl;
+            }
+        }
+
+        // Last resort for compatibility path (may still be rejected by strict server MIME rules)
+        return comb.toDataURL("image/jpeg", 0.85);
+}
+
+export function getScreenshot() : string
+{
+        const comb = composeDrawingCanvas();
         const webp = comb.toDataURL("image/webp", 0.8);
         if (webp.startsWith("data:image/webp")) {
             return webp;
@@ -1031,6 +1215,8 @@ export function activateCommentOnTimeline(commentId: string) {
 
 // Internal handler for pin clicks - bubbles event up to App
 function handlePinClick(id: string) {
+    // Enter comment review tap mode so single-tap always reveals controls during review.
+    enterCommentReviewTapMode();
     if (oncommentpinclicked) oncommentpinclicked({id});
 }
 
@@ -1039,9 +1225,31 @@ function handlePinClick(id: string) {
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
     onkeydown={onWindowKeyPress}
+    onpointerdown={onRootRevealTap}
+    ontouchstart={onRootRevealTap}
     class="relative w-full h-full flex flex-col object-contain"
     role="main"
 >
+	{#if reviewFirstTapGuard}
+		<div
+			class="absolute inset-0 z-[220] bg-transparent pointer-events-auto"
+			onpointerdown={onCommentReviewRevealTap}
+			onclick={onCommentReviewRevealTap}
+			ontouchstart={onCommentReviewRevealTap}
+			ontouchend={onCommentReviewRevealTap}
+			aria-hidden="true"
+		></div>
+	{/if}
+
+	{#if debugTapHud}
+		<div class="absolute left-2 top-2 z-[260] max-w-[92%] rounded bg-black/75 px-2 py-1 text-[11px] leading-4 text-lime-200 pointer-events-none">
+			<div class="text-white/90">Tap Debug HUD</div>
+			{#each debugTapHudLines as line}
+				<div>{line}</div>
+			{/each}
+		</div>
+	{/if}
+
 	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
 			 style="{debug_layout?'border: 2px solid orange;':''}">
 		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap}>
@@ -1087,20 +1295,15 @@ function handlePinClick(id: string) {
 				<button
 					type="button"
 					class="absolute inset-0 z-40 bg-transparent"
-					onclick={(e) => {
-						e.stopPropagation();
-						if ((e as MouseEvent).detail > 1) {
-							cancelPendingSingleSurfaceTap();
-							return;
-						}
-						overlayVisibilityBeforeMultiClick = overlayVisible;
-						scheduleSingleSurfaceTap(() => revealOverlayFromHidden());
-					}}
+					onpointerdown={onHiddenOverlayTap}
+					onclick={onHiddenOverlayTap}
 					ondblclick={onVideoSurfaceDoubleClick}
-					ontouchend={(e) => { e.stopPropagation(); revealOverlayFromHidden(); }}
+					ontouchstart={onHiddenOverlayTap}
+					ontouchend={onHiddenOverlayTap}
 					aria-label="Show playback controls"
 				></button>
 			{/if}
+
 
 			<!--    TODO: maybe show actively controlling collaborator's avatar like this?
 			<div class="absolute top-0 left-0 w-full h-full z-1">
@@ -1109,18 +1312,17 @@ function handlePinClick(id: string) {
 		-->
 
 			<!-- YouTube-like overlay controls -->
-			<div class="absolute inset-0 z-30 pointer-events-auto transition-opacity duration-300 {overlayVisible ? 'opacity-100 visible' : 'opacity-0 invisible'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
+			<div class="absolute inset-0 z-[180] transition-opacity duration-700 ease-out {overlayVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
 					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
-					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center w-[4.62rem] h-[4.62rem] md:w-[5.04rem] md:h-[5.04rem] min-w-[4.62rem] min-h-[4.62rem] md:min-w-[5.04rem] md:min-h-[5.04rem] rounded-full bg-white/28 text-white text-[2.45rem] md:text-[2.7rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); togglePlay(); }} title="Play/Pause" aria-label="Play/Pause"></button>
+					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center w-[4.62rem] h-[4.62rem] md:w-[5.04rem] md:h-[5.04rem] min-w-[4.62rem] min-h-[4.62rem] md:min-w-[5.04rem] md:min-h-[5.04rem] rounded-full bg-white/28 text-white text-[2.45rem] md:text-[2.7rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); suppressClickUntil = Date.now() + 700; togglePlay(); showOverlay(true); }} title="Play/Pause" aria-label="Play/Pause"></button>
 					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(1); }} aria-label="Step forwards"></button>
 				</div>
 
 				<button class="absolute right-3 md:right-4 bottom-14 md:bottom-16 fa-solid fa-expand text-white/95 text-2xl h-12 w-12 rounded-full bg-white/20 inline-flex items-center justify-center pointer-events-auto" onclick={(e) => { e.stopPropagation(); }} aria-label="Fullscreen"></button>
 
 				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
-					<div class="mb-1.5 text-white text-[2rem] md:text-[2.2rem] leading-none font-semibold drop-shadow">{format_tc(time)} / {format_tc(getEffectiveDuration())}</div>
 					<div class="relative h-2">
 						<div
 							role="slider"
@@ -1142,17 +1344,22 @@ function handlePinClick(id: string) {
 						{#if loopStartTime>0 || loopEndTime>0}
 							<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
 						{/if}
-						{#each commentsWithTc as item}
-							<CommentTimelinePin
-								id={item.id}
-								username={item.usernameIfnull || item.userId || '?'}
-								comment={item.comment}
-								x_loc={tcToDurationFract(item.timecode)}
-								onclick={(event) => handlePinClick(event.id)}
-							/>
-						{/each}
 					</div>
 				</div>
+			</div>
+
+			<!-- Comment timeline pins are rendered in an independent layer so
+			     comment interactions are decoupled from control overlay show/hide logic. -->
+			<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 z-50 h-2 pointer-events-auto">
+				{#each commentsWithTc as item}
+					<CommentTimelinePin
+						id={item.id}
+						username={item.usernameIfnull || item.userId || '?'}
+						comment={item.comment}
+						x_loc={tcToDurationFract(item.timecode)}
+						onclick={(event) => handlePinClick(event.id)}
+					/>
+				{/each}
 			</div>
 		</div>
 	</div>

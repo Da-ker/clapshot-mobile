@@ -26,8 +26,8 @@ import {hexColorForUsername} from '@/lib/Avatar.svelte';
         title="{username}: {comment}"
         tabindex="0"
         role="link"
-        onkeyup={e=>{e.key==='Enter' && onclick?.({id})}}
-        onclick={() => onclick?.({id})}></div>
+        onkeyup={e=>{ if (e.key==='Enter') { e.stopPropagation(); onclick?.({id}); } }}
+        onclick={(e) => { e.stopPropagation(); onclick?.({id}); }}></div>
 </div>
 
 

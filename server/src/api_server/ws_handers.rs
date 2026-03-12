@@ -271,8 +271,8 @@ pub async fn msg_add_comment(data: &proto::client::client_to_server_cmd::AddComm
             let mime = img_uri.mime_type();
             let ext = match (mime.type_.as_str(), mime.subtype.as_str()) {
                 ("image", "webp") => "webp",
-                ("image", "jpeg") => "jpg",
-                ("image", "png") => "png",
+                ("image", "jpeg") | ("image", "jpg") | ("image", "pjpeg") => "jpg",
+                ("image", "png") | ("image", "x-png") => "png",
                 _ => bail!("Invalid mimetype in drawing: {:?}", mime),
             };
             let img_data = img_uri.decode_to_vec().map_err(|e| anyhow!("Failed to decode drawing data URI: {:?}", e))?;

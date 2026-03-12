@@ -258,8 +258,14 @@ impl ServerState {
                 if !drawing.starts_with("data:") {
                     let path = self.media_files_dir.join(&c.media_file_id).join("drawings").join(&drawing);
                     if path.exists() {
-                        let data = tokio::fs::read(path).await?;
-                        *drawing = format!("data:image/webp;base64,{}", Base64GP::STANDARD_NO_PAD.encode(&data));
+                        let data = tokio::fs::read(&path).await?;
+                        let mime = match path.extension().and_then(|e| e.to_str()).map(|s| s.to_ascii_lowercase()) {
+                            Some(ext) if ext == "webp" => "image/webp",
+                            Some(ext) if ext == "png" => "image/png",
+                            Some(ext) if ext == "jpg" || ext == "jpeg" => "image/jpeg",
+                            _ => "image/webp",
+                        };
+                        *drawing = format!("data:{};base64,{}", mime, Base64GP::STANDARD_NO_PAD.encode(&data));
                     } else {
                         tracing::warn!("Drawing file not found for comment: {}", c.id);
                         c.comment += " [DRAWING NOT FOUND]";
