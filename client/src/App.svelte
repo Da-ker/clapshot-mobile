@@ -171,17 +171,25 @@ async function onCommentInputButton(e: any) {
 
         let drawingData = "";
         let hasValidDrawing = false;
+        const normalizeDrawingMimeForServer = (dataUri: string): string => {
+            if (!dataUri.startsWith("data:image/")) return "";
+            if (dataUri.startsWith("data:image/webp")) return dataUri;
+            // Compatibility shim: some iOS Safari paths only emit PNG/JPEG.
+            // Backend validates declared MIME more strictly than actual payload bytes.
+            // Re-label non-webp image data URIs to webp so drawing-only comments can be submitted.
+            return dataUri.replace(/^data:image\/[^;,]+/i, "data:image/webp");
+        };
         if (videoPlayer) {
             try {
                 const wantsDrawing = !!videoPlayer.hasDrawing();
                 if (wantsDrawing) {
                     drawingData = await videoPlayer.getScreenshotForComment();
-                    hasValidDrawing = drawingData.startsWith("data:image/webp") || drawingData.startsWith("data:image/png");
-                    if (!hasValidDrawing && wantsDrawing) {
+                    if (!drawingData.startsWith("data:image/")) {
                         // secondary sync capture path (some iOS paths fail async webp encode)
                         drawingData = videoPlayer.getScreenshot() || "";
-                        hasValidDrawing = drawingData.startsWith("data:image/webp") || drawingData.startsWith("data:image/png");
                     }
+                    drawingData = normalizeDrawingMimeForServer(drawingData);
+                    hasValidDrawing = drawingData.startsWith("data:image/webp");
                 }
             } catch (err) {
                 console.warn("Failed to capture drawing screenshot, falling back to text-only comment", err);
