@@ -984,8 +984,8 @@ export async function getScreenshotForComment() : Promise<string> {
             }
         }
 
-        // Last resort for compatibility path (may still be rejected by strict server MIME rules)
-        return comb.toDataURL("image/jpeg", 0.85);
+        // Last resort: use PNG (lossless and broadly accepted by server MIME validation)
+        return comb.toDataURL("image/png");
 }
 
 export function getScreenshot() : string
@@ -995,7 +995,7 @@ export function getScreenshot() : string
         if (webp.startsWith("data:image/webp")) {
             return webp;
         }
-        return comb.toDataURL("image/jpeg", 0.85);
+        return comb.toDataURL("image/png");
 }
 
 export async function collabPlay(seek_time: number, looping: boolean) {
