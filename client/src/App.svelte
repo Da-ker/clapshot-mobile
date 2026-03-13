@@ -176,8 +176,12 @@ async function onCommentInputButton(e: any) {
                 const wantsDrawing = !!videoPlayer.hasDrawing();
                 if (wantsDrawing) {
                     drawingData = await videoPlayer.getScreenshotForComment();
-                    // Keep strict to avoid server-side MIME rejection regressions.
-                    hasValidDrawing = drawingData.startsWith("data:image/webp");
+                    hasValidDrawing = drawingData.startsWith("data:image/webp") || drawingData.startsWith("data:image/png");
+                    if (!hasValidDrawing && wantsDrawing) {
+                        // secondary sync capture path (some iOS paths fail async webp encode)
+                        drawingData = videoPlayer.getScreenshot() || "";
+                        hasValidDrawing = drawingData.startsWith("data:image/webp") || drawingData.startsWith("data:image/png");
+                    }
                 }
             } catch (err) {
                 console.warn("Failed to capture drawing screenshot, falling back to text-only comment", err);

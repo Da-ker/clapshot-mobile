@@ -984,10 +984,8 @@ export async function getScreenshotForComment() : Promise<string> {
             }
         }
 
-        // Do NOT fallback to other MIME types here.
-        // Some deployments only accept webp drawings server-side.
-        // Returning empty string lets caller send text-only comment safely.
-        return "";
+        // iOS-safe fallback: PNG is widely supported when WebP encoding fails.
+        return comb.toDataURL("image/png");
 }
 
 export function getScreenshot() : string
@@ -997,7 +995,7 @@ export function getScreenshot() : string
         if (webp.startsWith("data:image/webp")) {
             return webp;
         }
-        return "";
+        return comb.toDataURL("image/png");
 }
 
 export async function collabPlay(seek_time: number, looping: boolean) {
