@@ -176,7 +176,8 @@ async function onCommentInputButton(e: any) {
                 const wantsDrawing = !!videoPlayer.hasDrawing();
                 if (wantsDrawing) {
                     drawingData = await videoPlayer.getScreenshotForComment();
-                    hasValidDrawing = drawingData.startsWith("data:image/");
+                    // Keep strict to avoid server-side MIME rejection regressions.
+                    hasValidDrawing = drawingData.startsWith("data:image/webp");
                 }
             } catch (err) {
                 console.warn("Failed to capture drawing screenshot, falling back to text-only comment", err);

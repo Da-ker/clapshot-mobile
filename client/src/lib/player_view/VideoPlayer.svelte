@@ -984,8 +984,10 @@ export async function getScreenshotForComment() : Promise<string> {
             }
         }
 
-        // Last resort: use PNG (lossless and broadly accepted by server MIME validation)
-        return comb.toDataURL("image/png");
+        // Do NOT fallback to other MIME types here.
+        // Some deployments only accept webp drawings server-side.
+        // Returning empty string lets caller send text-only comment safely.
+        return "";
 }
 
 export function getScreenshot() : string
@@ -995,7 +997,7 @@ export function getScreenshot() : string
         if (webp.startsWith("data:image/webp")) {
             return webp;
         }
-        return comb.toDataURL("image/png");
+        return "";
 }
 
 export async function collabPlay(seek_time: number, looping: boolean) {
