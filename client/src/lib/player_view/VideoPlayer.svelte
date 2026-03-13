@@ -208,10 +208,9 @@ function prepare_drawing(): void
     draw_canvas = document.createElement('canvas');
     draw_canvas.width = videoElem.videoWidth;
     draw_canvas.height = videoElem.videoHeight;
-    // Keep drawing canvas above playback overlay controls on mobile/touch devices,
-    // otherwise taps land on controls and strokes never reach the canvas.
-    draw_canvas.classList.add("absolute", "max-h-full", "max-w-full", "z-[210]", "touch-none");
-    draw_canvas.style.cssText = 'outline: 5px solid red; outline-offset: -5px; cursor:crosshair; left: 50%; top: 50%; transform: translate(-50%, -50%); touch-action: none;';
+    // Default below overlay controls; only raise above controls while actively drawing.
+    draw_canvas.classList.add("absolute", "max-h-full", "max-w-full", "z-[100]", "touch-none");
+    draw_canvas.style.cssText = 'outline: 5px solid red; outline-offset: -5px; cursor:crosshair; left: 50%; top: 50%; transform: translate(-50%, -50%); touch-action: none; z-index: 100;';
 
     // add mouse up listener to the canvas
     draw_canvas.addEventListener('mouseup', function(e: MouseEvent) {
@@ -913,6 +912,7 @@ export function onToggleDraw(mode_on: boolean) {
     if (mode_on) {
         draw_canvas.style.outline = "5px solid " + draw_color;
         draw_canvas.style.cursor = "crosshair";
+        draw_canvas.style.zIndex = "210"; // ensure strokes beat overlay controls while drawing
         const ctx = draw_canvas.getContext('2d');
         if (ctx) videoDecoder?.captureFrame(ctx);
         draw_canvas.style.visibility = "visible";
@@ -920,6 +920,7 @@ export function onToggleDraw(mode_on: boolean) {
     } else {
         draw_canvas.style.visibility = "hidden";
         draw_canvas.style.pointerEvents = "none";
+        draw_canvas.style.zIndex = "100"; // keep controls visible/clickable in review mode
     }
 }
 
@@ -1034,6 +1035,7 @@ export async function setDrawing(drawing: string) {
         draw_canvas.style.visibility = "visible";
         draw_canvas.style.cursor = "";
         draw_canvas.style.outline = "none";
+        draw_canvas.style.zIndex = "100"; // show snapshot below controls
         // Make it non-interactive (pass clicks through)
         draw_canvas.style.pointerEvents = "none";
     }
