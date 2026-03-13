@@ -208,8 +208,10 @@ function prepare_drawing(): void
     draw_canvas = document.createElement('canvas');
     draw_canvas.width = videoElem.videoWidth;
     draw_canvas.height = videoElem.videoHeight;
-    draw_canvas.classList.add("absolute", "max-h-full", "max-w-full", "z-[100]");
-    draw_canvas.style.cssText = 'outline: 5px solid red; outline-offset: -5px; cursor:crosshair; left: 50%; top: 50%; transform: translate(-50%, -50%);';
+    // Keep drawing canvas above playback overlay controls on mobile/touch devices,
+    // otherwise taps land on controls and strokes never reach the canvas.
+    draw_canvas.classList.add("absolute", "max-h-full", "max-w-full", "z-[210]", "touch-none");
+    draw_canvas.style.cssText = 'outline: 5px solid red; outline-offset: -5px; cursor:crosshair; left: 50%; top: 50%; transform: translate(-50%, -50%); touch-action: none;';
 
     // add mouse up listener to the canvas
     draw_canvas.addEventListener('mouseup', function(e: MouseEvent) {
