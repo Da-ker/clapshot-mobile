@@ -226,6 +226,7 @@ function prepare_drawing(): void
     draw_board.setLineSize(videoElem.videoWidth / 100);
     draw_board.setLineColor(draw_color);
     draw_canvas.style.visibility = "hidden"; // hide the canvas until the user clicks the draw button
+    draw_canvas.style.pointerEvents = "none"; // never block playback controls unless actively drawing
 }
 
 
@@ -918,6 +919,7 @@ export function onToggleDraw(mode_on: boolean) {
         draw_canvas.style.pointerEvents = "auto";
     } else {
         draw_canvas.style.visibility = "hidden";
+        draw_canvas.style.pointerEvents = "none";
     }
 }
 
