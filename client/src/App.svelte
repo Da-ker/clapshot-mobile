@@ -1206,14 +1206,14 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
 
             <!-- Floating comments panel -->
-            <div class="relative md:absolute z-20 left-2 w-[calc(100%-1rem)] md:w-[26rem] md:left-auto md:right-4 mt-0 md:mt-0 bottom-0 md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] md:h-auto h-[clamp(13rem,34dvh,20rem)] flex flex-col overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}">
+            <div class="relative md:absolute z-20 left-2 w-[calc(100%-1rem)] md:w-[26rem] md:left-auto md:right-4 mt-0 md:mt-0 bottom-0 md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] h-auto md:h-auto max-h-[clamp(12rem,36dvh,22rem)] md:max-h-none flex flex-col overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}">
                 <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                     <div class="hidden md:flex justify-end">
                         <button class="fa-solid {commentsPanelMode === 'half' ? 'fa-up-down' : 'fa-minimize'} text-slate-400 hover:text-slate-200 h-8 w-8" onclick={toggleCommentsPanelMode} aria-label="Toggle comments drawer size"></button>
                     </div>
                 </div>
 
-                <div class="flex-1 {commentsPanelMode === 'full' ? 'max-h-[74vh]' : 'max-h-[44vh]'} md:max-h-[52vh] overflow-y-auto overflow-x-hidden px-1 py-2 pb-24 md:pb-2 space-y-2 [contain:layout_paint]">
+                <div class="{commentsPanelMode === 'full' ? 'max-h-[74vh]' : 'max-h-[44vh]'} md:max-h-[52vh] max-h-[clamp(8rem,26dvh,14rem)] overflow-y-auto overflow-x-hidden px-1 py-2 pb-2 space-y-2 [contain:layout_paint]">
                     {#if $allComments.length > 0}
                         {#each $allComments as c (c.comment.id)}
                             <CommentCard
