@@ -31,6 +31,8 @@ let swipeStartY = $state(0);
 let swipeStartOffsetPx = $state(0);
 let swipeActive = $state(false);
 let swipeDidMove = $state(false);
+let swipeScrollLockEl: HTMLElement | null = null;
+let swipeScrollLockPrevOverflow = '';
 
 const canEdit = $derived(comment.userId == $curUserId || $curUserIsAdmin);
 const canDelete = $derived(canEdit && !hasChildren());
@@ -111,6 +113,21 @@ function closeSwipeActions() {
     swipeOffsetPx = 0;
 }
 
+function lockCommentListScroll() {
+    if (swipeScrollLockEl) return;
+    swipeScrollLockEl = (document.getElementById(`comment_card_${comment.id}`)?.closest('[data-comments-scroll]') as HTMLElement | null) ?? null;
+    if (!swipeScrollLockEl) return;
+    swipeScrollLockPrevOverflow = swipeScrollLockEl.style.overflowY || '';
+    swipeScrollLockEl.style.overflowY = 'hidden';
+}
+
+function unlockCommentListScroll() {
+    if (!swipeScrollLockEl) return;
+    swipeScrollLockEl.style.overflowY = swipeScrollLockPrevOverflow;
+    swipeScrollLockEl = null;
+    swipeScrollLockPrevOverflow = '';
+}
+
 function openSwipeActions() {
     swipeOffsetPx = -maxSwipePx;
 }
@@ -118,6 +135,7 @@ function openSwipeActions() {
 function onCardTouchStart(e: TouchEvent) {
     const t = e.touches[0];
     if (!t) return;
+    unlockCommentListScroll();
     swipeActive = true;
     swipeDidMove = false;
     swipeStartX = t.clientX;
@@ -140,11 +158,13 @@ function onCardTouchMove(e: TouchEvent) {
 
     if (verticalIntent && !swipeDidMove) {
         swipeActive = false;
+        unlockCommentListScroll();
         return;
     }
 
     if (horizontalIntent || swipeDidMove) {
         swipeDidMove = true;
+        lockCommentListScroll();
         // While actively swiping card horizontally, lock parent vertical scroll.
         e.preventDefault();
     } else {
@@ -156,6 +176,7 @@ function onCardTouchMove(e: TouchEvent) {
 }
 
 function onCardTouchEnd() {
+    unlockCommentListScroll();
     if (!swipeDidMove) {
         swipeActive = false;
         return;
