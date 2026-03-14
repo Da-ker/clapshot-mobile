@@ -1356,17 +1356,17 @@ function handlePinClick(id: string) {
 							ontouchmove={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
 						>
 							<div class="absolute inset-y-0 left-0 bg-red-600 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
-							<!-- Comment markers are integrated into the seek bar, rendered above progress fill -->
-							<div class="absolute inset-0 z-40 pointer-events-none">
-								{#each commentsWithTc as item}
-									<div
-										class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] h-[135%] rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500' : 'bg-white/85'}"
-										style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
-										title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
-									></div>
-								{/each}
-							</div>
 							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-600 z-30" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
+						</div>
+						<!-- Comment markers are rendered in a sibling layer to avoid slider overflow clipping -->
+						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-5 z-40 pointer-events-none">
+							{#each commentsWithTc as item}
+								<div
+									class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] h-5 rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500' : 'bg-white/85'}"
+									style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
+									title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
+								></div>
+							{/each}
 						</div>
 						{#if loopStartTime>0 || loopEndTime>0}
 							<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
