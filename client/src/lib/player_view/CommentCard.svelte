@@ -140,7 +140,14 @@ function onCardTouchMove(e: TouchEvent) {
 
     if (Math.abs(dx) > 6) {
         swipeDidMove = true;
+        // While swiping cards horizontally, block parent vertical scroll.
         e.preventDefault();
+        e.stopPropagation();
+    }
+
+    if (swipeDidMove) {
+        e.preventDefault();
+        e.stopPropagation();
     }
 
     const next = swipeStartOffsetPx + dx;
