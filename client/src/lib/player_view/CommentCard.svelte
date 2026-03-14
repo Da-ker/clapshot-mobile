@@ -131,23 +131,24 @@ function onCardTouchMove(e: TouchEvent) {
     if (!t) return;
     const dx = t.clientX - swipeStartX;
     const dy = t.clientY - swipeStartY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
 
-    // Prefer vertical scrolling unless horizontal intent is clear.
-    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+    // Let vertical scrolling win unless horizontal intention is clearly stronger.
+    const horizontalIntent = absDx > 12 && absDx > absDy + 4;
+    const verticalIntent = absDy > 8 && absDy > absDx;
+
+    if (verticalIntent && !swipeDidMove) {
         swipeActive = false;
         return;
     }
 
-    if (Math.abs(dx) > 6) {
+    if (horizontalIntent || swipeDidMove) {
         swipeDidMove = true;
-        // While swiping cards horizontally, block parent vertical scroll.
+        // While actively swiping card horizontally, lock parent vertical scroll.
         e.preventDefault();
-        e.stopPropagation();
-    }
-
-    if (swipeDidMove) {
-        e.preventDefault();
-        e.stopPropagation();
+    } else {
+        return;
     }
 
     const next = swipeStartOffsetPx + dx;
@@ -203,7 +204,7 @@ function onCardClick() {
 
     <div
         id="comment_card_{comment.id}"
-        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis touch-pan-x bg-gradient-to-b from-slate-800 to-slate-900 {!!comment.timecode ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
+        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gradient-to-b from-slate-800 to-slate-900 {!!comment.timecode ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
         tabindex="0"
         role="link"
         style="transform: translateX({swipeOffsetPx}px); transition: {swipeActive ? 'none' : 'transform 180ms ease-out'};"
