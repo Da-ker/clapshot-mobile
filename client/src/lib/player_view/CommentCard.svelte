@@ -24,7 +24,7 @@ let editing = $state(false);
 let showReply: boolean = $state(false);
 let replyInput: HTMLInputElement | undefined = $state();
 
-const SWIPE_ACTION_WIDTH = 84;
+const SWIPE_ACTION_WIDTH = 74;
 let swipeOffsetPx = $state(0);
 let swipeStartX = $state(0);
 let swipeStartY = $state(0);
@@ -177,18 +177,18 @@ function onCardClick() {
 <div class="relative w-full min-w-0 overflow-hidden rounded-xl border border-slate-700/60 shadow-[0_2px_10px_rgba(0,0,0,0.18)]">
     <div class="absolute inset-y-0 right-0 z-0 flex items-stretch">
         <button
-            class="w-[84px] text-white text-sm font-semibold bg-sky-600 active:bg-sky-700"
+            class="w-[74px] text-white text-sm font-semibold bg-sky-600 active:bg-sky-700"
             onclick={(e) => { e.stopPropagation(); closeSwipeActions(); showReply = true; }}
         >{$t('comments.reply')}</button>
         {#if canEdit}
             <button
-                class="w-[84px] text-white text-sm font-semibold bg-amber-500 active:bg-amber-600"
+                class="w-[74px] text-white text-sm font-semibold bg-amber-500 active:bg-amber-600"
                 onclick={(e) => { e.stopPropagation(); closeSwipeActions(); editing = true; }}
             >{$t('comments.edit')}</button>
         {/if}
         {#if canDelete}
             <button
-                class="w-[84px] text-white text-sm font-semibold bg-red-500 active:bg-red-600"
+                class="w-[74px] text-white text-sm font-semibold bg-red-500 active:bg-red-600"
                 onclick={(e) => { e.stopPropagation(); closeSwipeActions(); onClickDeleteComment(); }}
             >{$t('comments.deleteShort')}</button>
         {/if}
