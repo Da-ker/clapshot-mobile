@@ -1329,7 +1329,7 @@ function handlePinClick(id: string) {
 				<button class="absolute right-3 md:right-4 bottom-14 md:bottom-16 fa-solid fa-expand text-white/95 text-2xl h-12 w-12 rounded-full bg-white/20 inline-flex items-center justify-center pointer-events-auto" onclick={(e) => { e.stopPropagation(); }} aria-label="Fullscreen"></button>
 
 				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
-					<div class="relative h-2">
+					<div class="relative h-3 md:h-4">
 						<div
 							role="slider"
 							aria-label="Seek"
@@ -1337,7 +1337,7 @@ function handlePinClick(id: string) {
 							aria-valuemax={Math.floor(getEffectiveDuration())}
 							aria-valuenow={Math.floor(time)}
 							tabindex="0"
-							class="relative w-full h-1 rounded-full overflow-hidden bg-white/45 hover:cursor-pointer"
+							class="relative w-full h-2 md:h-2.5 rounded-full overflow-hidden bg-white/45 hover:cursor-pointer"
 							onclick={(e) => e.stopPropagation()}
 							onmousedown={preventDefault((e)=>{ handleMove(e as MouseEvent, e.currentTarget); })}
 							onmousemove={(e)=>{ handleMove(e as MouseEvent, e.currentTarget); }}
@@ -1345,7 +1345,7 @@ function handlePinClick(id: string) {
 							ontouchmove={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
 						>
 							<div class="absolute inset-y-0 left-0 bg-red-600" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
-							<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-red-600" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.35rem);"></div>
+							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-600" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
 						</div>
 						{#if loopStartTime>0 || loopEndTime>0}
 							<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
