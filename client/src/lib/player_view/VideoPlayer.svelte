@@ -1359,10 +1359,10 @@ function handlePinClick(id: string) {
 							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-600 z-30" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
 						</div>
 						<!-- Comment markers are rendered in a sibling layer to avoid slider overflow clipping -->
-						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-5 z-40 pointer-events-none">
+						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-full z-40 pointer-events-none">
 							{#each commentsWithTc as item}
 								<div
-									class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] h-5 rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500' : 'bg-white/85'}"
+									class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] h-[115%] rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500' : 'bg-white/85'}"
 									style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
 									title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
 								></div>
