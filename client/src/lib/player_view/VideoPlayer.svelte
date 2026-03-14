@@ -1343,8 +1343,24 @@ function handlePinClick(id: string) {
 							ontouchstart={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
 							ontouchmove={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
 						>
-							<div class="absolute inset-y-0 left-0 bg-red-600" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
-							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-600" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
+							<!-- Comment markers are integrated into the seek bar so they follow control visibility -->
+							<div class="absolute inset-0 z-10 pointer-events-none">
+								{#each commentsWithTc as item}
+									<button
+										type="button"
+										class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-full flex items-center justify-center pointer-events-auto"
+										style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
+										title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
+										onpointerdown={(e) => { e.stopPropagation(); }}
+										onclick={(e) => { e.preventDefault(); e.stopPropagation(); handlePinClick(item.id); }}
+										aria-label={`Jump to comment by ${item.usernameIfnull || item.userId || 'user'}`}
+									>
+										<span class="block w-[2px] h-full rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(15,23,42,0.35)]"></span>
+									</button>
+								{/each}
+							</div>
+							<div class="absolute inset-y-0 left-0 bg-red-600 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
+							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-600 z-30" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
 						</div>
 						{#if loopStartTime>0 || loopEndTime>0}
 							<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
@@ -1353,21 +1369,6 @@ function handlePinClick(id: string) {
 				</div>
 			</div>
 
-			<!-- Comment markers: compact vertical ticks integrated with seekbar position -->
-			<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 z-50 h-2 pointer-events-none">
-				{#each commentsWithTc as item}
-					<button
-						type="button"
-						class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-5 flex items-center justify-center pointer-events-auto"
-						style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
-						title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
-						onclick={(e) => { e.stopPropagation(); handlePinClick(item.id); }}
-						aria-label={`Jump to comment by ${item.usernameIfnull || item.userId || 'user'}`}
-					>
-						<span class="block w-[2px] h-3 rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(15,23,42,0.35)]"></span>
-					</button>
-				{/each}
-			</div>
 		</div>
 	</div>
 
