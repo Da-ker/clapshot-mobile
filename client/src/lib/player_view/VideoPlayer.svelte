@@ -1349,7 +1349,7 @@ function handlePinClick(id: string) {
 						>
 							<div class="absolute inset-y-0 left-0 bg-cyan-400 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
 							<!-- Comment markers are integrated into the seek bar, rendered above progress fill -->
-							<div class="absolute inset-0 z-30 pointer-events-none">
+							<div class="absolute inset-0 z-40 pointer-events-none">
 								{#each commentsWithTc as item}
 									<div
 										class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] h-full rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {item.id === highlightedCommentId ? 'bg-amber-400' : 'bg-white/85'}"
@@ -1358,7 +1358,7 @@ function handlePinClick(id: string) {
 									></div>
 								{/each}
 							</div>
-							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-cyan-400 z-40" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
+							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-700 z-30" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
 						</div>
 						{#if loopStartTime>0 || loopEndTime>0}
 							<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
