@@ -12,7 +12,6 @@ import {HybridVideoDecoder} from './video-decoder/HybridVideoDecoder';
 import {TimecodeUtils} from './video-decoder/timecode';
 import {allComments, curSubtitle, videoIsReady, collabId, curVideo, clientConfig} from '@/stores';
 import LocalStorageCookies from '@/cookies';
-import CommentTimelinePin from './CommentTimelinePin.svelte';
 
 
     interface Props {
@@ -1354,17 +1353,19 @@ function handlePinClick(id: string) {
 				</div>
 			</div>
 
-			<!-- Comment timeline pins are rendered in an independent layer so
-			     comment interactions are decoupled from control overlay show/hide logic. -->
-			<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 z-50 h-2 pointer-events-auto">
+			<!-- Comment markers: compact vertical ticks integrated with seekbar position -->
+			<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 z-50 h-2 pointer-events-none">
 				{#each commentsWithTc as item}
-					<CommentTimelinePin
-						id={item.id}
-						username={item.usernameIfnull || item.userId || '?'}
-						comment={item.comment}
-						x_loc={tcToDurationFract(item.timecode)}
-						onclick={(event) => handlePinClick(event.id)}
-					/>
+					<button
+						type="button"
+						class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-5 flex items-center justify-center pointer-events-auto"
+						style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
+						title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
+						onclick={(e) => { e.stopPropagation(); handlePinClick(item.id); }}
+						aria-label={`Jump to comment by ${item.usernameIfnull || item.userId || 'user'}`}
+					>
+						<span class="block w-[2px] h-3 rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(15,23,42,0.35)]"></span>
+					</button>
 				{/each}
 			</div>
 		</div>
