@@ -93,10 +93,18 @@ function onEditFieldKeyDown(e: KeyboardEvent) {
 }
 
 function onEditFieldBlur() {
-    if (editing) {
-        editing = false;
-        commentText = commentText.trim();
-        comment.comment = commentText;
+    if (!editing) return;
+    editing = false;
+
+    const nextText = commentText.trim();
+    if (nextText === '') {
+        commentText = comment.comment;
+        return;
+    }
+
+    if (nextText !== comment.comment && oneditcomment) {
+        comment.comment = nextText;
+        oneditcomment({ id: comment.id, comment_text: nextText });
     }
 }
 
