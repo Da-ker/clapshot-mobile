@@ -170,25 +170,11 @@ function onCardClick() {
     if (comment.timecode) onTimecodeClick(comment.timecode);
 }
 
-function onClickShare() {
-    // Build a simple fragment link to this comment
-    try {
-        const base = window.location.href.split('#')[0];
-        const url = `${base}#comment_${comment.id}`;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(url).then(() => {
-                alert($t('comments.linkCopied'));
-            }).catch(() => { alert($t('comments.copyLink') + ": " + url); });
-        } else { alert($t('comments.copyLink') + ": " + url); }
-    } catch (e) {
-        console.error('Failed to copy link', e);
-    }
-}
 
 </script>
 
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.5}em;">
-<div class="relative w-full min-w-0 overflow-hidden rounded-lg border border-slate-700/70">
+<div class="relative w-full min-w-0 overflow-hidden rounded-xl border border-slate-700/60 shadow-[0_2px_10px_rgba(0,0,0,0.18)]">
     <div class="absolute inset-y-0 right-0 z-0 flex items-stretch">
         <button
             class="w-[84px] text-white text-sm font-semibold bg-sky-600 active:bg-sky-700"
@@ -210,7 +196,7 @@ function onClickShare() {
 
     <div
         id="comment_card_{comment.id}"
-        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gray-800 {!!comment.timecode ? 'hover:bg-gray-700' : ''}"
+        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gradient-to-b from-slate-800 to-slate-900 {!!comment.timecode ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
         tabindex="0"
         role="link"
         style="transform: translateX({swipeOffsetPx}px); transition: {swipeActive ? 'none' : 'transform 180ms ease-out'};"
@@ -225,12 +211,12 @@ function onClickShare() {
         }}
     >
 
-        <div class="flex mx-2 pt-3 min-w-0">
-            <div class="flex-none w-10 h-10 md:w-9 md:h-9 block"><Avatar username={comment.userId || comment.usernameIfnull}/></div>
-            <h5 class="flex-1 min-w-0 ml-3 text-gray-500 self-end truncate">{comment.usernameIfnull}</h5>
+        <div class="flex items-start px-2.5 pt-2 min-w-0 gap-2">
+            <div class="flex-none w-8 h-8 md:w-8 md:h-8 block"><Avatar username={comment.userId || comment.usernameIfnull}/></div>
+            <h5 class="flex-1 min-w-0 text-slate-400 text-sm leading-5 truncate">{comment.usernameIfnull}</h5>
             <span class="flex-none hidden text-xs font-mono">[{comment.id}@{comment.parentId}]</span>
-            <span class="pl-2 flex-none max-w-[45%] text-xs text-right overflow-hidden text-ellipsis italic whitespace-nowrap self-end">
-                    <span class="text-yellow-700 hover:text-yellow-500 hover:underline cursor-pointer">
+            <span class="flex-none max-w-[48%] text-[11px] text-right overflow-hidden text-ellipsis italic whitespace-nowrap leading-5">
+                    <span class="text-amber-400/90 hover:text-amber-300 hover:underline cursor-pointer">
                         {comment.timecode ? comment.timecode : ""}
                     </span>
                     {#if comment.subtitleId}
@@ -241,26 +227,17 @@ function onClickShare() {
             </span>
         </div>
 
-        <div class="p-2" lang="en">
+        <div class="px-2.5 pb-2 pt-1" lang="en">
             {#if editing}
                 <textarea class="w-full outline-dashed bg-slate-500" rows=3 use:callFocus bind:value={commentText} onkeydown={onEditFieldKeyDown} onblur={onEditFieldBlur}></textarea>
             {:else}
-                <p class="text-gray-300 text-base hyphenate">
+                <p class="text-slate-200 text-sm leading-5 hyphenate">
                     {comment.comment}
                     {#if comment.edited}
                         <span class="text-xs italic text-gray-500"> {$t('comments.editedSuffix')}</span>
                     {/if}
                 </p>
             {/if}
-        </div>
-
-        <div class="px-2 pb-2 flex justify-end">
-            <button
-                class="fa fa-link border rounded-lg px-2 py-1 text-sm h-9 border-gray-500 text-gray-300 hover:bg-gray-700"
-                title={$t('comments.copyLink')}
-                aria-label={$t('comments.copyLink')}
-                onclick={(e) => { e.stopPropagation(); onClickShare(); }}
-            ></button>
         </div>
 
         {#if showReply}
