@@ -277,6 +277,8 @@ async function handleMove(e: MouseEvent | TouchEvent, target: EventTarget|null) 
     // Check for touch event using 'touches' property (TouchEvent global may not exist on desktop Safari)
     const isTouch = 'touches' in e;
     if (!isTouch && !(e.buttons & 1)) return; // mouse not down
+    // Any manual seek movement should clear comment highlight immediately.
+    highlightedCommentId = undefined;
     videoElem.pause();
     const clientX = isTouch ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const { left, right } = (target as HTMLProgressElement).getBoundingClientRect();
@@ -310,6 +312,8 @@ export function setPlayback(play: boolean, request_source: string|undefined): bo
         return false;       // "no change"
 
     if (play) {
+        // Starting playback should exit comment-focus highlight state.
+        highlightedCommentId = undefined;
         videoDecoder?.prepareForPlayback();
         seekSideEffects();
         videoElem.play();
