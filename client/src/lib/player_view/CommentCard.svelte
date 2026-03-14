@@ -203,7 +203,7 @@ function onCardClick() {
 
     <div
         id="comment_card_{comment.id}"
-        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gradient-to-b from-slate-800 to-slate-900 {!!comment.timecode ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
+        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis touch-pan-x bg-gradient-to-b from-slate-800 to-slate-900 {!!comment.timecode ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
         tabindex="0"
         role="link"
         style="transform: translateX({swipeOffsetPx}px); transition: {swipeActive ? 'none' : 'transform 180ms ease-out'};"
