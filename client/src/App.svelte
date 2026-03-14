@@ -287,6 +287,9 @@ async function onCommentInputButton(e: any) {
 
 function onDisplayComment(e: any) {
     if (!$curVideo) { throw Error("No video loaded"); }
+    if (videoPlayer && e.id) {
+        videoPlayer.setHighlightedComment(String(e.id));
+    }
     // Always pause immediately when jumping to a comment frame during playback.
     if (videoPlayer) {
         videoPlayer.setPlayback(false, "comment_review");
@@ -389,6 +392,7 @@ function activateComment(e: any) {
 
     // Handle all the display logic (drawing, subtitle, collab, etc.)
     onDisplayComment({
+        id: commentId,
         timecode: c.comment.timecode,
         drawing: c.comment.drawing,
         subtitleId: c.comment.subtitleId

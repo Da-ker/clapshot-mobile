@@ -12,7 +12,7 @@ import { t } from '@/i18n';
     interface Props {
         indent?: number;
         comment: Proto3.Comment;
-        ondisplaycomment?: (event: {timecode: string, drawing?: string, subtitleId?: string}) => void;
+        ondisplaycomment?: (event: {id: string, timecode: string, drawing?: string, subtitleId?: string}) => void;
         ondeletecomment?: (event: {id: string}) => void;
         onreplytocomment?: (event: {parentId: string, commentText: string, subtitleId?: string}) => void;
         oneditcomment?: (event: {id: string, comment_text: string}) => void;
@@ -47,6 +47,7 @@ $effect(() => {
 
 function onTimecodeClick(tc: string) {
     if (ondisplaycomment) ondisplaycomment({
+        id: comment.id,
         timecode: tc,
         drawing: comment.drawing,
         subtitleId: comment.subtitleId
