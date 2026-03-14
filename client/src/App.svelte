@@ -134,9 +134,36 @@ async function onTopFrameEdited(e: Event) {
 
 $effect(() => {
     if (!$mediaFileId || !$curVideo) return;
-    refreshTopVideoMeta();
-    const timer = setInterval(refreshTopVideoMeta, 250);
-    return () => clearInterval(timer);
+
+    let rafId = 0;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const tick = () => {
+        refreshTopVideoMeta();
+
+        // While playing, update on every animation frame for smooth time/frame display.
+        const isPlaying = !!videoPlayer?.getPlaybackState?.().playing;
+        if (isPlaying) {
+            rafId = requestAnimationFrame(tick);
+            if (timer) {
+                clearInterval(timer);
+                timer = undefined;
+            }
+            return;
+        }
+
+        // While paused/idle, keep a light polling fallback.
+        if (!timer) {
+            timer = setInterval(refreshTopVideoMeta, 120);
+        }
+    };
+
+    tick();
+
+    return () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        if (timer) clearInterval(timer);
+    };
 });
 
 let drawerTouchStartY = 0;
