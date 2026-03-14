@@ -1348,7 +1348,7 @@ function handlePinClick(id: string) {
 							aria-valuemax={Math.floor(getEffectiveDuration())}
 							aria-valuenow={Math.floor(time)}
 							tabindex="0"
-							class="relative w-full h-2 md:h-2.5 rounded-full overflow-hidden bg-white/45 hover:cursor-pointer"
+							class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-2 md:h-2.5 rounded-full overflow-hidden bg-white/45 hover:cursor-pointer"
 							onclick={(e) => e.stopPropagation()}
 							onmousedown={preventDefault((e)=>{ handleMove(e as MouseEvent, e.currentTarget); })}
 							onmousemove={(e)=>{ handleMove(e as MouseEvent, e.currentTarget); }}
