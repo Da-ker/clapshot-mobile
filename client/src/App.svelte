@@ -1372,6 +1372,13 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         font-size: 90%;
     }
 
+    /* Lock page-level vertical scrolling; keep scrolling only in explicit internal panels */
+    :global(html), :global(body) {
+        height: 100%;
+        overflow: hidden;
+        overscroll-behavior-y: none;
+    }
+
     /* Make all headings in organizer page bigger */
     :global(div.organizer_page){
         margin: 2em;
