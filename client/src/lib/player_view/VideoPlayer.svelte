@@ -63,6 +63,7 @@ export function getEffectiveDuration(): number {
 let loop: boolean = $state(false);
 let loopStartTime: number = $state(-1);
 let loopEndTime: number = $state(-2);
+let highlightedCommentId: string | undefined = $state(undefined);
 
 let videoCanvasContainer: any = $state();
 let videoDecoder: HybridVideoDecoder | null = null;
@@ -1200,6 +1201,9 @@ export function activateCommentOnTimeline(commentId: string) {
         return;
     }
 
+    // Mark current timeline comment so its tick can be highlighted.
+    highlightedCommentId = commentId;
+
     // Seek to the timecode
     if (clicked_pin.timecode) {
         try {
@@ -1343,24 +1347,18 @@ function handlePinClick(id: string) {
 							ontouchstart={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
 							ontouchmove={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
 						>
-							<!-- Comment markers are integrated into the seek bar so they follow control visibility -->
-							<div class="absolute inset-0 z-10 pointer-events-none">
+							<div class="absolute inset-y-0 left-0 bg-cyan-400 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
+							<!-- Comment markers are integrated into the seek bar, rendered above progress fill -->
+							<div class="absolute inset-0 z-30 pointer-events-none">
 								{#each commentsWithTc as item}
-									<button
-										type="button"
-										class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-full flex items-center justify-center pointer-events-auto"
+									<div
+										class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] h-full rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {item.id === highlightedCommentId ? 'bg-amber-400' : 'bg-white/85'}"
 										style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
 										title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
-										onpointerdown={(e) => { e.stopPropagation(); }}
-										onclick={(e) => { e.preventDefault(); e.stopPropagation(); handlePinClick(item.id); }}
-										aria-label={`Jump to comment by ${item.usernameIfnull || item.userId || 'user'}`}
-									>
-										<span class="block w-[2px] h-full rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(15,23,42,0.35)]"></span>
-									</button>
+									></div>
 								{/each}
 							</div>
-							<div class="absolute inset-y-0 left-0 bg-red-600 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
-							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-600 z-30" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
+							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-cyan-400 z-40" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
 						</div>
 						{#if loopStartTime>0 || loopEndTime>0}
 							<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
