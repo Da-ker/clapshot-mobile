@@ -228,8 +228,8 @@ function onCardClick() {
 
 </script>
 
-<div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.5}em;">
-<div class="relative w-full min-w-0 overflow-hidden rounded-xl border border-slate-700/60 shadow-[0_2px_10px_rgba(0,0,0,0.18)]">
+<div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
+<div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {indent > 0 ? 'border-sky-700/50 bg-slate-900/35' : 'border-slate-700/60'}">
     <div class="absolute inset-y-0 right-0 z-0 flex items-stretch">
         <button
             class="w-[74px] text-white text-sm font-semibold bg-sky-600 active:bg-sky-700"
@@ -310,21 +310,7 @@ function onCardClick() {
 </div>
 
 <style>
-.hyphenate {
-    -webkit-hyphens: auto;
-    -moz-hyphens: auto;
-    -ms-hyphens: auto;
-    hyphens: auto;
-    word-break: break-word;
-}
 button {
     cursor: pointer;
-}
-
-/* Aggressive overflow guard for narrow/mobile screens */
-@media (max-width: 767px) {
-    .comment-indent-shell {
-        padding-left: 0 !important;
-    }
 }
 </style>
