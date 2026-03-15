@@ -23,6 +23,7 @@ import { t } from '@/i18n';
 let editing = $state(false);
 let showReply: boolean = $state(false);
 let replyInput: HTMLInputElement | undefined = $state();
+let replyText = $state('');
 
 const SWIPE_ACTION_WIDTH = 74;
 let swipeOffsetPx = $state(0);
@@ -66,16 +67,28 @@ function onClickDeleteComment() {
 }
 
 function onReplySubmit() {
-    if (replyInput && replyInput.value != "" && onreplytocomment)
-    {
+    const nextText = replyText.trim();
+    if (nextText !== '' && onreplytocomment) {
         onreplytocomment({
             parentId: comment.id,
-            commentText: replyInput.value,
+            commentText: nextText,
             subtitleId: $curSubtitle?.id
         });
-        replyInput.value = "";
-        showReply = false;
     }
+    replyText = '';
+    showReply = false;
+}
+
+function onReplyFieldBlur() {
+    // Safari/iOS keyboard accessory "✓" often triggers blur without submit.
+    // If user already typed content, treat blur as submit for better UX.
+    setTimeout(() => {
+        if (!showReply) return;
+        const activeEl = document.activeElement as HTMLElement | null;
+        if (activeEl?.closest?.(`#reply_form_${comment.id}`)) return;
+        if (replyText.trim() !== '') onReplySubmit();
+        else showReply = false;
+    }, 0);
 }
 
 function callFocus(elem: HTMLElement) {
@@ -214,6 +227,7 @@ function onCardTouchEnd() {
 }
 
 function onCardClick() {
+    if (showReply || editing) return;
     if (swipeDidMove) {
         swipeDidMove = false;
         return;
@@ -229,11 +243,11 @@ function onCardClick() {
 </script>
 
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
-<div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {indent > 0 ? 'border-sky-700/50 bg-slate-900/35' : 'border-slate-700/60'}">
+<div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {indent > 0 ? 'border-sky-700/50 bg-slate-900/30 border-l-[3px] border-l-sky-400/70' : 'border-slate-700/60'}">
     <div class="absolute inset-y-0 right-0 z-0 flex items-stretch">
         <button
             class="w-[74px] text-white text-sm font-semibold bg-sky-600 active:bg-sky-700"
-            onclick={(e) => { e.stopPropagation(); closeSwipeActions(); showReply = true; }}
+            onclick={(e) => { e.stopPropagation(); closeSwipeActions(); replyText = ''; showReply = true; }}
         >{$t('comments.reply')}</button>
         {#if canEdit}
             <button
@@ -274,6 +288,9 @@ function onCardClick() {
                 </div>
             {:else}
                 <p class="flex-1 min-w-0 text-sm leading-5 whitespace-normal break-words">
+                    {#if indent > 0}
+                        <span class="inline-flex items-center text-[11px] text-sky-300/90 mr-1">↳ 回复</span>
+                    {/if}
                     <span class="text-slate-400">{comment.usernameIfnull}</span>
                     <span class="text-slate-500">：</span>
                     <span class="text-slate-200">{comment.comment}</span>
@@ -296,13 +313,25 @@ function onCardClick() {
         </div>
 
         {#if showReply}
-        <form class="p-2" onsubmit={(e) => {e.preventDefault(); onReplySubmit();}}>
-                <input
-                    class="w-full border p-1 rounded bg-gray-900"
-                    type="text" placeholder={$t('comments.yourReply')}
-                    use:callFocus
-                    bind:this={replyInput}
-            onblur={()=>showReply=false} />
+        <form
+            id="reply_form_{comment.id}"
+            class="p-2"
+            onsubmit={(e) => { e.preventDefault(); e.stopPropagation(); onReplySubmit(); }}
+        >
+                <div class="flex items-center gap-2 rounded-md border border-sky-500/45 bg-slate-900/70 p-1.5">
+                    <input
+                        class="flex-1 border p-1 rounded bg-gray-900"
+                        type="text"
+                        placeholder={$t('comments.yourReply')}
+                        enterkeyhint="send"
+                        use:callFocus
+                        bind:this={replyInput}
+                        bind:value={replyText}
+                        onblur={onReplyFieldBlur}
+                    />
+                    <button type="button" class="h-8 px-2 rounded bg-slate-700 text-slate-200" onclick={() => { replyText = ''; showReply = false; }}>✕</button>
+                    <button type="submit" class="h-8 px-3 rounded bg-emerald-600 text-white font-semibold">✓</button>
+                </div>
             </form>
         {/if}
     </div>
