@@ -17,7 +17,24 @@ let { onbuttonclicked }: Props = $props();
 let inputText: any = $state();
 let drawMode = $state(false);
 let timedComment = $state(true);
-let curColor = $state("red");
+
+const DRAW_PALETTE_KEY = 'clapshot:draw-palette-selection:v1';
+function getSavedPaletteSelection(): string {
+    try {
+        return localStorage.getItem(DRAW_PALETTE_KEY) || 'red';
+    } catch {
+        return 'red';
+    }
+}
+function setSavedPaletteSelection(v: string) {
+    try {
+        localStorage.setItem(DRAW_PALETTE_KEY, v);
+    } catch {
+        // ignore
+    }
+}
+
+let curColor = $state(getSavedPaletteSelection());
 
 export function forceDrawMode(on: boolean) {
     drawMode = on;
@@ -39,9 +56,12 @@ function onClickDraw() {
 }
 function onColorSelected(c: string) {
     curColor = c;
+    setSavedPaletteSelection(c);
     if (onbuttonclicked) onbuttonclicked({'action': 'color_select', 'color': c});
 }
 function onClearDrawing() {
+    curColor = '__clear__';
+    setSavedPaletteSelection('__clear__');
     if (onbuttonclicked) {
         onbuttonclicked({ 'action': 'clear_drawing' });
     }
@@ -66,7 +86,7 @@ function onTextChange(e: any) {
                 class="{(curColor=='__clear__') ? 'border-2 border-gray-100' : 'border border-gray-600'} inline-flex items-center justify-center w-6 h-6 m-2 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500"
                 title="清除标注"
                 aria-label="Clear drawings"
-                onclick={() => { curColor = '__clear__'; onClearDrawing(); }}
+                onclick={onClearDrawing}
             >
                 <i class="fas fa-trash text-[11px] text-gray-200"></i>
             </button>
