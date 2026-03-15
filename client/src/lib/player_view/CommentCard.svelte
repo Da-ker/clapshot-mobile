@@ -26,6 +26,7 @@ let replyInput: HTMLInputElement | undefined = $state();
 let replyText = $state('');
 
 const SWIPE_ACTION_WIDTH = 74;
+const COMPLETE_CACHE_KEY = 'clapshot:comment-completed:v1';
 let swipeOffsetPx = $state(0);
 let swipeStartX = $state(0);
 let swipeStartY = $state(0);
@@ -38,9 +39,35 @@ let swipeScrollLockPrevOverflow = '';
 const canEdit = $derived(comment.userId == $curUserId || $curUserIsAdmin);
 const canDelete = $derived(canEdit);
 const swipeActionCount = $derived(1 + (canEdit ? 1 : 0) + (canDelete ? 1 : 0));
-const maxSwipePx = $derived(swipeActionCount * SWIPE_ACTION_WIDTH);
+const maxSwipeLeftPx = $derived(swipeActionCount * SWIPE_ACTION_WIDTH);
+const maxSwipeRightPx = SWIPE_ACTION_WIDTH;
+
+let completedCommentIds = $state<Set<string>>(new Set());
+const isCompleted = $derived(completedCommentIds.has(comment.id));
 
 let commentText = $state(comment.comment);
+
+function loadCompletedSet(): Set<string> {
+    try {
+        const raw = localStorage.getItem(COMPLETE_CACHE_KEY);
+        const ids = raw ? JSON.parse(raw) : [];
+        return new Set(Array.isArray(ids) ? ids : []);
+    } catch {
+        return new Set();
+    }
+}
+
+function saveCompletedSet(next: Set<string>) {
+    try {
+        localStorage.setItem(COMPLETE_CACHE_KEY, JSON.stringify(Array.from(next)));
+    } catch {
+        // ignore storage errors
+    }
+}
+
+$effect(() => {
+    completedCommentIds = loadCompletedSet();
+});
 
 $effect(() => {
     commentText = comment.comment;
@@ -160,6 +187,23 @@ function closeSwipeActions() {
     swipeOffsetPx = 0;
 }
 
+function openLeftSwipeActions() {
+    swipeOffsetPx = -maxSwipeLeftPx;
+}
+
+function openRightSwipeActions() {
+    swipeOffsetPx = maxSwipeRightPx;
+}
+
+function onClickToggleComplete() {
+    const next = new Set(completedCommentIds);
+    if (next.has(comment.id)) next.delete(comment.id);
+    else next.add(comment.id);
+    completedCommentIds = next;
+    saveCompletedSet(next);
+    closeSwipeActions();
+}
+
 function lockCommentListScroll() {
     if (swipeScrollLockEl) return;
     swipeScrollLockEl = (document.getElementById(`comment_card_${comment.id}`)?.closest('[data-comments-scroll]') as HTMLElement | null) ?? null;
@@ -175,9 +219,6 @@ function unlockCommentListScroll() {
     swipeScrollLockPrevOverflow = '';
 }
 
-function openSwipeActions() {
-    swipeOffsetPx = -maxSwipePx;
-}
 
 function onCardTouchStart(e: TouchEvent) {
     if (editing) return;
@@ -221,7 +262,7 @@ function onCardTouchMove(e: TouchEvent) {
     }
 
     const next = swipeStartOffsetPx + dx;
-    swipeOffsetPx = Math.max(-maxSwipePx, Math.min(0, next));
+    swipeOffsetPx = Math.max(-maxSwipeLeftPx, Math.min(maxSwipeRightPx, next));
 }
 
 function onCardTouchEnd() {
@@ -231,16 +272,22 @@ function onCardTouchEnd() {
         return;
     }
 
-    const threshold = Math.min(56, maxSwipePx / 3);
-    const startedOpen = swipeStartOffsetPx < 0;
+    const leftThreshold = Math.min(56, maxSwipeLeftPx / 3);
+    const rightThreshold = Math.min(36, maxSwipeRightPx / 2);
 
-    if (startedOpen) {
-        // When actions are already open, a slight right swipe should close them.
+    if (swipeStartOffsetPx < 0) {
         const rightSwipeDistance = swipeOffsetPx - swipeStartOffsetPx;
         if (rightSwipeDistance > 10) closeSwipeActions();
-        else openSwipeActions();
+        else if (swipeOffsetPx <= -leftThreshold) openLeftSwipeActions();
+        else closeSwipeActions();
+    } else if (swipeStartOffsetPx > 0) {
+        const leftSwipeDistance = swipeStartOffsetPx - swipeOffsetPx;
+        if (leftSwipeDistance > 10) closeSwipeActions();
+        else if (swipeOffsetPx >= rightThreshold) openRightSwipeActions();
+        else closeSwipeActions();
     } else {
-        if (Math.abs(swipeOffsetPx) > threshold) openSwipeActions();
+        if (swipeOffsetPx <= -leftThreshold) openLeftSwipeActions();
+        else if (swipeOffsetPx >= rightThreshold) openRightSwipeActions();
         else closeSwipeActions();
     }
 
@@ -264,7 +311,14 @@ function onCardClick() {
 </script>
 
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
-<div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {indent > 0 ? 'border-sky-700/50 bg-slate-900/30 border-l-[3px] border-l-sky-400/70' : 'border-slate-700/60'}">
+<div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {isCompleted ? 'border-orange-700/70 bg-orange-950/35 border-l-[3px] border-l-orange-500/75' : (indent > 0 ? 'border-sky-700/50 bg-slate-900/30 border-l-[3px] border-l-sky-400/70' : 'border-slate-700/60')}">
+    <div class="absolute inset-y-0 left-0 z-0 flex items-stretch">
+        <button
+            class="w-[74px] text-white text-sm font-semibold bg-teal-500 active:bg-teal-600"
+            onclick={(e) => { e.stopPropagation(); onClickToggleComplete(); }}
+        >{isCompleted ? '取消' : '完成'}</button>
+    </div>
+
     <div class="absolute inset-y-0 right-0 z-0 flex items-stretch">
         <button
             class="w-[74px] text-white text-sm font-semibold bg-sky-600 active:bg-sky-700"
@@ -286,7 +340,7 @@ function onCardClick() {
 
     <div
         id="comment_card_{comment.id}"
-        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gradient-to-b from-slate-800 to-slate-900 {!!comment.timecode ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
+        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gradient-to-b {isCompleted ? 'from-orange-900/80 to-orange-950/90 hover:from-orange-800/85 hover:to-orange-900/90' : 'from-slate-800 to-slate-900'} {!!comment.timecode && !isCompleted ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
         tabindex="0"
         role="link"
         style="transform: translateX({swipeOffsetPx}px); transition: {swipeActive ? 'none' : 'transform 180ms ease-out'};"
