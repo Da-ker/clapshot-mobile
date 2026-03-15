@@ -45,6 +45,10 @@ $effect(() => {
     commentText = comment.comment;
 });
 
+$effect(() => {
+    if (editing) closeSwipeActions();
+});
+
 function onTimecodeClick(tc: string) {
     if (ondisplaycomment) ondisplaycomment({
         id: comment.id,
@@ -142,6 +146,7 @@ function openSwipeActions() {
 }
 
 function onCardTouchStart(e: TouchEvent) {
+    if (editing) return;
     const t = e.touches[0];
     if (!t) return;
     unlockCommentListScroll();
@@ -153,6 +158,7 @@ function onCardTouchStart(e: TouchEvent) {
 }
 
 function onCardTouchMove(e: TouchEvent) {
+    if (editing) return;
     if (!swipeActive) return;
     const t = e.touches[0];
     if (!t) return;
