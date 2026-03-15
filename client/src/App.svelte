@@ -333,15 +333,14 @@ function onDeleteComment(e: any) {
     }
 
     const idsToDelete: string[] = [];
-    const stack: string[] = [targetId];
-    while (stack.length > 0) {
-        const id = stack.pop()!;
-        idsToDelete.push(id);
+    function collectPostOrder(id: string) {
         const children = byParent.get(id) ?? [];
-        for (const childId of children) stack.push(childId);
+        for (const childId of children) collectPostOrder(childId);
+        idsToDelete.push(id); // children first, parent last
     }
+    collectPostOrder(targetId);
 
-    // Delete parent + all descendants (forum-style cascade delete)
+    // Delete descendants first, then parent (prevents server-side FK/relation errors)
     for (const id of idsToDelete) {
         wsEmit({delComment: { commentId: id }});
     }

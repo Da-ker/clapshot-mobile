@@ -59,10 +59,35 @@ function onTimecodeClick(tc: string) {
     });
 }
 
+function getDescendantIds(rootId: string): string[] {
+    const byParent = new Map<string, string[]>();
+    for (const c of $allComments) {
+        const pid = c.comment.parentId;
+        if (!pid) continue;
+        const arr = byParent.get(pid) ?? [];
+        arr.push(c.comment.id);
+        byParent.set(pid, arr);
+    }
+
+    const descendants: string[] = [];
+    const stack: string[] = [...(byParent.get(rootId) ?? [])];
+    while (stack.length > 0) {
+        const id = stack.pop()!;
+        descendants.push(id);
+        const children = byParent.get(id) ?? [];
+        for (const childId of children) stack.push(childId);
+    }
+    return descendants;
+}
+
 function onClickDeleteComment() {
-    var result = confirm($t('comments.deleteConfirm'));
+    const descendantCount = getDescendantIds(comment.id).length;
+    const confirmText = descendantCount > 0
+        ? `将删除此评论及 ${descendantCount} 条回复，是否继续？`
+        : $t('comments.deleteConfirm');
+    const result = confirm(confirmText);
     if (result && ondeletecomment) {
-        ondeletecomment({'id': comment.id});
+        ondeletecomment({ id: comment.id });
     }
 }
 
