@@ -1062,8 +1062,43 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
                 // Re-sort / turn updated comment tree into an indented, ordered list for UI
                 function indentCommentTree(items: IndentedComment[]): IndentedComment[]
                 {
+                    const parseTimecodeSec = (tc?: string): number | null => {
+                        if (!tc) return null;
+                        const s = tc.trim();
+                        if (!s) return null;
+
+                        // hh:mm:ss(.ms) | mm:ss(.ms)
+                        const parts = s.split(':');
+                        if (parts.length === 2 || parts.length === 3) {
+                            const nums = parts.map((p) => Number(p));
+                            if (nums.every((n) => Number.isFinite(n))) {
+                                if (parts.length === 2) return nums[0] * 60 + nums[1];
+                                return nums[0] * 3600 + nums[1] * 60 + nums[2];
+                            }
+                        }
+
+                        // e.g. "90.5s"
+                        const m = s.match(/^([0-9]+(?:\.[0-9]+)?)s$/i);
+                        if (m) return Number(m[1]);
+
+                        return null;
+                    };
+
                     let rootComments = items.filter(item => item.comment.parentId == null);
-                    rootComments.sort((a, b) => (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0));
+                    rootComments.sort((a, b) => {
+                        const aTc = parseTimecodeSec(a.comment.timecode);
+                        const bTc = parseTimecodeSec(b.comment.timecode);
+
+                        // Put comments without timecode on top.
+                        if (aTc == null && bTc != null) return -1;
+                        if (aTc != null && bTc == null) return 1;
+
+                        // Both have valid timecode: sort by timeline order.
+                        if (aTc != null && bTc != null && aTc !== bTc) return aTc - bTc;
+
+                        // Fallback for same/invalid timecode.
+                        return (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0);
+                    });
 
                     // Recursive DFS function to traverse and build the ordered list
                     function dfs(c: IndentedComment, depth: number, result: IndentedComment[]): void {
