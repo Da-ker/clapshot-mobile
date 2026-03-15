@@ -60,8 +60,6 @@ function onColorSelected(c: string) {
     if (onbuttonclicked) onbuttonclicked({'action': 'color_select', 'color': c});
 }
 function onClearDrawing() {
-    curColor = '__clear__';
-    setSavedPaletteSelection('__clear__');
     if (onbuttonclicked) {
         onbuttonclicked({ 'action': 'clear_drawing' });
     }
@@ -83,7 +81,7 @@ function onTextChange(e: any) {
         <div class="absolute w-full top-[-3.4em] bg-gray-900 h-12 rounded-md flex items-center place-content-center" transition:fade="{{duration: 100}}">
             <button
                 type="button"
-                class="{(curColor=='__clear__') ? 'border-2 border-gray-100' : 'border border-gray-600'} inline-flex items-center justify-center w-6 h-6 m-2 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500"
+                class="border border-gray-600 inline-flex items-center justify-center w-6 h-6 m-2 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500"
                 title="清除标注"
                 aria-label="Clear drawings"
                 onclick={onClearDrawing}
