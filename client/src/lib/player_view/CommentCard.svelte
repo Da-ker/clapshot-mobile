@@ -26,7 +26,8 @@ let replyInput: HTMLInputElement | undefined = $state();
 let replyText = $state('');
 
 const SWIPE_ACTION_WIDTH = 74;
-const COMPLETE_CACHE_KEY = 'clapshot:comment-completed:v1';
+const COMPLETED_TOKEN = '__CS_DONE__';
+const LEGACY_COMPLETED_TOKEN = '[[CLAPSHOT_DONE]]';
 let swipeOffsetPx = $state(0);
 let swipeStartX = $state(0);
 let swipeStartY = $state(0);
@@ -43,35 +44,21 @@ const maxSwipeLeftPx = $derived(swipeActionCount * SWIPE_ACTION_WIDTH);
 const canComplete = $derived(indent === 0);
 const maxSwipeRightPx = $derived(canComplete ? SWIPE_ACTION_WIDTH : 0);
 
-let completedCommentIds = $state<Set<string>>(new Set());
-const isCompleted = $derived(canComplete && completedCommentIds.has(comment.id));
+const isCompleted = $derived(canComplete && ((comment.comment || '').includes(COMPLETED_TOKEN) || (comment.comment || '').includes(LEGACY_COMPLETED_TOKEN)));
 
-let commentText = $state(comment.comment);
-
-function loadCompletedSet(): Set<string> {
-    try {
-        const raw = localStorage.getItem(COMPLETE_CACHE_KEY);
-        const ids = raw ? JSON.parse(raw) : [];
-        return new Set(Array.isArray(ids) ? ids : []);
-    } catch {
-        return new Set();
-    }
+function stripCompletedToken(text: string): string {
+    return (text || '').replace(COMPLETED_TOKEN, '').replace(LEGACY_COMPLETED_TOKEN, '').trim();
 }
 
-function saveCompletedSet(next: Set<string>) {
-    try {
-        localStorage.setItem(COMPLETE_CACHE_KEY, JSON.stringify(Array.from(next)));
-    } catch {
-        // ignore storage errors
-    }
+function withCompletedToken(text: string, completed: boolean): string {
+    const base = stripCompletedToken(text);
+    return completed ? `${base} ${COMPLETED_TOKEN}`.trim() : base;
 }
 
-$effect(() => {
-    completedCommentIds = loadCompletedSet();
-});
+let commentText = $state(stripCompletedToken(comment.comment || ''));
 
 $effect(() => {
-    commentText = comment.comment;
+    commentText = stripCompletedToken(comment.comment || '');
 });
 
 $effect(() => {
@@ -157,8 +144,9 @@ function onEditFieldKeyDown(e: KeyboardEvent) {
         });
         commentText = commentText.trim();
         if (commentText != "" && oneditcomment) {
-            comment.comment = commentText;
-            oneditcomment({'id': comment.id, 'comment_text': commentText});
+            const nextStored = withCompletedToken(commentText, isCompleted);
+            comment.comment = nextStored;
+            oneditcomment({'id': comment.id, 'comment_text': nextStored});
         }
     }
 }
@@ -168,14 +156,16 @@ function onEditFieldBlur() {
     editing = false;
 
     const nextText = commentText.trim();
+    const currentVisibleText = stripCompletedToken(comment.comment || '');
     if (nextText === '') {
-        commentText = comment.comment;
+        commentText = currentVisibleText;
         return;
     }
 
-    if (nextText !== comment.comment && oneditcomment) {
-        comment.comment = nextText;
-        oneditcomment({ id: comment.id, comment_text: nextText });
+    if (nextText !== currentVisibleText && oneditcomment) {
+        const nextStored = withCompletedToken(nextText, isCompleted);
+        comment.comment = nextStored;
+        oneditcomment({ id: comment.id, comment_text: nextStored });
     }
 }
 
@@ -197,12 +187,11 @@ function openRightSwipeActions() {
 }
 
 function onClickToggleComplete() {
-    if (!canComplete) return;
-    const next = new Set(completedCommentIds);
-    if (next.has(comment.id)) next.delete(comment.id);
-    else next.add(comment.id);
-    completedCommentIds = next;
-    saveCompletedSet(next);
+    if (!canComplete || !oneditcomment) return;
+    const nextCompleted = !isCompleted;
+    const nextStored = withCompletedToken(comment.comment || '', nextCompleted);
+    comment.comment = nextStored;
+    oneditcomment({ id: comment.id, comment_text: nextStored });
     closeSwipeActions();
 }
 
@@ -369,7 +358,7 @@ function onCardClick() {
                 <p class="flex-1 min-w-0 text-sm leading-5 whitespace-normal break-words">
                     <span class="text-slate-400">{comment.usernameIfnull}</span>
                     <span class="text-slate-500">：</span>
-                    <span class="text-slate-200">{comment.comment}</span>
+                    <span class="text-slate-200">{stripCompletedToken(comment.comment || '')}</span>
 
                 </p>
             {/if}
