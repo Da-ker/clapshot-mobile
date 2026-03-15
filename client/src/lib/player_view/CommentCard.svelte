@@ -312,9 +312,7 @@ function onCardClick() {
                     <span class="text-slate-400">{comment.usernameIfnull}</span>
                     <span class="text-slate-500">：</span>
                     <span class="text-slate-200">{comment.comment}</span>
-                    {#if comment.edited}
-                        <span class="text-xs italic text-gray-500"> {$t('comments.editedSuffix')}</span>
-                    {/if}
+
                 </p>
             {/if}
             <span class="flex-none hidden text-xs font-mono">[{comment.id}@{comment.parentId}]</span>
