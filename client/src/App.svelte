@@ -320,7 +320,31 @@ function onDisplayComment(e: any) {
 }
 
 function onDeleteComment(e: any) {
-    wsEmit({delComment: { commentId: e.id }});
+    const targetId = e.id;
+    if (!targetId) return;
+
+    const all = $allComments.map((c: any) => c.comment);
+    const byParent = new Map<string, string[]>();
+    for (const c of all) {
+        if (!c.parentId) continue;
+        const arr = byParent.get(c.parentId) ?? [];
+        arr.push(c.id);
+        byParent.set(c.parentId, arr);
+    }
+
+    const idsToDelete: string[] = [];
+    const stack: string[] = [targetId];
+    while (stack.length > 0) {
+        const id = stack.pop()!;
+        idsToDelete.push(id);
+        const children = byParent.get(id) ?? [];
+        for (const childId of children) stack.push(childId);
+    }
+
+    // Delete parent + all descendants (forum-style cascade delete)
+    for (const id of idsToDelete) {
+        wsEmit({delComment: { commentId: id }});
+    }
 }
 
 function onReplyComment(e: { parentId: string; commentText: string, subtitleId?: string }) {

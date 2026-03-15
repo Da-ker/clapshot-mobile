@@ -36,7 +36,7 @@ let swipeScrollLockEl: HTMLElement | null = null;
 let swipeScrollLockPrevOverflow = '';
 
 const canEdit = $derived(comment.userId == $curUserId || $curUserIsAdmin);
-const canDelete = $derived(canEdit && !hasChildren());
+const canDelete = $derived(canEdit);
 const swipeActionCount = $derived(1 + (canEdit ? 1 : 0) + (canDelete ? 1 : 0));
 const maxSwipePx = $derived(swipeActionCount * SWIPE_ACTION_WIDTH);
 
@@ -124,10 +124,6 @@ function onEditFieldBlur() {
         comment.comment = nextText;
         oneditcomment({ id: comment.id, comment_text: nextText });
     }
-}
-
-function hasChildren(): boolean {
-    return $allComments.filter(c => c.comment.parentId == comment.id).length > 0;
 }
 
 function getSubtitleLanguage(subtitleId: string): string {
@@ -288,9 +284,6 @@ function onCardClick() {
                 </div>
             {:else}
                 <p class="flex-1 min-w-0 text-sm leading-5 whitespace-normal break-words">
-                    {#if indent > 0}
-                        <span class="inline-flex items-center text-[11px] text-sky-300/90 mr-1">↳ 回复</span>
-                    {/if}
                     <span class="text-slate-400">{comment.usernameIfnull}</span>
                     <span class="text-slate-500">：</span>
                     <span class="text-slate-200">{comment.comment}</span>
