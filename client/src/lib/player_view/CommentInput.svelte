@@ -60,13 +60,13 @@ function onTextChange(e: any) {
 <div class="relative">
     <!-- Color selector -->
     {#if drawMode}
-        <div class="absolute w-full top-[-3em] bg-gray-900 h-10 rounded-md flex place-content-center" transition:fade="{{duration: 100}}">
+        <div class="absolute w-full top-[-3.4em] bg-gray-900 h-12 rounded-md flex items-center place-content-center" transition:fade="{{duration: 100}}">
             <button
                 type="button"
-                class="{(curColor=='__clear__') ? 'border-2 border-gray-100' : 'border border-gray-600'} inline-flex items-center justify-center w-6 h-6 m-2 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500"
+                class="border-2 border-gray-100 inline-flex items-center justify-center w-6 h-6 m-2 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500"
                 title="清除标注"
                 aria-label="Clear drawings"
-                onclick={() => { curColor = '__clear__'; onClearDrawing(); }}
+                onclick={onClearDrawing}
             >
                 <i class="fas fa-trash text-[11px] text-gray-200"></i>
             </button>
