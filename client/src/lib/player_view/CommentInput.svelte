@@ -61,10 +61,18 @@ function onTextChange(e: any) {
     <!-- Color selector -->
     {#if drawMode}
         <div class="absolute w-full top-[-3em] bg-gray-900 h-10 rounded-md flex place-content-center" transition:fade="{{duration: 100}}">
-            <button type="button" class="fas fa-trash text-gray-500 hover:text-red-300 active:text-red-400 inline-block w-10 h-10 mx-2 rounded-lg" title="清除标注" aria-label="Clear drawings" onclick={onClearDrawing}></button>
+            <button
+                type="button"
+                class="{(curColor=='__clear__') ? 'border-2 border-gray-100' : 'border border-gray-600'} inline-flex items-center justify-center w-6 h-6 m-2 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500"
+                title="清除标注"
+                aria-label="Clear drawings"
+                onclick={() => { curColor = '__clear__'; onClearDrawing(); }}
+            >
+                <i class="fas fa-trash text-[11px] text-gray-200"></i>
+            </button>
 
             {#each ["red", "green", "blue", "cyan", "yellow", "black", "white"] as c}
-                <button type="button" class="{(curColor==c) ? 'border-2 border-gray-100' : 'border border-gray-600'}  inline-block w-6 h-6 m-2 rounded-lg" style="background: {c};" aria-label="Select {c} color" onclick={() => onColorSelected(c)}></button>
+                <button type="button" class="{(curColor==c) ? 'border-2 border-gray-100' : 'border border-gray-600'} inline-block w-6 h-6 m-2 rounded-lg" style="background: {c};" aria-label="Select {c} color" onclick={() => onColorSelected(c)}></button>
             {/each}
         </div>
     {/if}
