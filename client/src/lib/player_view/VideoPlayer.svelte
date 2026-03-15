@@ -1368,8 +1368,9 @@ function handlePinClick(id: string) {
 							ontouchcancel={onSeekEnd}
 						>
 							<div class="absolute inset-y-0 left-0 bg-red-600 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
-							<div class="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-red-500 z-30 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-150 {isSeekingThumb ? 'scale-110' : 'scale-100'}" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.625rem);"></div>
 						</div>
+						<!-- Seek knob in sibling layer to avoid being clipped by slider overflow -->
+						<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-500 z-50 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-150 {isSeekingThumb ? 'scale-110' : 'scale-100'}" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
 						<!-- Comment markers are rendered in a sibling layer to avoid slider overflow clipping -->
 						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-full z-40 pointer-events-none">
 							{#each commentsWithTc as item}
