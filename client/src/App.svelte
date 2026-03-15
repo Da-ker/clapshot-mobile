@@ -1062,39 +1062,62 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
                 // Re-sort / turn updated comment tree into an indented, ordered list for UI
                 function indentCommentTree(items: IndentedComment[]): IndentedComment[]
                 {
-                    const parseTimecodeSec = (tc?: string): number | null => {
+                    const parseTimecodeKey = (tc?: string): number[] | null => {
                         if (!tc) return null;
                         const s = tc.trim();
                         if (!s) return null;
 
+                        // Common frame-based format: hh:mm:ss:ff
+                        const frameParts = s.split(':');
+                        if (frameParts.length === 4) {
+                            const nums = frameParts.map((p) => Number(p));
+                            if (nums.every((n) => Number.isFinite(n))) return nums;
+                        }
+
                         // hh:mm:ss(.ms) | mm:ss(.ms)
-                        const parts = s.split(':');
-                        if (parts.length === 2 || parts.length === 3) {
-                            const nums = parts.map((p) => Number(p));
+                        if (frameParts.length === 3 || frameParts.length === 2) {
+                            const nums = frameParts.map((p) => Number(p));
                             if (nums.every((n) => Number.isFinite(n))) {
-                                if (parts.length === 2) return nums[0] * 60 + nums[1];
-                                return nums[0] * 3600 + nums[1] * 60 + nums[2];
+                                return frameParts.length === 3
+                                    ? [nums[0], nums[1], nums[2], 0]
+                                    : [0, nums[0], nums[1], 0];
                             }
                         }
 
                         // e.g. "90.5s"
                         const m = s.match(/^([0-9]+(?:\.[0-9]+)?)s$/i);
-                        if (m) return Number(m[1]);
+                        if (m) {
+                            const sec = Number(m[1]);
+                            if (Number.isFinite(sec)) return [0, 0, sec, 0];
+                        }
 
                         return null;
                     };
 
+                    const compareTcKey = (a: number[], b: number[]): number => {
+                        const len = Math.max(a.length, b.length);
+                        for (let i = 0; i < len; i++) {
+                            const av = a[i] ?? 0;
+                            const bv = b[i] ?? 0;
+                            if (av !== bv) return av - bv;
+                        }
+                        return 0;
+                    };
+
                     let rootComments = items.filter(item => item.comment.parentId == null);
                     rootComments.sort((a, b) => {
-                        const aTc = parseTimecodeSec(a.comment.timecode);
-                        const bTc = parseTimecodeSec(b.comment.timecode);
+                        const aTc = parseTimecodeKey(a.comment.timecode);
+                        const bTc = parseTimecodeKey(b.comment.timecode);
 
                         // Put comments without timecode on top.
                         if (aTc == null && bTc != null) return -1;
                         if (aTc != null && bTc == null) return 1;
 
                         // Both have valid timecode: sort by timeline order.
-                        if (aTc != null && bTc != null && aTc !== bTc) return aTc - bTc;
+                        if (aTc != null && bTc != null) {
+                            const cmp = compareTcKey(aTc, bTc);
+                            if (cmp !== 0) return cmp;
+                        }
 
                         // Fallback for same/invalid timecode.
                         return (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0);
