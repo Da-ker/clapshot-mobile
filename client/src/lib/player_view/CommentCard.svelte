@@ -196,9 +196,20 @@ function onCardTouchEnd() {
         swipeActive = false;
         return;
     }
+
     const threshold = Math.min(56, maxSwipePx / 3);
-    if (Math.abs(swipeOffsetPx) > threshold) openSwipeActions();
-    else closeSwipeActions();
+    const startedOpen = swipeStartOffsetPx < 0;
+
+    if (startedOpen) {
+        // When actions are already open, a slight right swipe should close them.
+        const rightSwipeDistance = swipeOffsetPx - swipeStartOffsetPx;
+        if (rightSwipeDistance > 10) closeSwipeActions();
+        else openSwipeActions();
+    } else {
+        if (Math.abs(swipeOffsetPx) > threshold) openSwipeActions();
+        else closeSwipeActions();
+    }
+
     swipeActive = false;
 }
 
