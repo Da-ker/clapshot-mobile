@@ -392,13 +392,9 @@ async function onCommentInputButton(e: any) {
         if (e.is_draw_mode) { pausePlayer(); }
         if (videoPlayer) videoPlayer.onToggleDraw(e.is_draw_mode);
     }
-    else if (e.action == "undo") {
+    else if (e.action == "clear_drawing") {
         pausePlayer();
-        if (videoPlayer) videoPlayer.onDrawUndo();
-    }
-    else if (e.action == "redo") {
-        pausePlayer();
-        if (videoPlayer) videoPlayer.onDrawRedo();
+        if (videoPlayer) videoPlayer.onDrawClear();
     }
 }
 

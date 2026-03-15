@@ -955,6 +955,15 @@ export function onDrawRedo() {
     draw_board?.redo();
 }
 
+export function onDrawClear() {
+    if (!draw_board || !draw_canvas) return;
+    draw_board.clear();
+    const ctx = draw_canvas.getContext('2d');
+    if (ctx) videoDecoder?.captureFrame(ctx);
+    draw_canvas.style.visibility = "visible";
+    draw_canvas.style.pointerEvents = "auto";
+}
+
 export function hasDrawing() {
     return draw_canvas && draw_canvas.style.visibility == "visible";
 }

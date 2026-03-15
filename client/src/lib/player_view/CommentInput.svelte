@@ -41,11 +41,9 @@ function onColorSelected(c: string) {
     curColor = c;
     if (onbuttonclicked) onbuttonclicked({'action': 'color_select', 'color': c});
 }
-function onUndoRedo(is_undo: boolean) {
-    if (is_undo && onbuttonclicked) {
-        onbuttonclicked({'action': 'undo'});
-    } else if (!is_undo && onbuttonclicked) {
-        onbuttonclicked({'action': 'redo'});
+function onClearDrawing() {
+    if (onbuttonclicked) {
+        onbuttonclicked({ 'action': 'clear_drawing' });
     }
 }
 
@@ -63,8 +61,7 @@ function onTextChange(e: any) {
     <!-- Color selector -->
     {#if drawMode}
         <div class="absolute w-full top-[-3em] bg-gray-900 h-10 rounded-md flex place-content-center" transition:fade="{{duration: 100}}">
-            <button type="button" class="fas fa-undo text-gray-500 hover:text-gray-100 active:text-gray-400 inline-block w-10 h-10 mx-2 rounded-lg" title={$t('comments.undo')} aria-label={$t('comments.undo')} onclick={()=>onUndoRedo(true)}></button>
-            <button type="button" class="fas fa-redo text-gray-500 hover:text-gray-100 active:text-gray-400 inline-block w-10 h-10 mx-2 rounded-lg" title={$t('comments.redo')} aria-label={$t('comments.redo')} onclick={()=>onUndoRedo(false)}></button>
+            <button type="button" class="fas fa-trash text-gray-500 hover:text-red-300 active:text-red-400 inline-block w-10 h-10 mx-2 rounded-lg" title="清除标注" aria-label="Clear drawings" onclick={onClearDrawing}></button>
 
             {#each ["red", "green", "blue", "cyan", "yellow", "black", "white"] as c}
                 <button type="button" class="{(curColor==c) ? 'border-2 border-gray-100' : 'border border-gray-600'}  inline-block w-6 h-6 m-2 rounded-lg" style="background: {c};" aria-label="Select {c} color" onclick={() => onColorSelected(c)}></button>
