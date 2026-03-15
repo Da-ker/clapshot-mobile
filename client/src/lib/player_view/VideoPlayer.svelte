@@ -138,6 +138,41 @@ function revealOverlayFromHidden() {
     suppressClickUntil = Date.now() + 260;
 }
 
+async function enterSystemFullscreen() {
+    const video = videoElem as any;
+    const container = videoCanvasContainer as any;
+
+    try {
+        // iOS Safari native player fullscreen
+        if (video && typeof video.webkitEnterFullscreen === 'function') {
+            video.webkitEnterFullscreen();
+            return;
+        }
+
+        // Standard Fullscreen API (prefer container to keep custom UI when possible)
+        if (container && typeof container.requestFullscreen === 'function') {
+            await container.requestFullscreen();
+            return;
+        }
+        if (video && typeof video.requestFullscreen === 'function') {
+            await video.requestFullscreen();
+            return;
+        }
+
+        // Legacy WebKit fallback
+        if (container && typeof container.webkitRequestFullscreen === 'function') {
+            container.webkitRequestFullscreen();
+            return;
+        }
+        if (video && typeof video.webkitRequestFullscreen === 'function') {
+            video.webkitRequestFullscreen();
+            return;
+        }
+    } catch (err) {
+        console.warn('Failed to enter fullscreen', err);
+    }
+}
+
 $effect(() => {
     if (!paused) {
         if (Date.now() < suppressAutoShowOverlayUntil) {
@@ -1361,7 +1396,7 @@ function handlePinClick(id: string) {
 					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(1); }} aria-label="Step forwards"></button>
 				</div>
 
-				<button class="absolute right-3 md:right-4 bottom-14 md:bottom-16 fa-solid fa-expand text-white/95 text-2xl h-12 w-12 rounded-full bg-white/20 inline-flex items-center justify-center pointer-events-auto" onclick={(e) => { e.stopPropagation(); }} aria-label="Fullscreen"></button>
+				<button class="absolute right-3 md:right-4 bottom-14 md:bottom-16 fa-solid fa-expand text-white/95 text-2xl h-12 w-12 rounded-full bg-white/20 inline-flex items-center justify-center pointer-events-auto" onclick={(e) => { e.stopPropagation(); enterSystemFullscreen(); }} aria-label="Fullscreen"></button>
 
 				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
 					<div class="relative h-3 md:h-4">
