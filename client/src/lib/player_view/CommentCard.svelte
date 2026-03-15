@@ -249,14 +249,14 @@ function onCardClick() {
         }}
     >
 
-        <div class="flex items-center px-2.5 py-2 min-w-0 gap-2" lang="en">
+        <div class="flex items-start px-2.5 py-2 min-w-0 gap-2" lang="en">
             <div class="flex-none w-8 h-8 md:w-8 md:h-8 block"><Avatar username={comment.userId || comment.usernameIfnull}/></div>
             {#if editing}
                 <div class="flex-1 min-w-0">
                     <textarea class="w-full outline-dashed bg-slate-500" rows=3 use:callFocus bind:value={commentText} onkeydown={onEditFieldKeyDown} onblur={onEditFieldBlur}></textarea>
                 </div>
             {:else}
-                <p class="flex-1 min-w-0 text-sm leading-5 truncate">
+                <p class="flex-1 min-w-0 text-sm leading-5 whitespace-normal break-words">
                     <span class="text-slate-400">{comment.usernameIfnull}</span>
                     <span class="text-slate-500">：</span>
                     <span class="text-slate-200">{comment.comment}</span>
@@ -266,12 +266,12 @@ function onCardClick() {
                 </p>
             {/if}
             <span class="flex-none hidden text-xs font-mono">[{comment.id}@{comment.parentId}]</span>
-            <span class="flex-none max-w-[48%] text-[11px] text-right overflow-hidden text-ellipsis italic whitespace-nowrap leading-5">
+            <span class="flex-none text-[11px] text-right italic whitespace-nowrap leading-5 pl-1">
                     <span class="text-amber-400/90 hover:text-amber-300 hover:underline cursor-pointer">
                         {comment.timecode ? comment.timecode : ""}
                     </span>
                     {#if comment.subtitleId}
-                        <span class="text-xs text-gray-500 text-nowrap text-ellipsis">| <strong>{getSubtitleLanguage(comment.subtitleId)}</strong></span>
+                        <span class="text-xs text-gray-500">| <strong>{getSubtitleLanguage(comment.subtitleId)}</strong></span>
                     {:else if comment.subtitleFilenameIfnull}
                         <span class="text-xs text-gray-500 line-through" title={comment.subtitleFilenameIfnull}>| {comment.subtitleFilenameIfnull}</span>
                     {/if}
