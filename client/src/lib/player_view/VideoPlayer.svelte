@@ -269,6 +269,15 @@ onDestroy(async () => {
 // Couldn't find a way to bind to it directly.
 setInterval(() => { loop = videoElem?.loop }, 500);
 
+let isSeekingThumb = $state(false);
+
+function onSeekStart() {
+    isSeekingThumb = true;
+}
+
+function onSeekEnd() {
+    isSeekingThumb = false;
+}
 
 async function handleMove(e: MouseEvent | TouchEvent, target: EventTarget|null) {
     if (!target) throw new Error("progress bar missing");
@@ -1350,13 +1359,16 @@ function handlePinClick(id: string) {
 							tabindex="0"
 							class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-2 md:h-2.5 rounded-full overflow-hidden bg-white/45 hover:cursor-pointer"
 							onclick={(e) => e.stopPropagation()}
-							onmousedown={preventDefault((e)=>{ handleMove(e as MouseEvent, e.currentTarget); })}
+							onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, e.currentTarget); })}
 							onmousemove={(e)=>{ handleMove(e as MouseEvent, e.currentTarget); }}
-							ontouchstart={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
+							onmouseup={onSeekEnd}
+							ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, e.currentTarget); })}
 							ontouchmove={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
+							ontouchend={onSeekEnd}
+							ontouchcancel={onSeekEnd}
 						>
 							<div class="absolute inset-y-0 left-0 bg-red-600 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
-							<div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-600 z-30" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.5rem);"></div>
+							<div class="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-red-500 z-30 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-150 {isSeekingThumb ? 'scale-110' : 'scale-100'}" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.625rem);"></div>
 						</div>
 						<!-- Comment markers are rendered in a sibling layer to avoid slider overflow clipping -->
 						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-full z-40 pointer-events-none">
@@ -1380,7 +1392,7 @@ function handlePinClick(id: string) {
 
 </div>
 
-<svelte:window onkeydown={onWindowKeyPress} />
+<svelte:window onkeydown={onWindowKeyPress} onmouseup={onSeekEnd} ontouchend={onSeekEnd} ontouchcancel={onSeekEnd} />
 
 <style>
 
