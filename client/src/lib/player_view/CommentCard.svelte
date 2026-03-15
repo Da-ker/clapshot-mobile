@@ -311,7 +311,7 @@ function onCardClick() {
 </script>
 
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
-<div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {isCompleted ? 'border-orange-700/70 bg-orange-950/35 border-l-[3px] border-l-orange-500/75' : (indent > 0 ? 'border-sky-700/50 bg-slate-900/30 border-l-[3px] border-l-sky-400/70' : 'border-slate-700/60')}">
+<div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {isCompleted ? 'border-orange-700/70 bg-orange-950/35 border-l border-l-orange-500/75' : (indent > 0 ? 'border-sky-700/50 bg-slate-900/30 border-l-[3px] border-l-sky-400/70' : 'border-slate-700/60')}">
     <div class="absolute inset-y-0 left-0 z-0 flex items-stretch transition-opacity {swipeOffsetPx > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}">
         <button
             class="w-[74px] text-white text-sm font-semibold bg-teal-500 active:bg-teal-600"
