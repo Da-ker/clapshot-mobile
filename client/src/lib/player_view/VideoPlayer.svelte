@@ -1398,11 +1398,11 @@ function handlePinClick(id: string) {
 
 				<button
 					type="button"
-					class="absolute right-3 md:right-4 bottom-8 md:bottom-9 h-10 w-10 rounded-full bg-white/28 text-white inline-flex items-center justify-center pointer-events-auto shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:bg-white/35 active:scale-95 transition"
+					class="absolute right-3 md:right-4 bottom-8 md:bottom-9 h-[30px] w-[30px] rounded-full bg-white/28 text-white inline-flex items-center justify-center pointer-events-auto shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:bg-white/35 active:scale-95 transition"
 					onclick={(e) => { e.stopPropagation(); enterSystemFullscreen(); }}
 					aria-label="Fullscreen"
 				>
-					<i class="fa-solid fa-up-right-and-down-left-from-center text-base"></i>
+					<i class="fa-solid fa-up-right-and-down-left-from-center text-[13px]"></i>
 				</button>
 
 				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
