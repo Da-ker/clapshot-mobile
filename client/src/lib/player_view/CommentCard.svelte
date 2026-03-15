@@ -312,14 +312,14 @@ function onCardClick() {
 
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
 <div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {isCompleted ? 'border-orange-700/70 bg-orange-950/35 border-l-[3px] border-l-orange-500/75' : (indent > 0 ? 'border-sky-700/50 bg-slate-900/30 border-l-[3px] border-l-sky-400/70' : 'border-slate-700/60')}">
-    <div class="absolute inset-y-0 left-0 z-0 flex items-stretch">
+    <div class="absolute inset-y-0 left-0 z-0 flex items-stretch transition-opacity {swipeOffsetPx > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}">
         <button
             class="w-[74px] text-white text-sm font-semibold bg-teal-500 active:bg-teal-600"
             onclick={(e) => { e.stopPropagation(); onClickToggleComplete(); }}
         >{isCompleted ? '取消' : '完成'}</button>
     </div>
 
-    <div class="absolute inset-y-0 right-0 z-0 flex items-stretch">
+    <div class="absolute inset-y-0 right-0 z-0 flex items-stretch transition-opacity {swipeOffsetPx < 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}">
         <button
             class="w-[74px] text-white text-sm font-semibold bg-sky-600 active:bg-sky-700"
             onclick={(e) => { e.stopPropagation(); closeSwipeActions(); replyText = ''; showReply = true; }}
@@ -340,7 +340,7 @@ function onCardClick() {
 
     <div
         id="comment_card_{comment.id}"
-        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gradient-to-b {isCompleted ? 'from-orange-900/80 to-orange-950/90 hover:from-orange-800/85 hover:to-orange-900/90' : 'from-slate-800 to-slate-900'} {!!comment.timecode && !isCompleted ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
+        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gradient-to-b {isCompleted ? 'from-orange-900 to-orange-950 hover:from-orange-800 hover:to-orange-900' : 'from-slate-800 to-slate-900'} {!!comment.timecode && !isCompleted ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
         tabindex="0"
         role="link"
         style="transform: translateX({swipeOffsetPx}px); transition: {swipeActive ? 'none' : 'transform 180ms ease-out'};"
