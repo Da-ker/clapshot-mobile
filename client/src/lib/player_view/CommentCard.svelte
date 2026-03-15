@@ -347,8 +347,6 @@ function onCardClick() {
                         bind:value={replyText}
                         onblur={onReplyFieldBlur}
                     />
-                    <button type="button" class="h-8 px-2 rounded bg-slate-700 text-slate-200" onclick={() => { replyText = ''; showReply = false; }}>✕</button>
-                    <button type="submit" class="h-8 px-3 rounded bg-emerald-600 text-white font-semibold">✓</button>
                 </div>
             </form>
         {/if}
