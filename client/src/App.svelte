@@ -113,6 +113,123 @@ function normalizeTimecodeForDisplay(tc: string): string {
     return `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}:${ff.padStart(2, '0')}`;
 }
 
+function compareTimecode(aTc?: string, bTc?: string): number {
+    const parseTimecodeKey = (tc?: string): number[] | null => {
+        if (!tc) return null;
+        const s = tc.trim();
+        if (!s) return null;
+
+        const frameParts = s.split(':');
+        if (frameParts.length === 4) {
+            const nums = frameParts.map((p) => Number(p));
+            if (nums.every((n) => Number.isFinite(n))) return nums;
+        }
+
+        if (frameParts.length === 3 || frameParts.length === 2) {
+            const nums = frameParts.map((p) => Number(p));
+            if (nums.every((n) => Number.isFinite(n))) {
+                return frameParts.length === 3 ? [nums[0], nums[1], nums[2], 0] : [0, nums[0], nums[1], 0];
+            }
+        }
+
+        const m = s.match(/^([0-9]+(?:\.[0-9]+)?)s$/i);
+        if (m) {
+            const sec = Number(m[1]);
+            if (Number.isFinite(sec)) return [0, 0, sec, 0];
+        }
+
+        return null;
+    };
+
+    const ak = parseTimecodeKey(aTc);
+    const bk = parseTimecodeKey(bTc);
+    if (ak == null && bk != null) return -1;
+    if (ak != null && bk == null) return 1;
+    if (ak == null || bk == null) return 0;
+
+    const len = Math.max(ak.length, bk.length);
+    for (let i = 0; i < len; i++) {
+        const av = ak[i] ?? 0;
+        const bv = bk[i] ?? 0;
+        if (av !== bv) return av - bv;
+    }
+    return 0;
+}
+
+function rebuildIndentedComments(items: IndentedComment[]): IndentedComment[] {
+    const rootComments = items.filter(item => item.comment.parentId == null);
+    rootComments.sort((a, b) => {
+        const tcCmp = compareTimecode(a.comment.timecode, b.comment.timecode);
+        if (tcCmp !== 0) return tcCmp;
+        return (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0);
+    });
+
+    const childrenByParent = new Map<string, IndentedComment[]>();
+    for (const item of items) {
+        const pid = item.comment.parentId;
+        if (!pid) continue;
+        const arr = childrenByParent.get(pid) ?? [];
+        arr.push(item);
+        childrenByParent.set(pid, arr);
+    }
+    for (const arr of childrenByParent.values()) {
+        arr.sort((a, b) => (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0));
+    }
+
+    const res: IndentedComment[] = [];
+    const visited = new Set<string>();
+    const dfs = (c: IndentedComment, depth: number) => {
+        if (visited.has(c.comment.id)) return;
+        visited.add(c.comment.id);
+        res.push({ ...c, indent: depth });
+        const children = childrenByParent.get(c.comment.id) ?? [];
+        for (const child of children) dfs(child, depth + 1);
+    };
+
+    for (const c of rootComments) dfs(c, 0);
+    for (const c of items) {
+        if (!visited.has(c.comment.id)) res.push({ ...c, indent: 0 });
+    }
+    return res;
+}
+
+const COMMENT_CACHE_PREFIX = 'clapshot:comment-cache:v1:';
+
+function commentCacheKey(mediaId: string) {
+    return `${COMMENT_CACHE_PREFIX}${mediaId}`;
+}
+
+function saveCommentCache(mediaId: string, items: IndentedComment[]) {
+    try {
+        const payload = {
+            version: 1,
+            savedAt: Date.now(),
+            comments: items.map((it) => it.comment)
+        };
+        localStorage.setItem(commentCacheKey(mediaId), JSON.stringify(payload));
+    } catch (e) {
+        console.debug('saveCommentCache failed', e);
+    }
+}
+
+function loadCommentCache(mediaId: string): IndentedComment[] | null {
+    try {
+        const raw = localStorage.getItem(commentCacheKey(mediaId));
+        if (!raw) return null;
+        const payload = JSON.parse(raw);
+        const comments = Array.isArray(payload?.comments) ? payload.comments : [];
+        if (comments.length === 0) return [];
+        const items: IndentedComment[] = comments.map((c: any) => {
+            const created = c?.created ? new Date(c.created) : c?.created;
+            return { comment: { ...c, created }, indent: 0 } as IndentedComment;
+        });
+        return rebuildIndentedComments(items);
+    } catch (e) {
+        console.debug('loadCommentCache failed', e);
+        return null;
+    }
+}
+
 function refreshTopVideoMeta() {
     if (!videoPlayer) return;
     topTimecode = normalizeTimecodeForDisplay(videoPlayer.getCurTimecode());
@@ -1024,11 +1141,20 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
                         document.title = "Clapshot - " + (v.title ?? v.id);
                     }
 
+                    const prevMediaId = $mediaFileId;
                     $mediaFileId = v.id;
                     $curVideo = v;
-                    // Keep existing comments visible during reconnect/refresh.
-                    // They will be upserted by incoming addComments shortly.
-                    // $allComments = [];
+
+                    // On media switch, instantly hydrate comments from local cache (if any)
+                    // to avoid blank waiting before server push arrives.
+                    if (prevMediaId !== v.id) {
+                        const cached = loadCommentCache(v.id);
+                        if (cached && cached.length > 0) {
+                            $allComments = cached;
+                        } else {
+                            $allComments = [];
+                        }
+                    }
 
                     if (v.defaultSubtitleId) {
                         $curSubtitle = $curVideo.subtitles.find((s) => s.id == v.defaultSubtitleId) ?? null;
@@ -1062,100 +1188,8 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
                 }
 
                 // Re-sort / turn updated comment tree into an indented, ordered list for UI
-                function indentCommentTree(items: IndentedComment[]): IndentedComment[]
-                {
-                    const parseTimecodeKey = (tc?: string): number[] | null => {
-                        if (!tc) return null;
-                        const s = tc.trim();
-                        if (!s) return null;
-
-                        const frameParts = s.split(':');
-                        if (frameParts.length === 4) {
-                            const nums = frameParts.map((p) => Number(p));
-                            if (nums.every((n) => Number.isFinite(n))) return nums;
-                        }
-
-                        if (frameParts.length === 3 || frameParts.length === 2) {
-                            const nums = frameParts.map((p) => Number(p));
-                            if (nums.every((n) => Number.isFinite(n))) {
-                                return frameParts.length === 3
-                                    ? [nums[0], nums[1], nums[2], 0]
-                                    : [0, nums[0], nums[1], 0];
-                            }
-                        }
-
-                        const m = s.match(/^([0-9]+(?:\.[0-9]+)?)s$/i);
-                        if (m) {
-                            const sec = Number(m[1]);
-                            if (Number.isFinite(sec)) return [0, 0, sec, 0];
-                        }
-
-                        return null;
-                    };
-
-                    const compareTcKey = (a: number[], b: number[]): number => {
-                        const len = Math.max(a.length, b.length);
-                        for (let i = 0; i < len; i++) {
-                            const av = a[i] ?? 0;
-                            const bv = b[i] ?? 0;
-                            if (av !== bv) return av - bv;
-                        }
-                        return 0;
-                    };
-
-                    const rootComments = items.filter(item => item.comment.parentId == null);
-                    rootComments.sort((a, b) => {
-                        const aTc = parseTimecodeKey(a.comment.timecode);
-                        const bTc = parseTimecodeKey(b.comment.timecode);
-
-                        if (aTc == null && bTc != null) return -1;
-                        if (aTc != null && bTc == null) return 1;
-
-                        if (aTc != null && bTc != null) {
-                            const cmp = compareTcKey(aTc, bTc);
-                            if (cmp !== 0) return cmp;
-                        }
-
-                        return (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0);
-                    });
-
-                    // Build parent->children map once to avoid repeated O(n) scans.
-                    const childrenByParent = new Map<string, IndentedComment[]>();
-                    for (const item of items) {
-                        const pid = item.comment.parentId;
-                        if (!pid) continue;
-                        const arr = childrenByParent.get(pid) ?? [];
-                        arr.push(item);
-                        childrenByParent.set(pid, arr);
-                    }
-                    for (const arr of childrenByParent.values()) {
-                        arr.sort((a, b) => (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0));
-                    }
-
-                    const res: IndentedComment[] = [];
-                    const visited = new Set<string>();
-
-                    function dfs(c: IndentedComment, depth: number): void {
-                        if (visited.has(c.comment.id)) return;
-                        visited.add(c.comment.id);
-                        res.push({ ...c, indent: depth });
-                        const children = childrenByParent.get(c.comment.id) ?? [];
-                        for (const child of children) dfs(child, depth + 1);
-                    }
-
-                    for (const c of rootComments) dfs(c, 0);
-
-                    // Add orphaned/unlinked nodes at the end.
-                    for (const c of items) {
-                        if (!visited.has(c.comment.id)) {
-                            visited.add(c.comment.id);
-                            res.push({ ...c, indent: 0 });
-                        }
-                    }
-
-                    return res;
-                }
-                $allComments = indentCommentTree($allComments);
+                $allComments = rebuildIndentedComments($allComments);
+                if ($mediaFileId) saveCommentCache($mediaFileId, $allComments);
 
                 // Try to activate comment from URL hash if conditions are met
                 tryActivateHashComment();
@@ -1163,6 +1197,7 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
             // delComment
             else if (cmd.delComment) {
                 $allComments = $allComments.filter((c: { comment: { id: string; }; }) => c.comment.id != cmd.delComment!.commentId);
+                if ($mediaFileId) saveCommentCache($mediaFileId, $allComments);
             }
             // collabEvent
             else if (cmd.collabEvent) {
