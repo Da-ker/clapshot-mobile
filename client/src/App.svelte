@@ -1026,7 +1026,9 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
 
                     $mediaFileId = v.id;
                     $curVideo = v;
-                    $allComments = [];
+                    // Keep existing comments visible during reconnect/refresh.
+                    // They will be upserted by incoming addComments shortly.
+                    // $allComments = [];
 
                     if (v.defaultSubtitleId) {
                         $curSubtitle = $curVideo.subtitles.find((s) => s.id == v.defaultSubtitleId) ?? null;
@@ -1067,14 +1069,12 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
                         const s = tc.trim();
                         if (!s) return null;
 
-                        // Common frame-based format: hh:mm:ss:ff
                         const frameParts = s.split(':');
                         if (frameParts.length === 4) {
                             const nums = frameParts.map((p) => Number(p));
                             if (nums.every((n) => Number.isFinite(n))) return nums;
                         }
 
-                        // hh:mm:ss(.ms) | mm:ss(.ms)
                         if (frameParts.length === 3 || frameParts.length === 2) {
                             const nums = frameParts.map((p) => Number(p));
                             if (nums.every((n) => Number.isFinite(n))) {
@@ -1084,7 +1084,6 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
                             }
                         }
 
-                        // e.g. "90.5s"
                         const m = s.match(/^([0-9]+(?:\.[0-9]+)?)s$/i);
                         if (m) {
                             const sec = Number(m[1]);
@@ -1104,43 +1103,56 @@ function connectWebsocketAfterAuthCheck(ws_url: string)
                         return 0;
                     };
 
-                    let rootComments = items.filter(item => item.comment.parentId == null);
+                    const rootComments = items.filter(item => item.comment.parentId == null);
                     rootComments.sort((a, b) => {
                         const aTc = parseTimecodeKey(a.comment.timecode);
                         const bTc = parseTimecodeKey(b.comment.timecode);
 
-                        // Put comments without timecode on top.
                         if (aTc == null && bTc != null) return -1;
                         if (aTc != null && bTc == null) return 1;
 
-                        // Both have valid timecode: sort by timeline order.
                         if (aTc != null && bTc != null) {
                             const cmp = compareTcKey(aTc, bTc);
                             if (cmp !== 0) return cmp;
                         }
 
-                        // Fallback for same/invalid timecode.
                         return (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0);
                     });
 
-                    // Recursive DFS function to traverse and build the ordered list
-                    function dfs(c: IndentedComment, depth: number, result: IndentedComment[]): void {
-                        if (result.find((it) => it.comment.id === c.comment.id)) return;  // already added, cut infinite loop
-                        result.push({ ...c, indent: depth });
-                        let children = items.filter(item => (item.comment.parentId === c.comment.id));
-                        children.sort((a, b) => (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0));
-                        for (let child of children)
-                        dfs(child, depth + 1, result);
+                    // Build parent->children map once to avoid repeated O(n) scans.
+                    const childrenByParent = new Map<string, IndentedComment[]>();
+                    for (const item of items) {
+                        const pid = item.comment.parentId;
+                        if (!pid) continue;
+                        const arr = childrenByParent.get(pid) ?? [];
+                        arr.push(item);
+                        childrenByParent.set(pid, arr);
+                    }
+                    for (const arr of childrenByParent.values()) {
+                        arr.sort((a, b) => (a.comment.created?.getTime() ?? 0) - (b.comment.created?.getTime() ?? 0));
                     }
 
-                    let res: IndentedComment[] = [];
-                    rootComments.forEach((c) => dfs(c, 0, res));
+                    const res: IndentedComment[] = [];
+                    const visited = new Set<string>();
 
-                    // Add any orphaned comments to the end (we may receive them out of order)
-                    items.forEach((c) => {
-                        if (!res.find((it) => it.comment.id === c.comment.id))
-                        res.push(c);
-                    });
+                    function dfs(c: IndentedComment, depth: number): void {
+                        if (visited.has(c.comment.id)) return;
+                        visited.add(c.comment.id);
+                        res.push({ ...c, indent: depth });
+                        const children = childrenByParent.get(c.comment.id) ?? [];
+                        for (const child of children) dfs(child, depth + 1);
+                    }
+
+                    for (const c of rootComments) dfs(c, 0);
+
+                    // Add orphaned/unlinked nodes at the end.
+                    for (const c of items) {
+                        if (!visited.has(c.comment.id)) {
+                            visited.add(c.comment.id);
+                            res.push({ ...c, indent: 0 });
+                        }
+                    }
+
                     return res;
                 }
                 $allComments = indentCommentTree($allComments);
