@@ -1396,7 +1396,14 @@ function handlePinClick(id: string) {
 					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(1); }} aria-label="Step forwards"></button>
 				</div>
 
-				<button class="absolute right-3 md:right-4 bottom-14 md:bottom-16 fa-solid fa-expand text-white/95 text-2xl h-12 w-12 rounded-full bg-white/20 inline-flex items-center justify-center pointer-events-auto" onclick={(e) => { e.stopPropagation(); enterSystemFullscreen(); }} aria-label="Fullscreen"></button>
+				<button
+					type="button"
+					class="absolute right-3 md:right-4 bottom-[4.1rem] md:bottom-[4.6rem] h-12 w-12 rounded-full bg-[#8b827d]/85 text-white inline-flex items-center justify-center pointer-events-auto shadow-[0_4px_16px_rgba(0,0,0,0.35)] backdrop-blur-sm hover:bg-[#968c87]/90 active:scale-95 transition"
+					onclick={(e) => { e.stopPropagation(); enterSystemFullscreen(); }}
+					aria-label="Fullscreen"
+				>
+					<i class="fa-solid fa-up-right-and-down-left-from-center text-[1.15rem]"></i>
+				</button>
 
 				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
 					<div class="relative h-3 md:h-4">
