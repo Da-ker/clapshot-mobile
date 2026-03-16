@@ -30,7 +30,7 @@ let videoReviewRootEl: HTMLDivElement | undefined = $state();
 let videoPanelEl: HTMLDivElement | undefined = $state();
 let mobileCommentInputHeight = $state(88);
 let commentsTopPx = $state(0);
-const COMMENT_VIDEO_GAP_PX = 8;
+const LAYOUT_SECTION_GAP_PX = 8;
 let debugLayout: boolean = false;
 let uiConnectedState: boolean = $state(false); // true if UI should look like we're connected to the server
 
@@ -308,7 +308,7 @@ function updateCommentsTop() {
     if (!videoReviewRootEl || !videoPanelEl) return;
     const rootRect = videoReviewRootEl.getBoundingClientRect();
     const panelRect = videoPanelEl.getBoundingClientRect();
-    commentsTopPx = Math.max(0, Math.round(panelRect.bottom - rootRect.top + COMMENT_VIDEO_GAP_PX));
+    commentsTopPx = Math.max(0, Math.round(panelRect.bottom - rootRect.top + LAYOUT_SECTION_GAP_PX));
 }
 
 $effect(() => {
@@ -1391,7 +1391,11 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 </div>
             </div>
             <!-- Video stays centered as primary focus -->
-            <div class="mt-[8px] h-auto md:h-[calc(100%-1.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
+            <div
+                class="flex-1 min-h-0 w-full flex items-center justify-center px-2 md:px-6 pb-0"
+                style="margin-top: {LAYOUT_SECTION_GAP_PX}px;"
+                data-video-stack
+            >
                 <div bind:this={videoPanelEl} class="w-full max-w-[1400px] rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)]">
                     <VideoPlayer
                         bind:this={videoPlayer} src={$curVideo.playbackUrl}
@@ -1407,8 +1411,9 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
             <!-- Floating comments panel -->
             <div
-                class="absolute z-20 left-1/2 -translate-x-1/2 md:translate-x-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-[26rem] md:max-w-none md:left-auto md:right-4 top-[var(--comments-top-px,52dvh)] bottom-[calc(var(--mobile-comment-input-h,88px)+env(safe-area-inset-bottom))] md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'}"
-                style="--mobile-comment-input-h: 56px; --comments-top-px: {commentsTopPx}px; --comment-video-gap: {COMMENT_VIDEO_GAP_PX}px;"
+                data-comments-panel="1"
+                class="absolute z-20 inset-x-0 mx-auto w-full max-w-[1400px] px-2 md:px-0 md:inset-x-auto md:left-auto md:right-4 md:mx-0 md:w-[26rem] md:max-w-none top-[var(--comments-top-px)] bottom-[calc(var(--mobile-comment-input-h)+env(safe-area-inset-bottom))] md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'}"
+                style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --comments-top-px: {commentsTopPx}px;"
             >
                 <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                     <div class="hidden md:flex justify-end">
@@ -1437,7 +1442,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
             </div>
 
-            <div bind:this={commentInputDockEl} class="fixed md:static left-1/2 -translate-x-1/2 md:translate-x-0 md:translate-y-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-auto md:max-w-none md:left-auto md:right-auto bottom-[max(0px,env(safe-area-inset-bottom))] md:bottom-auto z-40 px-2 pt-0 pb-2 rounded-t-xl md:rounded-none bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)] md:shadow-none">
+            <div bind:this={commentInputDockEl} class="fixed md:static inset-x-0 mx-auto w-full max-w-[1400px] px-2 md:px-0 md:w-auto md:max-w-none md:inset-x-auto md:left-auto md:right-auto bottom-[max(0px,env(safe-area-inset-bottom))] md:bottom-auto z-40 pt-0 pb-2 rounded-t-xl md:rounded-none bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)] md:shadow-none">
                 <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
             </div>
 
