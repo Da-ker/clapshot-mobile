@@ -1381,8 +1381,8 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
             <!-- Floating comments panel -->
             <div
-                class="relative md:absolute z-20 left-1/2 -translate-x-1/2 md:translate-x-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-[26rem] md:max-w-none md:left-auto md:right-4 mt-2 md:mt-0 bottom-auto md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] h-[min(44dvh,var(--mobile-comment-max-h))] max-h-[min(44dvh,var(--mobile-comment-max-h))] md:h-auto md:max-h-none flex flex-col overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 mb-[calc(var(--mobile-comment-input-h,88px)+env(safe-area-inset-bottom))] md:mb-0 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}"
-                style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --mobile-comment-max-h: calc(100dvh - var(--mobile-comment-input-h,88px) - env(safe-area-inset-bottom) - 0.75rem);"
+                class="relative md:absolute z-20 left-1/2 -translate-x-1/2 md:translate-x-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-[26rem] md:max-w-none md:left-auto md:right-4 mt-2 md:mt-0 bottom-auto md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] h-[calc(min(44dvh,var(--mobile-comment-max-h))+16px)] max-h-[calc(min(44dvh,var(--mobile-comment-max-h))+16px)] md:h-auto md:max-h-none flex flex-col overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 md:mb-0 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}"
+                style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --mobile-comment-max-h: calc(100dvh - var(--mobile-comment-input-h,88px) - env(safe-area-inset-bottom) - 0.75rem); height: calc(min(44dvh, var(--mobile-comment-max-h)) + 40px); max-height: calc(min(44dvh, var(--mobile-comment-max-h)) + 40px);"
             >
                 <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                     <div class="hidden md:flex justify-end">
@@ -1390,7 +1390,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     </div>
                 </div>
 
-                <div data-comments-scroll="1" class="flex-1 md:max-h-[52vh] overflow-y-auto overflow-x-hidden px-1 py-2 pb-2 md:pb-2 space-y-2 [contain:layout_paint]">
+                <div data-comments-scroll="1" class="flex-1 {commentsPanelMode === 'full' ? 'max-h-[74vh]' : 'max-h-[44vh]'} md:max-h-[52vh] overflow-y-auto overflow-x-hidden px-1 py-2 pb-2 md:pb-2 space-y-2 [contain:layout_paint]">
                     {#if $allComments.length > 0}
                         {#each $allComments as c (c.comment.id)}
                             <CommentCard
