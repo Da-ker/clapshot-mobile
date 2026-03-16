@@ -927,6 +927,9 @@ function startHold(mode: 'forward' | 'backward') {
     clearHoldTimer();
     holdTimer = setTimeout(() => {
         holdConsumedClick = true;
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            try { navigator.vibrate(30); } catch {}
+        }
         setPlayback(false, mode === 'forward' ? 'VideoPlayerHoldForward' : 'VideoPlayerHoldBackward');
         const fps = videoDecoder?.frameRate || parseFloat($curVideo?.duration?.fps ?? '24') || 24;
         const intervalMs = Math.max(30, Math.round(2000 / fps)); // ~0.5x shuttle
