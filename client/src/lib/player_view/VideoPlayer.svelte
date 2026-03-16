@@ -1398,15 +1398,16 @@ function handlePinClick(id: string) {
 
 				<button
 					type="button"
-					class="absolute right-3 md:right-4 bottom-8 md:bottom-9 size-[30px] min-w-[30px] min-h-[30px] max-w-[30px] max-h-[30px] p-0 rounded-full bg-white/28 text-white inline-flex items-center justify-center leading-none pointer-events-auto shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:bg-white/35 active:scale-95 transition"
+					class="absolute right-3 md:right-4 bottom-8 md:bottom-9 p-0 bg-white/28 text-white inline-grid place-items-center leading-none pointer-events-auto shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:bg-white/35 active:scale-95 transition overflow-hidden"
+					style="width:30px;height:30px;min-width:30px;min-height:30px;max-width:30px;max-height:30px;border-radius:9999px;"
 					onclick={(e) => { e.stopPropagation(); enterSystemFullscreen(); }}
 					aria-label="Fullscreen"
 				>
 					<i class="fa-solid fa-up-right-and-down-left-from-center text-[13px] leading-none"></i>
 				</button>
 
-				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
-					<div class="relative h-3 md:h-4">
+				<div class="absolute left-1/2 -translate-x-1/2 w-1/2 bottom-2 md:bottom-3 pointer-events-auto">
+					<div class="relative h-2 md:h-3">
 						<div
 							bind:this={seekSliderEl}
 							role="slider"
@@ -1425,7 +1426,7 @@ function handlePinClick(id: string) {
 							ontouchend={onSeekEnd}
 							ontouchcancel={onSeekEnd}
 						>
-							<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 md:h-2 rounded-full overflow-hidden bg-white/45">
+							<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[3px] md:h-1 rounded-full overflow-hidden bg-white/45">
 								<div class="absolute inset-y-0 left-0 bg-red-600 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
 							</div>
 						</div>
