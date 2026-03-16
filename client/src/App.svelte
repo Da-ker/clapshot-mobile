@@ -26,7 +26,11 @@ import { ClientToServerCmd } from '@clapshot_protobuf/typescript/dist/src/client
 let videoPlayer: VideoPlayer | undefined = $state();
 let commentInput: CommentInput | undefined = $state();
 let commentInputDockEl: HTMLDivElement | undefined = $state();
+let videoReviewRootEl: HTMLDivElement | undefined = $state();
+let videoPanelEl: HTMLDivElement | undefined = $state();
 let mobileCommentInputHeight = $state(88);
+let commentsTopPx = $state(0);
+const COMMENT_VIDEO_GAP_PX = 12;
 let debugLayout: boolean = false;
 let uiConnectedState: boolean = $state(false); // true if UI should look like we're connected to the server
 
@@ -300,6 +304,13 @@ function updateMobileCommentInputHeight() {
     mobileCommentInputHeight = Math.max(0, Math.round(commentInputDockEl.getBoundingClientRect().height));
 }
 
+function updateCommentsTop() {
+    if (!videoReviewRootEl || !videoPanelEl) return;
+    const rootRect = videoReviewRootEl.getBoundingClientRect();
+    const panelRect = videoPanelEl.getBoundingClientRect();
+    commentsTopPx = Math.max(0, Math.round(panelRect.bottom - rootRect.top + COMMENT_VIDEO_GAP_PX));
+}
+
 $effect(() => {
     if (!commentInputDockEl) return;
     updateMobileCommentInputHeight();
@@ -309,6 +320,21 @@ $effect(() => {
     return () => {
         ro.disconnect();
         window.removeEventListener('resize', updateMobileCommentInputHeight);
+    };
+});
+
+$effect(() => {
+    if (!videoReviewRootEl || !videoPanelEl) return;
+    updateCommentsTop();
+    const ro = new ResizeObserver(() => updateCommentsTop());
+    ro.observe(videoReviewRootEl);
+    ro.observe(videoPanelEl);
+    window.addEventListener('resize', updateCommentsTop);
+    window.visualViewport?.addEventListener('resize', updateCommentsTop);
+    return () => {
+        ro.disconnect();
+        window.removeEventListener('resize', updateCommentsTop);
+        window.visualViewport?.removeEventListener('resize', updateCommentsTop);
     };
 });
 
@@ -1348,7 +1374,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         {:else if $mediaFileId && $curVideo && $curVideo.playbackUrl}
 
         <!-- ========== video review widgets ============= -->
-        <div class="relative h-full min-h-0 overflow-hidden">
+        <div bind:this={videoReviewRootEl} class="relative h-full min-h-0 overflow-hidden">
             <div class="px-2 md:px-6 pt-2 pb-0">
                 <div class="rounded-xl bg-slate-900/55 px-2.5 md:px-3 py-[2px] backdrop-blur-sm">
                     <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
@@ -1366,7 +1392,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
             </div>
             <!-- Video stays centered as primary focus -->
             <div class="mt-2 h-auto md:h-[calc(100%-1.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
-                <div class="w-full max-w-[1400px] rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)]">
+                <div bind:this={videoPanelEl} class="w-full max-w-[1400px] rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)]">
                     <VideoPlayer
                         bind:this={videoPlayer} src={$curVideo.playbackUrl}
                         onseeked={onPlayerSeeked}
@@ -1381,8 +1407,8 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
             <!-- Floating comments panel -->
             <div
-                class="absolute z-20 left-1/2 -translate-x-1/2 md:translate-x-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-[26rem] md:max-w-none md:left-auto md:right-4 top-[var(--mobile-comments-top,52dvh)] md:top-[5.5rem] bottom-[calc(var(--mobile-comment-input-h,88px)+env(safe-area-inset-bottom))] md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'}"
-                style="--mobile-comment-input-h: {mobileCommentInputHeight}px;"
+                class="absolute z-20 left-1/2 -translate-x-1/2 md:translate-x-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-[26rem] md:max-w-none md:left-auto md:right-4 top-[var(--comments-top-px,52dvh)] bottom-[calc(var(--mobile-comment-input-h,88px)+env(safe-area-inset-bottom))] md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'}"
+                style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --comments-top-px: {commentsTopPx}px; --comment-video-gap: {COMMENT_VIDEO_GAP_PX}px;"
             >
                 <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                     <div class="hidden md:flex justify-end">
