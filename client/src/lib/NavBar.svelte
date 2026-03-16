@@ -134,65 +134,63 @@ function addEDLComments(comments: Proto3.Comment[]) {
 
 </script>
 
-<nav class="px-3 sm:px-5 py-2 rounded bg-gray-900/90 backdrop-blur-sm">
+<nav class="px-3 sm:px-5 py-1.5 sm:py-2 rounded bg-gray-900/90 backdrop-blur-sm">
 
 	<div class="flex items-center gap-2 sm:gap-4 flex-wrap md:flex-nowrap min-w-0">
 
 		<!-- logo with "home" link -->
 		<span class="shrink-0">
 			<a href="/" class="flex items-baseline cursor-pointer">
-				<img src="{$clientConfig ? ($clientConfig?.logo_url || "clapshot-logo.svg") : ""}" class="h-6 sm:h-9 filter brightness-75" alt="{$clientConfig ? ($clientConfig.app_title || "Clapshot") : ""}" />
+				<img src="{$clientConfig ? ($clientConfig?.logo_url || "clapshot-logo.svg") : ""}" class="h-6 sm:h-8 filter brightness-75" alt="{$clientConfig ? ($clientConfig.app_title || "Clapshot") : ""}" />
 			</a>
 		</span>
 
 		<!-- video info -->
-		<div class="flex-1 min-w-0">
+		<div class="flex-1 min-w-0 flex justify-center">
 			{#if $mediaFileId}
-			<span class="grid grid-flow-row auto-rows-max items-center text-gray-400 mx-1 sm:mx-4 min-w-0">
-					<h2 class="text-sm sm:text-lg text-left sm:text-center min-w-0 text-gray-200 font-semibold">
-						<span class="inline-flex items-center min-w-0 w-full align-middle">
-							<span class="truncate">{$curVideo?.title || $mediaFileId}</span>
-							<button
-								type="button"
-								id="media-menu-button"
-								onclick={toggleMediaMenu}
-								class="ml-auto pl-4 inline-flex shrink-0 items-center justify-center rounded-md px-2 py-1 {$collabId ? 'bg-green-500 text-black' : 'bg-gray-800 text-gray-300'} hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-								aria-haspopup="true"
-								aria-expanded={isMobileViewport ? isMobileMediaMenuOpen : false}
-								aria-label="Open media menu"
-							>
-								<i class="fas fa-bars"></i>
-							</button>
-						</span>
+			<div class="inline-flex items-center gap-2 sm:gap-3 min-w-0 text-gray-400">
+				<div class="min-w-0 text-center">
+					<h2 class="text-sm sm:text-base min-w-0 text-gray-200 font-semibold truncate">{$curVideo?.title || $mediaFileId}</h2>
+					<span class="text-[11px] sm:text-xs truncate font-mono text-gray-500">ID: {$mediaFileId}</span>
+					{#if videoProgressMsg}
+						<div class="text-cyan-800 text-[11px] text-center">{videoProgressMsg}</div>
+					{/if}
+				</div>
+				<button
+					type="button"
+					id="media-menu-button"
+					onclick={toggleMediaMenu}
+					class="inline-flex self-center shrink-0 items-center justify-center rounded-md px-2 py-1 {$collabId ? 'bg-green-500 text-black' : 'bg-gray-800 text-gray-300'} hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+					aria-haspopup="true"
+					aria-expanded={isMobileViewport ? isMobileMediaMenuOpen : false}
+					aria-label="Open media menu"
+				>
+					<i class="fas fa-bars"></i>
+				</button>
 
-						{#if !isMobileViewport}
-							<Dropdown class="w-64 text-sm clapshot-dropdown media-dropdown z-50" triggeredBy="#media-menu-button">
-								<DropdownItem onclick={copyToClipboard}><i class="fas fa-share-square"></i> {$t('nav.shareToLoggedInUsers')}</DropdownItem>
-								{#if $curVideo?.origUrl}
-									<DropdownItem title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> {$t('nav.downloadOriginal')}</a></DropdownItem>
-								{/if}
-								{#if $collabId}
-									<DropdownItem href="?vid={$mediaFileId}" class="text-green-400"><i class="fas fa-users"></i> {$t('nav.leaveCollab')}</DropdownItem>
-								{:else}
-									<DropdownItem href="?vid={$mediaFileId}&collab={randomSessionId}" title="Start collaborative session"><i class="fas fa-user-plus"></i> {$t('nav.startCollab')}</DropdownItem>
-								{/if}
-
-								<DropdownItem>
-									<i class="fas fa-cog"></i> {$t('nav.experimentalTools')}
-									<ChevronRightOutline class="w-6 h-6 ms-2 float-right" />
-								</DropdownItem>
-								<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown media-dropdown z-50">
-									<DropdownItem onclick={() => isEDLImportOpen = true}><i class="fas fa-file-import"></i> {$t('nav.importEdl')}</DropdownItem>
-									<DropdownItem onclick={() => isExportOpen = true}><i class="fas fa-file-export"></i> {$t('nav.exportComments')}</DropdownItem>
-								</Dropdown>
-							</Dropdown>
+				{#if !isMobileViewport}
+					<Dropdown class="w-64 text-sm clapshot-dropdown media-dropdown z-50" triggeredBy="#media-menu-button">
+						<DropdownItem onclick={copyToClipboard}><i class="fas fa-share-square"></i> {$t('nav.shareToLoggedInUsers')}</DropdownItem>
+						{#if $curVideo?.origUrl}
+							<DropdownItem title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> {$t('nav.downloadOriginal')}</a></DropdownItem>
 						{/if}
-					</h2>
-				<span class="mx-1 sm:mx-4 text-[11px] sm:text-xs text-left sm:text-center truncate font-mono text-gray-500">ID: {$mediaFileId}</span>
-				{#if videoProgressMsg}
-					<span class="text-cyan-800 mx-4 text-xs text-center">{videoProgressMsg}</span>
+						{#if $collabId}
+							<DropdownItem href="?vid={$mediaFileId}" class="text-green-400"><i class="fas fa-users"></i> {$t('nav.leaveCollab')}</DropdownItem>
+						{:else}
+							<DropdownItem href="?vid={$mediaFileId}&collab={randomSessionId}" title="Start collaborative session"><i class="fas fa-user-plus"></i> {$t('nav.startCollab')}</DropdownItem>
+						{/if}
+
+						<DropdownItem>
+							<i class="fas fa-cog"></i> {$t('nav.experimentalTools')}
+							<ChevronRightOutline class="w-6 h-6 ms-2 float-right" />
+						</DropdownItem>
+						<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown media-dropdown z-50">
+							<DropdownItem onclick={() => isEDLImportOpen = true}><i class="fas fa-file-import"></i> {$t('nav.importEdl')}</DropdownItem>
+							<DropdownItem onclick={() => isExportOpen = true}><i class="fas fa-file-export"></i> {$t('nav.exportComments')}</DropdownItem>
+						</Dropdown>
+					</Dropdown>
 				{/if}
-			</span>
+			</div>
 			{/if}
 		</div>
 
