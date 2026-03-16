@@ -899,7 +899,7 @@ async function step_video(frames: number) {
     send_collab_report();
 }
 
-const HOLD_TRIGGER_MS = 1000;
+const HOLD_TRIGGER_MS = 500;
 let holdTimer: ReturnType<typeof setTimeout> | undefined;
 let holdInterval: ReturnType<typeof setInterval> | undefined;
 let holdMode: 'forward' | 'backward' | undefined;
