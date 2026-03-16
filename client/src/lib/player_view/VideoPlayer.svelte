@@ -307,6 +307,8 @@ setInterval(() => { loop = videoElem?.loop }, 500);
 
 let isSeekingThumb = $state(false);
 let seekSliderEl: HTMLDivElement | undefined;
+let pendingSeekTime: number | undefined;
+let seekInFlight = false;
 
 function onSeekStart() {
     isSeekingThumb = true;
@@ -314,6 +316,25 @@ function onSeekStart() {
 
 function onSeekEnd() {
     isSeekingThumb = false;
+    seekSideEffects();
+    send_collab_report();
+    if (videoElem) { videoElem.focus(); }
+}
+
+async function flushQueuedSeek() {
+    if (!videoDecoder || seekInFlight || pendingSeekTime === undefined) return;
+    seekInFlight = true;
+    const target = pendingSeekTime;
+    pendingSeekTime = undefined;
+    try {
+        const pos = await videoDecoder.seekToTime(target);
+        time = pos.timestamp;
+    } finally {
+        seekInFlight = false;
+        if (pendingSeekTime !== undefined) {
+            void flushQueuedSeek();
+        }
+    }
 }
 
 function onGlobalSeekMove(e: MouseEvent | TouchEvent) {
@@ -333,22 +354,21 @@ async function handleMove(e: MouseEvent | TouchEvent, target: EventTarget|null) 
     videoElem.pause();
     const clientX = isTouch ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const { left, right } = (target as HTMLProgressElement).getBoundingClientRect();
-    const newTime = effectiveDuration * (clientX - left) / (right - left);
+    const newTime = Math.max(0, Math.min(effectiveDuration, effectiveDuration * (clientX - left) / (right - left)));
+
+    // Update knob immediately for smoother dragging.
+    time = newTime;
 
     // Use stepper for seeking (handles both HTML5 and Mediabunny modes)
     if (videoDecoder) {
-        const pos = await videoDecoder.seekToTime(newTime);
-        time = pos.timestamp;
+        pendingSeekTime = newTime;
+        void flushQueuedSeek();
     } else {
         // Fallback before stepper is initialized
-        time = newTime;
-        videoElem.currentTime = time;
+        videoElem.currentTime = newTime;
     }
 
-    seekSideEffects();
     paused = true;
-    send_collab_report();
-    if (videoElem) { videoElem.focus(); }
 }
 
 let playback_request_source: string|undefined = undefined;
