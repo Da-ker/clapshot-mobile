@@ -1381,11 +1381,11 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
             <!-- Floating comments panel -->
             <div
-                class="relative md:absolute z-20 left-1/2 -translate-x-1/2 md:translate-x-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-[26rem] md:max-w-none md:left-auto md:right-4 mt-2 md:mt-0 bottom-auto md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] h-[min(44dvh,var(--mobile-comment-max-h))] max-h-[min(44dvh,var(--mobile-comment-max-h))] md:h-auto md:max-h-none flex flex-col overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 mb-0 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}"
-                style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --mobile-comment-max-h: calc(100dvh - var(--mobile-comment-input-h,88px) - env(safe-area-inset-bottom));"
+                class="relative md:absolute z-20 left-1/2 -translate-x-1/2 md:translate-x-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-[26rem] md:max-w-none md:left-auto md:right-4 mt-2 md:mt-0 bottom-auto md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] h-[min(44dvh,var(--mobile-comment-max-h))] max-h-[min(44dvh,var(--mobile-comment-max-h))] md:h-auto md:max-h-none flex flex-col overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 mb-[calc(var(--mobile-comment-input-h,88px)+env(safe-area-inset-bottom))] md:mb-0 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}"
+                style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --mobile-comment-max-h: calc(100dvh - var(--mobile-comment-input-h,88px) - env(safe-area-inset-bottom) - 0.75rem);"
             >
-                <div class="relative h-3 px-3 bg-[#0a1220]/90 border-b border-slate-800/70" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
-                    <div class="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2">
+                <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
+                    <div class="hidden md:flex justify-end">
                         <button class="fa-solid {commentsPanelMode === 'half' ? 'fa-up-down' : 'fa-minimize'} text-slate-400 hover:text-slate-200 h-8 w-8" onclick={toggleCommentsPanelMode} aria-label="Toggle comments drawer size"></button>
                     </div>
                 </div>
@@ -1405,7 +1405,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     {:else}
                         <div class="text-sm text-slate-400 px-2 py-4">No comments yet</div>
                     {/if}
-                    <div class="h-0 min-h-0 md:h-0 md:min-h-0"></div>
+                    <div class="h-[calc(var(--mobile-comment-input-h,88px)*0.32)] min-h-6 md:h-0 md:min-h-0"></div>
                 </div>
 
 
