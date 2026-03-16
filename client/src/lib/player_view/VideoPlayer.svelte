@@ -283,7 +283,6 @@ onDestroy(async () => {
         draw_board.destroy();
         draw_board = null;
     }
-    stopHold();
     videoDecoder?.dispose();
     videoDecoder = null;
     if (volumeHudTimer) {
@@ -307,8 +306,6 @@ setInterval(() => { loop = videoElem?.loop }, 500);
 
 let isSeekingThumb = $state(false);
 let seekSliderEl: HTMLDivElement | undefined;
-let pendingSeekTime: number | undefined;
-let seekInFlight = false;
 
 function onSeekStart() {
     isSeekingThumb = true;
@@ -316,25 +313,6 @@ function onSeekStart() {
 
 function onSeekEnd() {
     isSeekingThumb = false;
-    seekSideEffects();
-    send_collab_report();
-    if (videoElem) { videoElem.focus(); }
-}
-
-async function flushQueuedSeek() {
-    if (!videoDecoder || seekInFlight || pendingSeekTime === undefined) return;
-    seekInFlight = true;
-    const target = pendingSeekTime;
-    pendingSeekTime = undefined;
-    try {
-        const pos = await videoDecoder.seekToTime(target);
-        time = pos.timestamp;
-    } finally {
-        seekInFlight = false;
-        if (pendingSeekTime !== undefined) {
-            void flushQueuedSeek();
-        }
-    }
 }
 
 function onGlobalSeekMove(e: MouseEvent | TouchEvent) {
@@ -354,21 +332,22 @@ async function handleMove(e: MouseEvent | TouchEvent, target: EventTarget|null) 
     videoElem.pause();
     const clientX = isTouch ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const { left, right } = (target as HTMLProgressElement).getBoundingClientRect();
-    const newTime = Math.max(0, Math.min(effectiveDuration, effectiveDuration * (clientX - left) / (right - left)));
-
-    // Update knob immediately for smoother dragging.
-    time = newTime;
+    const newTime = effectiveDuration * (clientX - left) / (right - left);
 
     // Use stepper for seeking (handles both HTML5 and Mediabunny modes)
     if (videoDecoder) {
-        pendingSeekTime = newTime;
-        void flushQueuedSeek();
+        const pos = await videoDecoder.seekToTime(newTime);
+        time = pos.timestamp;
     } else {
         // Fallback before stepper is initialized
-        videoElem.currentTime = newTime;
+        time = newTime;
+        videoElem.currentTime = time;
     }
 
+    seekSideEffects();
     paused = true;
+    send_collab_report();
+    if (videoElem) { videoElem.focus(); }
 }
 
 let playback_request_source: string|undefined = undefined;
@@ -904,97 +883,14 @@ export function getCurFrame() {
 
 
 async function step_video(frames: number) {
-    if (videoDecoder) {
-        const direction = frames < 0 ? -1 : 1;
-        const position = await videoDecoder.stepFrame(direction as 1 | -1, Math.abs(frames));
-        time = position.timestamp;
-    } else {
-        const fps = parseFloat($curVideo?.duration?.fps ?? '24') || 24;
-        const nextTime = Math.max(0, Math.min(getEffectiveDuration(), (videoElem?.currentTime ?? time) + frames / fps));
-        time = nextTime;
-        if (videoElem) videoElem.currentTime = nextTime;
-    }
+    if (!videoDecoder) return;
+
+    const direction = frames < 0 ? -1 : 1;
+    const position = await videoDecoder.stepFrame(direction as 1 | -1, Math.abs(frames));
+    time = position.timestamp;
 
     seekSideEffects();
     send_collab_report();
-}
-
-const HOLD_TRIGGER_MS = 500;
-let holdTimer: ReturnType<typeof setTimeout> | undefined;
-let holdInterval: ReturnType<typeof setInterval> | undefined;
-let holdMode: 'forward' | 'backward' | undefined;
-let holdConsumedClick = false;
-let holdStepBusy = false;
-
-function clearHoldTimer() {
-    if (!holdTimer) return;
-    clearTimeout(holdTimer);
-    holdTimer = undefined;
-}
-
-function startHold(mode: 'forward' | 'backward') {
-    stopHold(false);
-    holdMode = mode;
-    holdConsumedClick = false;
-
-    // Hold mode should stay visually paused and silent.
-    setPlayback(false, mode === 'forward' ? 'VideoPlayerHoldForward' : 'VideoPlayerHoldBackward');
-    if (videoElem) {
-        videoElem.playbackRate = 1;
-        videoElem.pause();
-    }
-
-    clearHoldTimer();
-    holdTimer = setTimeout(() => {
-        holdConsumedClick = true;
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-            try { navigator.vibrate(30); } catch {}
-        }
-        setPlayback(false, mode === 'forward' ? 'VideoPlayerHoldForward' : 'VideoPlayerHoldBackward');
-        const fps = videoDecoder?.frameRate || parseFloat($curVideo?.duration?.fps ?? '24') || 24;
-        const intervalMs = Math.max(30, Math.round(2000 / fps)); // ~0.5x shuttle
-        const stepDir = mode === 'forward' ? 1 : -1;
-        holdInterval = setInterval(async () => {
-            if (holdStepBusy) return;
-            holdStepBusy = true;
-            try {
-                await step_video(stepDir);
-            } finally {
-                holdStepBusy = false;
-            }
-        }, intervalMs);
-    }, HOLD_TRIGGER_MS);
-}
-
-function stopHold(clearConsumed = true) {
-    clearHoldTimer();
-    if (holdInterval) {
-        clearInterval(holdInterval);
-        holdInterval = undefined;
-    }
-
-    if (holdConsumedClick) {
-        if (videoElem) {
-            videoElem.playbackRate = 1;
-            videoElem.pause();
-        }
-        send_collab_report();
-    }
-
-    holdMode = undefined;
-    if (clearConsumed) holdConsumedClick = false;
-}
-
-function onStepButtonClick(event: MouseEvent, dir: -1 | 1) {
-    if (swallowIfHiddenFirstTap(event)) return;
-    event.stopPropagation();
-
-    if (holdConsumedClick) {
-        holdConsumedClick = false;
-        return;
-    }
-
-    step_video(dir);
 }
 
 const INTERACTIVE_ELEMS = ['input', 'textarea', 'select', 'option', 'button'];
@@ -1432,7 +1328,7 @@ function handlePinClick(id: string) {
 
 	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
 			 style="{debug_layout?'border: 2px solid orange;':''}">
-		<div bind:this={videoCanvasContainer} class="no-select relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap}>
+		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap}>
 			<video
 				transition:scale
 				src="{src}"
@@ -1492,32 +1388,12 @@ function handlePinClick(id: string) {
 		-->
 
 			<!-- YouTube-like overlay controls -->
-			<div class="absolute inset-0 z-[180] transition-opacity duration-400 ease-out {overlayVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
+			<div class="absolute inset-0 z-[180] transition-opacity duration-700 ease-out {overlayVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
-					<button
-						class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center"
-						onclick={(e) => onStepButtonClick(e, -1)}
-						onmousedown={(e) => { e.stopPropagation(); startHold('backward'); }}
-						onmouseup={() => stopHold()}
-						onmouseleave={() => stopHold(false)}
-						ontouchstart={(e) => { e.stopPropagation(); startHold('backward'); }}
-						ontouchend={() => stopHold()}
-						ontouchcancel={() => stopHold()}
-						aria-label="Step backwards"
-					></button>
+					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
 					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center w-[4.62rem] h-[4.62rem] md:w-[5.04rem] md:h-[5.04rem] min-w-[4.62rem] min-h-[4.62rem] md:min-w-[5.04rem] md:min-h-[5.04rem] rounded-full bg-white/28 text-white text-[2.45rem] md:text-[2.7rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); suppressClickUntil = Date.now() + 700; togglePlay(); showOverlay(true); }} title="Play/Pause" aria-label="Play/Pause"></button>
-					<button
-						class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center"
-						onclick={(e) => onStepButtonClick(e, 1)}
-						onmousedown={(e) => { e.stopPropagation(); startHold('forward'); }}
-						onmouseup={() => stopHold()}
-						onmouseleave={() => stopHold(false)}
-						ontouchstart={(e) => { e.stopPropagation(); startHold('forward'); }}
-						ontouchend={() => stopHold()}
-						ontouchcancel={() => stopHold()}
-						aria-label="Step forwards"
-					></button>
+					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(1); }} aria-label="Step forwards"></button>
 				</div>
 
 				<button
@@ -1592,12 +1468,6 @@ function handlePinClick(id: string) {
 
 button:disabled {
     opacity: 0.3;
-}
-
-.no-select {
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
 }
 
 </style>
