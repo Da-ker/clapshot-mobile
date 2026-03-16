@@ -141,8 +141,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 		<!-- logo with "home" link -->
 		<span class="shrink-0">
 			<a href="/" class="flex items-baseline cursor-pointer">
-				<img src="{$clientConfig ? ($clientConfig?.logo_url || "clapshot-logo.svg") : ""}" class="mr-2 sm:mr-3 h-6 sm:h-9 filter brightness-75" alt="{$clientConfig ? ($clientConfig.app_title || "Clapshot") : ""}" />
-				<span class="self-center mt-1 text-2xl sm:text-4xl whitespace-nowrap text-gray-300" style="font-family: 'Yanone Kaffeesatz', sans-serif;">{($clientConfig ? ($clientConfig.app_title || "Clapshot") : "").toUpperCase()}</span>
+				<img src="{$clientConfig ? ($clientConfig?.logo_url || "clapshot-logo.svg") : ""}" class="h-6 sm:h-9 filter brightness-75" alt="{$clientConfig ? ($clientConfig.app_title || "Clapshot") : ""}" />
 			</a>
 		</span>
 
@@ -150,14 +149,14 @@ function addEDLComments(comments: Proto3.Comment[]) {
 		<div class="flex-1 min-w-0">
 			{#if $mediaFileId}
 			<span class="grid grid-flow-row auto-rows-max items-center text-gray-400 mx-1 sm:mx-4 min-w-0">
-					<h2 class="text-sm sm:text-lg text-left sm:text-center min-w-0">
-						<span class="inline-flex items-center gap-2 min-w-0 align-middle">
-							<span class="font-mono truncate">{$mediaFileId}</span>
+					<h2 class="text-sm sm:text-lg text-left sm:text-center min-w-0 text-gray-200 font-semibold">
+						<span class="inline-flex items-center min-w-0 w-full align-middle">
+							<span class="truncate">{$curVideo?.title || $mediaFileId}</span>
 							<button
 								type="button"
 								id="media-menu-button"
 								onclick={toggleMediaMenu}
-								class="inline-flex shrink-0 items-center justify-center rounded-md px-2 py-1 {$collabId ? 'bg-green-500 text-black' : 'bg-gray-800 text-gray-300'} hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+								class="ml-auto pl-4 inline-flex shrink-0 items-center justify-center rounded-md px-2 py-1 {$collabId ? 'bg-green-500 text-black' : 'bg-gray-800 text-gray-300'} hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
 								aria-haspopup="true"
 								aria-expanded={isMobileViewport ? isMobileMediaMenuOpen : false}
 								aria-label="Open media menu"
@@ -189,7 +188,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 							</Dropdown>
 						{/if}
 					</h2>
-				<span class="mx-1 sm:mx-4 text-xs text-left sm:text-center truncate">{$curVideo?.title}</span>
+				<span class="mx-1 sm:mx-4 text-[11px] sm:text-xs text-left sm:text-center truncate font-mono text-gray-500">ID: {$mediaFileId}</span>
 				{#if videoProgressMsg}
 					<span class="text-cyan-800 mx-4 text-xs text-center">{videoProgressMsg}</span>
 				{/if}
