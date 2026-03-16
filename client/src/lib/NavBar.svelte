@@ -149,7 +149,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 		<div class="flex-1 min-w-0 flex justify-center">
 			{#if $mediaFileId}
 			<div class="inline-flex items-center gap-2 sm:gap-3 min-w-0 text-gray-400">
-				<div class="min-w-0 text-center pt-0.5 sm:pt-1">
+				<div class="min-w-0 text-center pt-1.5 sm:pt-2">
 					<h2 class="text-sm sm:text-base min-w-0 text-gray-200 font-semibold truncate leading-tight">{$curVideo?.title || $mediaFileId}</h2>
 					<span class="text-[10px] sm:text-[11px] truncate font-mono text-gray-500">ID: {$mediaFileId}</span>
 					{#if videoProgressMsg}
