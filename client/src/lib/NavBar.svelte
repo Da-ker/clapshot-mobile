@@ -134,14 +134,14 @@ function addEDLComments(comments: Proto3.Comment[]) {
 
 </script>
 
-<nav class="px-3 sm:px-5 py-0.5 sm:py-1 rounded bg-gray-900/90 backdrop-blur-sm">
+<nav class="px-3 sm:px-5 py-1 sm:py-1.5 rounded bg-gray-900/90 backdrop-blur-sm">
 
 	<div class="flex items-center gap-2 sm:gap-3 flex-wrap md:flex-nowrap min-w-0">
 
 		<!-- logo with "home" link -->
 		<span class="shrink-0">
 			<a href="/" class="flex items-baseline cursor-pointer">
-				<img src="{$clientConfig ? ($clientConfig?.logo_url || "clapshot-logo.svg") : ""}" class="h-5 sm:h-7 filter brightness-75" alt="{$clientConfig ? ($clientConfig.app_title || "Clapshot") : ""}" />
+				<img src="{$clientConfig ? ($clientConfig?.logo_url || "clapshot-logo.svg") : ""}" class="h-6 sm:h-8 filter brightness-75" alt="{$clientConfig ? ($clientConfig.app_title || "Clapshot") : ""}" />
 			</a>
 		</span>
 
@@ -198,9 +198,9 @@ function addEDLComments(comments: Proto3.Comment[]) {
 		<div class="shrink-0" style="visibility: {$curUsername ? 'visible': 'hidden'}">
 			<span class="flex w-auto items-center gap-2">
 				<h6 class="hidden sm:block flex-1 mx-2 sm:mx-4 text-gray-400 font-semibold max-w-40 truncate">{$curUsername}</h6>
-				<button id="user-menu-button" class="flex-0 ring-2 ring-slate-800 text-sm rounded-full" aria-haspopup="true" aria-expanded="false">
+				<button id="user-menu-button" class="flex-0 ring-4 ring-slate-800 text-sm rounded-full" aria-haspopup="true" aria-expanded="false">
 					{#if $curUserPic || $curUsername}
-					<div class="w-8 block"><Avatar username={$curUsername} /></div>
+					<div class="w-10 block"><Avatar username={$curUsername} /></div>
 					{/if}
 				</button>
 			</span>
