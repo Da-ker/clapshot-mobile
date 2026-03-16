@@ -1406,7 +1406,7 @@ function handlePinClick(id: string) {
 					<i class="fa-solid fa-up-right-and-down-left-from-center text-[13px] leading-none"></i>
 				</button>
 
-				<div class="absolute left-1/2 -translate-x-1/2 w-1/2 bottom-2 md:bottom-3 pointer-events-auto">
+				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
 					<div class="relative h-2 md:h-3">
 						<div
 							bind:this={seekSliderEl}
