@@ -916,6 +916,16 @@ function startHold(mode: 'forward' | 'backward') {
     stopHold(false);
     holdMode = mode;
     holdConsumedClick = false;
+
+    // Backward-hold should stay visually paused and silent for the whole hold window.
+    if (mode === 'backward') {
+        setPlayback(false, 'VideoPlayerHoldBackward');
+        if (videoElem) {
+            videoElem.playbackRate = 1;
+            videoElem.pause();
+        }
+    }
+
     clearHoldTimer();
     holdTimer = setTimeout(() => {
         holdConsumedClick = true;
@@ -1406,7 +1416,7 @@ function handlePinClick(id: string) {
 
 	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
 			 style="{debug_layout?'border: 2px solid orange;':''}">
-		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap}>
+		<div bind:this={videoCanvasContainer} class="no-select relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap}>
 			<video
 				transition:scale
 				src="{src}"
@@ -1566,6 +1576,12 @@ function handlePinClick(id: string) {
 
 button:disabled {
     opacity: 0.3;
+}
+
+.no-select {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
 }
 
 </style>
