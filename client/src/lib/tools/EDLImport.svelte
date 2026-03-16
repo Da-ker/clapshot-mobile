@@ -106,7 +106,7 @@ const handleAccept = () => {
 <Modal title="Import EDL as Comments" bind:open={isOpen} class="w-96">
     <form bind:this={edlForm} class="flex flex-col space-y-1" action="#">
         <Label for="file_up">Upload EDL</Label>
-        <Fileupload id="file_up" accept=".edl" onchange={handleFileUpload} />
+        <Fileupload id="file_up" class="!ring-0 focus:!ring-0 focus:!outline-none focus:!border-slate-500" accept=".edl" onchange={handleFileUpload} />
         <Label for="fps_input" class="pt-2">Frame rate</Label>
         <Input id="fps_input" type="number" bind:value={frameRate}/>
     </form>
@@ -130,3 +130,12 @@ const handleAccept = () => {
         <Helper color="red" class="text-lg">{errorMsg}</Helper>
     {/if}
 </Modal>
+
+<style>
+    :global(#file_up),
+    :global(#file_up:focus),
+    :global(#file_up:focus-visible) {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+</style>
