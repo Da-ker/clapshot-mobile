@@ -10,6 +10,7 @@ interface Props {
 
 let { isOpen = $bindable(false) }: Props = $props();
 
+let modalFocusAnchor: HTMLDivElement | undefined = $state();
 let selectedExporterId = $state(exporters[0]?.id || '');
 let optionValues = $state<Record<string, string | number | boolean>>({});
 let frameRate: number = $state(24);
@@ -66,9 +67,22 @@ function setOptionValue(id: string, value: string | number | boolean) {
 
 // Format dropdown items
 let formatItems = $derived(exporters.map(e => ({ value: e.id, name: e.name })));
+
+// Prevent iOS/Safari from auto-opening select picker when modal appears
+$effect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    setTimeout(() => {
+        const activeEl = document.activeElement as HTMLElement | null;
+        if (activeEl && (activeEl.tagName === 'SELECT' || activeEl.id === 'format_select')) {
+            activeEl.blur();
+        }
+        modalFocusAnchor?.focus();
+    }, 0);
+});
 </script>
 
 <Modal title="Export Comments" bind:open={isOpen} class="w-96">
+    <div bind:this={modalFocusAnchor} tabindex="-1" aria-hidden="true" class="sr-only"></div>
     <div class="flex flex-col space-y-4">
         <!-- Format selection -->
         <div>
