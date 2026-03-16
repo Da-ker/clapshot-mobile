@@ -1428,8 +1428,8 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         </div>
 
         {#if $collabId && !collabDialogAck}
-        <div class="fixed top-0 left-0 w-full h-full flex justify-center items-center">
-            <div class="bg-gray-900 text-white p-4 rounded-md shadow-lg text-center leading-loose">
+        <div class="fixed inset-0 z-[300] flex justify-center items-center bg-black/45 backdrop-blur-[1px]">
+            <div class="bg-gray-900 text-white p-4 rounded-md shadow-lg text-center leading-loose relative z-[301]">
                 <p class="text-xl text-green-500">{$t('status.collabActiveTitle')}</p>
                 <p class="">{$t('status.collabSessionId', {id: $collabId})}</p>
                 <p class="">{$t('status.collabActionsMirrored')}</p>
