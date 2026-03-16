@@ -917,32 +917,25 @@ function startHold(mode: 'forward' | 'backward') {
     holdMode = mode;
     holdConsumedClick = false;
 
-    // Backward-hold should stay visually paused and silent for the whole hold window.
-    if (mode === 'backward') {
-        setPlayback(false, 'VideoPlayerHoldBackward');
-        if (videoElem) {
-            videoElem.playbackRate = 1;
-            videoElem.pause();
-        }
+    // Hold mode should stay visually paused and silent.
+    setPlayback(false, mode === 'forward' ? 'VideoPlayerHoldForward' : 'VideoPlayerHoldBackward');
+    if (videoElem) {
+        videoElem.playbackRate = 1;
+        videoElem.pause();
     }
 
     clearHoldTimer();
     holdTimer = setTimeout(() => {
         holdConsumedClick = true;
-        if (mode === 'forward') {
-            if (videoElem) videoElem.playbackRate = 0.5;
-            setPlayback(true, 'VideoPlayerHoldForward');
-            return;
-        }
-
-        setPlayback(false, 'VideoPlayerHoldBackward');
+        setPlayback(false, mode === 'forward' ? 'VideoPlayerHoldForward' : 'VideoPlayerHoldBackward');
         const fps = videoDecoder?.frameRate || parseFloat($curVideo?.duration?.fps ?? '24') || 24;
-        const intervalMs = Math.max(30, Math.round(2000 / fps)); // ~0.5x reverse
+        const intervalMs = Math.max(30, Math.round(2000 / fps)); // ~0.5x shuttle
+        const stepDir = mode === 'forward' ? 1 : -1;
         holdInterval = setInterval(async () => {
             if (holdStepBusy) return;
             holdStepBusy = true;
             try {
-                await step_video(-1);
+                await step_video(stepDir);
             } finally {
                 holdStepBusy = false;
             }
@@ -957,7 +950,7 @@ function stopHold(clearConsumed = true) {
         holdInterval = undefined;
     }
 
-    if (holdMode === 'forward' && holdConsumedClick) {
+    if (holdConsumedClick) {
         if (videoElem) {
             videoElem.playbackRate = 1;
             videoElem.pause();
