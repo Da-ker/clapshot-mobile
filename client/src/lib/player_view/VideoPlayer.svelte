@@ -1398,7 +1398,7 @@ function handlePinClick(id: string) {
 
 				<button
 					type="button"
-					class="absolute right-3 md:right-4 bottom-8 md:bottom-9 p-0 bg-white/28 text-white inline-grid place-items-center leading-none pointer-events-auto shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:bg-white/35 active:scale-95 transition overflow-hidden"
+					class="absolute right-3 md:right-4 bottom-4 md:bottom-5 p-0 bg-white/28 text-white inline-grid place-items-center leading-none pointer-events-auto shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:bg-white/35 active:scale-95 transition overflow-hidden"
 					style="width:30px;height:30px;min-width:30px;min-height:30px;max-width:30px;max-height:30px;border-radius:9999px;"
 					onclick={(e) => { e.stopPropagation(); enterSystemFullscreen(); }}
 					aria-label="Fullscreen"
