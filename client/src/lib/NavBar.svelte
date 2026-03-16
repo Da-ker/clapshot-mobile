@@ -134,7 +134,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 
 </script>
 
-<nav class="px-3 sm:px-5 py-1 sm:py-1.5 rounded bg-gray-900/90 backdrop-blur-sm">
+<nav class="relative z-[120] px-3 sm:px-5 py-1 sm:py-1.5 rounded bg-gray-900/90 backdrop-blur-sm">
 
 	<div class="flex items-center gap-2 sm:gap-3 flex-wrap md:flex-nowrap min-w-0">
 
@@ -169,7 +169,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 				</button>
 
 				{#if !isMobileViewport}
-					<Dropdown class="w-64 text-sm clapshot-dropdown media-dropdown z-50" triggeredBy="#media-menu-button">
+					<Dropdown class="w-64 text-sm clapshot-dropdown media-dropdown z-[130]" triggeredBy="#media-menu-button">
 						<DropdownItem onclick={copyToClipboard}><i class="fas fa-share-square"></i> {$t('nav.shareToLoggedInUsers')}</DropdownItem>
 						{#if $curVideo?.origUrl}
 							<DropdownItem title="Download original file"><a href={$curVideo?.origUrl} download><i class="fas fa-download"></i> {$t('nav.downloadOriginal')}</a></DropdownItem>
@@ -184,7 +184,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 							<i class="fas fa-cog"></i> {$t('nav.experimentalTools')}
 							<ChevronRightOutline class="w-6 h-6 ms-2 float-right" />
 						</DropdownItem>
-						<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown media-dropdown z-50">
+						<Dropdown placement="right-start" class="w-64 text-sm clapshot-dropdown media-dropdown z-[140]">
 							<DropdownItem onclick={() => isEDLImportOpen = true}><i class="fas fa-file-import"></i> {$t('nav.importEdl')}</DropdownItem>
 							<DropdownItem onclick={() => isExportOpen = true}><i class="fas fa-file-export"></i> {$t('nav.exportComments')}</DropdownItem>
 						</Dropdown>
