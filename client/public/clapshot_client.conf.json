@@ -1,6 +1,6 @@
 {
-    "ws_url": "wss://www.banchi.top:1818/api/ws",
-    "upload_url": "https://www.banchi.top:1818/api/upload",
+    "ws_url": "wss://rev.banchi.top:1818/api/ws",
+    "upload_url": "https://rev.banchi.top:1818/api/upload",
     "user_menu_extra_items": [
         { "label": "My Videos", "type": "url", "data": "/"}
     ],
