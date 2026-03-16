@@ -30,7 +30,7 @@ let videoReviewRootEl: HTMLDivElement | undefined = $state();
 let videoPanelEl: HTMLDivElement | undefined = $state();
 let mobileCommentInputHeight = $state(88);
 let commentsTopPx = $state(0);
-const COMMENT_VIDEO_GAP_PX = 12;
+const COMMENT_VIDEO_GAP_PX = 8;
 let debugLayout: boolean = false;
 let uiConnectedState: boolean = $state(false); // true if UI should look like we're connected to the server
 
@@ -1391,7 +1391,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 </div>
             </div>
             <!-- Video stays centered as primary focus -->
-            <div class="mt-2 h-auto md:h-[calc(100%-1.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
+            <div class="mt-[10px] h-auto md:h-[calc(100%-1.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
                 <div bind:this={videoPanelEl} class="w-full max-w-[1400px] rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)]">
                     <VideoPlayer
                         bind:this={videoPlayer} src={$curVideo.playbackUrl}
