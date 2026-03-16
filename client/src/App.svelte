@@ -1349,8 +1349,8 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
         <!-- ========== video review widgets ============= -->
         <div class="relative h-full min-h-0 overflow-hidden">
-            <div class="px-2 md:px-6 pt-2 pb-1">
-                <div class="rounded-xl bg-slate-900/55 px-2.5 md:px-3 py-2 backdrop-blur-sm">
+            <div class="px-2 md:px-6 pt-1.5 pb-0.5">
+                <div class="rounded-xl bg-slate-900/55 px-2.5 md:px-3 py-1 backdrop-blur-sm">
                     <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
                         <span class="top-left-controls inline-flex flex-[0_1_70%] md:flex-[0_1_74%] items-center rounded-lg bg-slate-800/60 px-2 py-1.5 text-slate-100 font-mono text-sm md:text-base min-w-0">
                             <input class="top-timecode-input bg-transparent rounded px-1 w-[13ch] md:w-[14ch] min-w-[13ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
