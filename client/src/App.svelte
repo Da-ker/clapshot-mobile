@@ -1408,7 +1408,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
             <!-- Floating comments panel -->
             <div
                 class="absolute z-20 left-1/2 -translate-x-1/2 md:translate-x-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-[26rem] md:max-w-none md:left-auto md:right-4 top-[var(--comments-top-px,52dvh)] bottom-[calc(var(--mobile-comment-input-h,88px)+env(safe-area-inset-bottom))] md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'}"
-                style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --comments-top-px: {commentsTopPx}px; --comment-video-gap: {COMMENT_VIDEO_GAP_PX}px;"
+                style="--mobile-comment-input-h: 56px; --comments-top-px: {commentsTopPx}px; --comment-video-gap: {COMMENT_VIDEO_GAP_PX}px;"
             >
                 <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                     <div class="hidden md:flex justify-end">
