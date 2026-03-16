@@ -1405,7 +1405,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     {:else}
                         <div class="text-sm text-slate-400 px-2 py-4">No comments yet</div>
                     {/if}
-                    <div class="h-[calc(var(--mobile-comment-input-h,88px)*0.32)] min-h-6 md:h-0 md:min-h-0"></div>
+                    <div class="h-0 min-h-0 md:h-0 md:min-h-0"></div>
                 </div>
 
 
