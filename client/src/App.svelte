@@ -1349,7 +1349,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
         <!-- ========== video review widgets ============= -->
         <div class="relative h-full min-h-0 overflow-hidden">
-            <div class="px-2 md:px-6 pt-2 pb-1">
+            <div class="px-2 md:px-6 pt-2 pb-0">
                 <div class="rounded-xl bg-slate-900/55 px-2.5 md:px-3 py-[2px] backdrop-blur-sm">
                     <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
                         <span class="top-left-controls inline-flex flex-[0_1_70%] md:flex-[0_1_74%] items-center rounded-lg bg-slate-800/60 px-2 py-[2px] text-slate-100 font-mono text-sm md:text-base min-w-0">
@@ -1365,7 +1365,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 </div>
             </div>
             <!-- Video stays centered as primary focus -->
-            <div class="h-auto md:h-[calc(100%-1.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
+            <div class="mt-2 h-auto md:h-[calc(100%-1.5rem)] w-full flex items-center justify-center px-2 md:px-6 pb-0">
                 <div class="w-full max-w-[1400px] rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)]">
                     <VideoPlayer
                         bind:this={videoPlayer} src={$curVideo.playbackUrl}
