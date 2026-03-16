@@ -1384,7 +1384,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 class="relative md:absolute z-20 left-1/2 -translate-x-1/2 md:translate-x-0 w-[calc(100%-1rem)] max-w-[1400px] md:w-[26rem] md:max-w-none md:left-auto md:right-4 mt-2 md:mt-0 bottom-auto md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] h-[min(44dvh,var(--mobile-comment-max-h))] max-h-[min(44dvh,var(--mobile-comment-max-h))] md:h-auto md:max-h-none flex flex-col overflow-hidden rounded-t-2xl md:rounded-xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 mb-[calc(var(--mobile-comment-input-h,88px)+env(safe-area-inset-bottom))] md:mb-0 {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'} {commentsPanelMode === 'full' ? 'md:max-h-[85vh]' : ''}"
                 style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --mobile-comment-max-h: calc(100dvh - var(--mobile-comment-input-h,88px) - env(safe-area-inset-bottom) - 0.75rem);"
             >
-                <div class="relative h-5 px-3" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
+                <div class="relative h-4 px-3" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                     <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
                         <div class="h-1 w-10 rounded-full bg-slate-400/45"></div>
                     </div>
