@@ -134,7 +134,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 
 </script>
 
-<nav class="relative z-[120] px-3 sm:px-5 py-1 sm:py-1.5 rounded bg-gray-900/90 backdrop-blur-sm">
+<nav class="relative z-[120] px-3 sm:px-5 md:px-6 py-1 sm:py-1.5 md:py-2 rounded bg-gray-900/90 backdrop-blur-sm">
 
 	<div class="flex items-center gap-2 sm:gap-3 flex-wrap md:flex-nowrap min-w-0">
 
@@ -151,7 +151,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 			<div class="inline-flex items-center gap-2 sm:gap-3 min-w-0 text-gray-400">
 				<div class="min-w-0 text-center pt-1 sm:pt-1.5">
 					<h2 class="text-sm sm:text-base min-w-0 text-gray-200 font-semibold truncate leading-none">{$curVideo?.title || $mediaFileId}</h2>
-					<span class="text-[9px] sm:text-[10px] truncate font-mono text-gray-500 leading-none">ID: {$mediaFileId}</span>
+					<span class="text-[9px] sm:text-[10px] truncate font-mono text-gray-500 leading-none">{$mediaFileId}</span>
 					{#if videoProgressMsg}
 						<div class="text-cyan-800 text-[11px] text-center">{videoProgressMsg}</div>
 					{/if}

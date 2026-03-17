@@ -1442,7 +1442,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
             </div>
 
-            <div bind:this={commentInputDockEl} class="fixed md:static inset-x-0 mx-auto w-full max-w-[1400px] px-2 md:px-0 md:w-auto md:max-w-none md:inset-x-auto md:left-auto md:right-auto bottom-[max(0px,env(safe-area-inset-bottom))] md:bottom-auto z-40 pt-0 pb-2 rounded-t-xl md:rounded-none bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)] md:shadow-none">
+            <div bind:this={commentInputDockEl} class="fixed md:absolute inset-x-0 mx-auto w-full max-w-[1400px] px-2 md:px-4 md:w-full md:max-w-[1400px] md:left-0 md:right-0 bottom-[max(0px,env(safe-area-inset-bottom))] md:bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 pt-0 pb-2 md:pb-0 rounded-t-xl md:rounded-xl bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)] md:shadow-[0_10px_24px_rgba(0,0,0,0.28)]">
                 <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
             </div>
 
