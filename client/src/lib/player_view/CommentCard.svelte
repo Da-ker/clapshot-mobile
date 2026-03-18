@@ -46,6 +46,10 @@ const maxSwipeRightPx = $derived(canComplete ? SWIPE_ACTION_WIDTH : 0);
 
 const isCompleted = $derived(canComplete && ((comment.comment || '').includes(COMPLETED_TOKEN) || (comment.comment || '').includes(LEGACY_COMPLETED_TOKEN)));
 
+let contextMenuOpen = $state(false);
+let contextMenuX = $state(0);
+let contextMenuY = $state(0);
+
 function stripCompletedToken(text: string): string {
     return (text || '').replace(COMPLETED_TOKEN, '').replace(LEGACY_COMPLETED_TOKEN, '').trim();
 }
@@ -286,6 +290,10 @@ function onCardTouchEnd() {
 }
 
 function onCardClick() {
+    if (contextMenuOpen) {
+        contextMenuOpen = false;
+        return;
+    }
     if (showReply || editing) return;
     if (swipeDidMove) {
         swipeDidMove = false;
@@ -298,8 +306,83 @@ function onCardClick() {
     if (comment.timecode) onTimecodeClick(comment.timecode);
 }
 
+function openContextMenuAt(x: number, y: number) {
+    closeSwipeActions();
+    contextMenuOpen = true;
+    contextMenuX = x;
+    contextMenuY = y;
+}
+
+function onCardPointerDown(e: PointerEvent) {
+    // Right-click should always open comment context menu on pointer-capable devices.
+    if (e.button !== 2) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openContextMenuAt(e.clientX, e.clientY);
+}
+
+function onCardContextMenu(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    openContextMenuAt(e.clientX, e.clientY);
+}
+
+function closeContextMenu() {
+    contextMenuOpen = false;
+}
+
+function onContextReply() {
+    closeContextMenu();
+    replyText = '';
+    showReply = true;
+}
+
+function onContextEdit() {
+    closeContextMenu();
+    editing = true;
+}
+
+function onContextDelete() {
+    closeContextMenu();
+    onClickDeleteComment();
+}
+
+function onContextComplete() {
+    closeContextMenu();
+    onClickToggleComplete();
+}
+
+function onGlobalPointerDownForContextMenu(e: MouseEvent) {
+    if (!contextMenuOpen) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest?.('[data-comment-context-menu="1"]')) return;
+    closeContextMenu();
+}
+
 
 </script>
+
+<svelte:window onmousedown={onGlobalPointerDownForContextMenu} onscroll={closeContextMenu} onblur={closeContextMenu} />
+
+{#if contextMenuOpen}
+<div
+    data-comment-context-menu="1"
+    class="fixed z-[350] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
+    style="left: {contextMenuX}px; top: {contextMenuY}px;"
+    onclick={(e) => e.stopPropagation()}
+>
+    {#if canComplete}
+        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-teal-300" onclick={onContextComplete}>{isCompleted ? '取消完成' : '完成'}</button>
+    {/if}
+    <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-sky-300" onclick={onContextReply}>{$t('comments.reply')}</button>
+    {#if canEdit}
+        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-amber-300" onclick={onContextEdit}>{$t('comments.edit')}</button>
+    {/if}
+    {#if canDelete}
+        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-red-300" onclick={onContextDelete}>{$t('comments.deleteShort')}</button>
+    {/if}
+</div>
+{/if}
 
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
 <div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {isCompleted ? 'border-orange-600/80 bg-orange-950/35' : (indent > 0 ? 'border-slate-700/80 bg-slate-900/35 border-l-[3px] border-l-slate-500/80' : 'border-slate-700/60')}">
@@ -342,8 +425,10 @@ function onCardClick() {
         ontouchend={onCardTouchEnd}
         ontouchcancel={onCardTouchEnd}
         onclick={onCardClick}
+        onpointerdown={onCardPointerDown}
+        oncontextmenu={onCardContextMenu}
         onkeydown={(e) => {
-            if (e.key == "Escape") { editing = false; closeSwipeActions(); }
+            if (e.key == "Escape") { editing = false; closeSwipeActions(); closeContextMenu(); }
             else if (e.key == "Enter") { onCardClick(); }
         }}
     >
