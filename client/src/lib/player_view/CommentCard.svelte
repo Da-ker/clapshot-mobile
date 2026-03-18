@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { flushSync } from 'svelte';
+    import { flushSync, tick } from 'svelte';
 
 
 import { scale } from "svelte/transition";
@@ -49,6 +49,7 @@ const isCompleted = $derived(canComplete && ((comment.comment || '').includes(CO
 let contextMenuOpen = $state(false);
 let contextMenuX = $state(0);
 let contextMenuY = $state(0);
+let contextMenuEl: HTMLDivElement | null = $state(null);
 let debugContextHint = $state('');
 let debugContextHintTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -317,12 +318,27 @@ function showDebugContextHint(msg: string) {
     }, 1800);
 }
 
-function openContextMenuAt(x: number, y: number) {
+async function openContextMenuAt(x: number, y: number) {
     closeSwipeActions();
+
+    const margin = 8;
+    const fallbackW = 168;
+    const fallbackH = 176;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
+
     contextMenuOpen = true;
-    contextMenuX = x;
-    contextMenuY = y;
-    showDebugContextHint(`context menu opened @ ${Math.round(x)},${Math.round(y)}`);
+    contextMenuX = vw > 0 ? Math.max(margin, Math.min(x, vw - fallbackW - margin)) : x;
+    contextMenuY = vh > 0 ? Math.max(margin, Math.min(y, vh - fallbackH - margin)) : y;
+
+    await tick();
+    if (contextMenuEl && vw > 0 && vh > 0) {
+        const rect = contextMenuEl.getBoundingClientRect();
+        contextMenuX = Math.max(margin, Math.min(contextMenuX, vw - rect.width - margin));
+        contextMenuY = Math.max(margin, Math.min(contextMenuY, vh - rect.height - margin));
+    }
+
+    showDebugContextHint(`context menu opened @ ${Math.round(contextMenuX)},${Math.round(contextMenuY)}`);
 }
 
 function onCardPointerDown(e: PointerEvent) {
@@ -343,6 +359,7 @@ function onCardContextMenu(e: MouseEvent) {
 
 function closeContextMenu() {
     contextMenuOpen = false;
+    contextMenuEl = null;
 }
 
 function onContextReply() {
@@ -388,6 +405,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 
 {#if contextMenuOpen}
 <div
+    bind:this={contextMenuEl}
     data-comment-context-menu="1"
     class="fixed z-[350] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
     style="left: {contextMenuX}px; top: {contextMenuY}px;"
