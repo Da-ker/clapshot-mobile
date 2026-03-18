@@ -534,11 +534,16 @@ function onOverlaySurfaceTap(event: Event) {
     const mouseEvent = event as MouseEvent;
     event.stopPropagation();
 
-    // Desktop-only requirement: disable single-click show/hide in video region.
+    // Desktop-only behavior: single click toggles play/pause.
     if (isDesktopPointerClick(mouseEvent)) {
         if (mouseEvent.detail > 1) {
             cancelPendingSingleSurfaceTap();
+            return;
         }
+        scheduleSingleSurfaceTap(() => {
+            if (Date.now() < suppressClickUntil) return;
+            togglePlay();
+        });
         return;
     }
 
@@ -573,11 +578,16 @@ function onPlayerSurfaceTap(event: Event) {
     const mouseEvent = event as MouseEvent;
     event.stopPropagation();
 
-    // Desktop-only requirement: disable single-click show/hide in video region.
+    // Desktop-only behavior: single click toggles play/pause.
     if (isDesktopPointerClick(mouseEvent)) {
         if (mouseEvent.detail > 1) {
             cancelPendingSingleSurfaceTap();
+            return;
         }
+        scheduleSingleSurfaceTap(() => {
+            if (Date.now() < suppressClickUntil) return;
+            togglePlay();
+        });
         return;
     }
 
@@ -706,6 +716,19 @@ function clickOnVideo(event: MouseEvent ) {
 
         if (event.detail > 1) {
             cancelPendingSingleSurfaceTap();
+            return;
+        }
+
+        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
+        if (isDesktop) {
+            const willPlay = paused;
+            suppressClickUntil = Date.now() + 260;
+            togglePlay();
+            if (willPlay) {
+                showOverlay(true);
+            } else {
+                showOverlay(false);
+            }
             return;
         }
 
