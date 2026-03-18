@@ -505,7 +505,7 @@ function toggleOverlayVisibility() {
     }
 }
 
-function scheduleSingleSurfaceTap(action: () => void) {
+function scheduleSingleSurfaceTap(action: () => void, delayMs: number = 240) {
     if (pendingSurfaceTapTimer) {
         clearTimeout(pendingSurfaceTapTimer);
         pendingSurfaceTapTimer = null;
@@ -513,7 +513,7 @@ function scheduleSingleSurfaceTap(action: () => void) {
     pendingSurfaceTapTimer = setTimeout(() => {
         pendingSurfaceTapTimer = null;
         action();
-    }, 240);
+    }, delayMs);
 }
 
 function cancelPendingSingleSurfaceTap() {
@@ -543,7 +543,7 @@ function onOverlaySurfaceTap(event: Event) {
         scheduleSingleSurfaceTap(() => {
             if (Date.now() < suppressClickUntil) return;
             togglePlay();
-        });
+        }, 110);
         return;
     }
 
@@ -587,7 +587,7 @@ function onPlayerSurfaceTap(event: Event) {
         scheduleSingleSurfaceTap(() => {
             if (Date.now() < suppressClickUntil) return;
             togglePlay();
-        });
+        }, 110);
         return;
     }
 
