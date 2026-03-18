@@ -49,6 +49,8 @@ const isCompleted = $derived(canComplete && ((comment.comment || '').includes(CO
 let contextMenuOpen = $state(false);
 let contextMenuX = $state(0);
 let contextMenuY = $state(0);
+let debugContextHint = $state('');
+let debugContextHintTimer: ReturnType<typeof setTimeout> | null = null;
 
 function stripCompletedToken(text: string): string {
     return (text || '').replace(COMPLETED_TOKEN, '').replace(LEGACY_COMPLETED_TOKEN, '').trim();
@@ -306,22 +308,34 @@ function onCardClick() {
     if (comment.timecode) onTimecodeClick(comment.timecode);
 }
 
+function showDebugContextHint(msg: string) {
+    debugContextHint = msg;
+    if (debugContextHintTimer) clearTimeout(debugContextHintTimer);
+    debugContextHintTimer = setTimeout(() => {
+        debugContextHint = '';
+        debugContextHintTimer = null;
+    }, 1800);
+}
+
 function openContextMenuAt(x: number, y: number) {
     closeSwipeActions();
     contextMenuOpen = true;
     contextMenuX = x;
     contextMenuY = y;
+    showDebugContextHint(`context menu opened @ ${Math.round(x)},${Math.round(y)}`);
 }
 
 function onCardPointerDown(e: PointerEvent) {
     // Right-click should always open comment context menu on pointer-capable devices.
     if (e.button !== 2) return;
+    showDebugContextHint(`pointerdown right-button on comment ${comment.id.slice(0, 6)}`);
     e.preventDefault();
     e.stopPropagation();
     openContextMenuAt(e.clientX, e.clientY);
 }
 
 function onCardContextMenu(e: MouseEvent) {
+    showDebugContextHint(`contextmenu event on comment ${comment.id.slice(0, 6)}`);
     e.preventDefault();
     e.stopPropagation();
     openContextMenuAt(e.clientX, e.clientY);
@@ -365,6 +379,12 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 </script>
 
 <svelte:window onmousedown={onGlobalPointerDownForContextMenu} onscroll={closeContextMenu} onblur={closeContextMenu} />
+
+{#if debugContextHint}
+<div class="fixed right-4 top-4 z-[500] rounded-md border border-lime-400/40 bg-black/80 px-3 py-1.5 text-xs text-lime-300 shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
+    {debugContextHint}
+</div>
+{/if}
 
 {#if contextMenuOpen}
 <div
