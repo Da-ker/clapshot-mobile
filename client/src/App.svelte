@@ -1342,7 +1342,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 <main>
     <span id="popup-container"></span>
     <div class="safe-area-pad box-border flex flex-col bg-[#101016] w-full h-[100dvh] overflow-hidden {debugLayout?'border-2 border-yellow-300':''}">
-        <div class="w-full md:max-w-[1400px] md:mx-auto md:left-auto md:right-auto"><NavBar onbasicauthlogout={basicAuthLogout} onaddcomments={onAddCommentsBulk}/></div>
+        <div class="flex-none w-full"><NavBar onbasicauthlogout={basicAuthLogout} onaddcomments={onAddCommentsBulk}/></div>
         <div class="flex-grow w-full min-h-0 {$mediaFileId && $curVideo && $curVideo.playbackUrl ? 'overflow-hidden' : 'overflow-auto overflow-x-hidden'} {debugLayout?'border-2 border-cyan-300':''}">
             <Notifications />
 
@@ -1411,7 +1411,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
                     <div
                         data-comments-panel="1"
-                        class="absolute z-20 inset-x-0 mx-auto w-full max-w-[1400px] px-2 top-[var(--comments-top-px)] bottom-[calc(var(--mobile-comment-input-h)+env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 md:static md:inset-auto md:mx-0 md:w-full md:max-w-none md:h-[calc(100dvh-220px)] md:rounded-xl md:px-0 md:top-auto md:bottom-auto {commentsPanelOpen ? 'md:translate-y-0 md:opacity-100' : 'md:translate-y-6 md:opacity-0 md:pointer-events-none'}"
+                        class="absolute z-20 inset-x-0 mx-auto w-full max-w-[1400px] px-2 top-[var(--comments-top-px)] bottom-[calc(var(--mobile-comment-input-h)+env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 md:static md:inset-auto md:mx-0 md:w-full md:max-w-none md:h-[calc(100dvh-220px)] md:rounded-xl md:px-0 md:top-auto md:bottom-auto md:translate-y-0 md:opacity-100 md:pointer-events-auto"
                         style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --comments-top-px: {commentsTopPx}px;"
                     >
                         <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
@@ -1441,16 +1441,6 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 </div>
             </div>
 
-            {#if !commentsPanelOpen}
-                <button
-                    class="hidden md:inline-flex absolute z-20 right-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] items-center gap-2 rounded-full bg-[#0c1018]/92 border border-slate-700/80 px-3 py-2 text-sm text-slate-200 shadow-xl"
-                    onclick={() => { commentsPanelOpen = true; commentsPanelMode = 'half'; }}
-                    aria-label="Open comments"
-                >
-                    <i class="fa-regular fa-comments"></i>
-                    <span>Comments ({$allComments.length})</span>
-                </button>
-            {/if}
         </div>
 
         {#if $collabId && !collabDialogAck}

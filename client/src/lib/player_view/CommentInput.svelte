@@ -78,7 +78,7 @@ function onTextChange(e: any) {
 <div class="relative">
     <!-- Color selector -->
     {#if drawMode}
-        <div class="absolute w-full top-[-3.4em] bg-gray-900 h-12 rounded-md flex items-center place-content-center" transition:fade="{{duration: 100}}">
+        <div class="absolute z-[80] w-full top-[-3.4em] bg-gray-900 h-12 rounded-md flex items-center place-content-center" transition:fade="{{duration: 100}}">
             <button
                 type="button"
                 class="border border-gray-600 inline-flex items-center justify-center w-6 h-6 m-2 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500"
