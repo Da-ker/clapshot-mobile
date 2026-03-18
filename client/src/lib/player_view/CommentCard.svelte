@@ -354,6 +354,8 @@ function onContextComplete() {
 
 function onGlobalPointerDownForContextMenu(e: MouseEvent) {
     if (!contextMenuOpen) return;
+    // Ignore right-button down so opening by right click won't be closed immediately.
+    if (e.button === 2) return;
     const target = e.target as HTMLElement | null;
     if (target?.closest?.('[data-comment-context-menu="1"]')) return;
     closeContextMenu();
