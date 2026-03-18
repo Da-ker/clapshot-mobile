@@ -91,6 +91,7 @@ let animationFrameId: number = 0;
 let audio_volume: number | undefined = $state();
 let overlayVisible: boolean = $state(true);
 let overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
+let fullscreenMouseIdleTimer: ReturnType<typeof setTimeout> | null = null;
 let suppressAutoShowOverlayUntil = 0;
 
 
@@ -115,8 +116,16 @@ function clearOverlayHideTimer() {
     }
 }
 
+function clearFullscreenMouseIdleTimer() {
+    if (fullscreenMouseIdleTimer) {
+        clearTimeout(fullscreenMouseIdleTimer);
+        fullscreenMouseIdleTimer = null;
+    }
+}
+
 function hideOverlayQuick() {
     clearOverlayHideTimer();
+    clearFullscreenMouseIdleTimer();
     overlayVisible = false;
 }
 
@@ -136,6 +145,61 @@ function revealOverlayFromHidden() {
     // First tap when hidden: reveal controls only.
     showOverlay(true);
     suppressClickUntil = Date.now() + 260;
+}
+
+function scheduleFullscreenIdleHideFromMouse() {
+    clearFullscreenMouseIdleTimer();
+    if (!isSystemFullscreen) return;
+    fullscreenMouseIdleTimer = setTimeout(() => {
+        overlayVisible = false;
+    }, 1000);
+}
+
+function onVideoRegionMouseMove() {
+    if (isSystemFullscreen) {
+        showOverlay(false);
+        scheduleFullscreenIdleHideFromMouse();
+        return;
+    }
+    showOverlay(false);
+}
+
+function onVideoRegionMouseLeave() {
+    if (isSystemFullscreen) return;
+    hideOverlayQuick();
+}
+
+let isSystemFullscreen = $state(false);
+
+function refreshSystemFullscreenState() {
+    const doc: any = document as any;
+    const fsEl =
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement;
+    const video = videoElem as any;
+    isSystemFullscreen = Boolean(fsEl) || Boolean(video?.webkitDisplayingFullscreen);
+}
+
+async function exitSystemFullscreen() {
+    const doc: any = document as any;
+    try {
+        if (typeof doc.exitFullscreen === 'function') {
+            await doc.exitFullscreen();
+            return;
+        }
+        if (typeof doc.webkitExitFullscreen === 'function') {
+            doc.webkitExitFullscreen();
+            return;
+        }
+        if (typeof doc.webkitCancelFullScreen === 'function') {
+            doc.webkitCancelFullScreen();
+            return;
+        }
+    } catch (err) {
+        console.warn('Failed to exit fullscreen', err);
+    }
 }
 
 async function enterSystemFullscreen() {
@@ -170,6 +234,14 @@ async function enterSystemFullscreen() {
         }
     } catch (err) {
         console.warn('Failed to enter fullscreen', err);
+    }
+}
+
+async function toggleSystemFullscreen() {
+    if (isSystemFullscreen) {
+        await exitSystemFullscreen();
+    } else {
+        await enterSystemFullscreen();
     }
 }
 
@@ -272,6 +344,12 @@ onMount(async () => {
     curSubtitle.subscribe(() => { offsetTextTracks(); });
     animationFrameId = requestAnimationFrame(handleTimeUpdate);
     initializeVolume();
+
+    refreshSystemFullscreenState();
+    document.addEventListener('fullscreenchange', refreshSystemFullscreenState);
+    document.addEventListener('webkitfullscreenchange', refreshSystemFullscreenState as EventListener);
+    (videoElem as any)?.addEventListener?.('webkitbeginfullscreen', refreshSystemFullscreenState);
+    (videoElem as any)?.addEventListener?.('webkitendfullscreen', refreshSystemFullscreenState);
 });
 
 onDestroy(async () => {
@@ -289,6 +367,12 @@ onDestroy(async () => {
         clearTimeout(volumeHudTimer);
         volumeHudTimer = null;
     }
+    clearFullscreenMouseIdleTimer();
+
+    document.removeEventListener('fullscreenchange', refreshSystemFullscreenState);
+    document.removeEventListener('webkitfullscreenchange', refreshSystemFullscreenState as EventListener);
+    (videoElem as any)?.removeEventListener?.('webkitbeginfullscreen', refreshSystemFullscreenState);
+    (videoElem as any)?.removeEventListener?.('webkitendfullscreen', refreshSystemFullscreenState);
 
     try {
         volumeMediaSource?.disconnect();
@@ -1328,7 +1412,7 @@ function handlePinClick(id: string) {
 
 	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
 			 style="{debug_layout?'border: 2px solid orange;':''}">
-		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap}>
+		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap} onmouseenter={onVideoRegionMouseMove} onmousemove={onVideoRegionMouseMove} onmouseleave={onVideoRegionMouseLeave}>
 			<video
 				transition:scale
 				src="{src}"
@@ -1400,10 +1484,11 @@ function handlePinClick(id: string) {
 					type="button"
 					class="absolute right-3 md:right-4 bottom-7 md:bottom-8 p-0 bg-white/28 text-white inline-grid place-items-center leading-none pointer-events-auto shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:bg-white/35 active:scale-95 transition overflow-hidden"
 					style="width:30px;height:30px;min-width:30px;min-height:30px;max-width:30px;max-height:30px;border-radius:9999px;"
-					onclick={(e) => { e.stopPropagation(); enterSystemFullscreen(); }}
-					aria-label="Fullscreen"
+					onclick={(e) => { e.stopPropagation(); toggleSystemFullscreen(); }}
+					aria-label={isSystemFullscreen ? "Exit fullscreen" : "Fullscreen"}
+					title={isSystemFullscreen ? "Exit fullscreen" : "Fullscreen"}
 				>
-					<i class="fa-solid fa-up-right-and-down-left-from-center text-[13px] leading-none"></i>
+					<i class="fa-solid {isSystemFullscreen ? 'fa-down-left-and-up-right-to-center' : 'fa-up-right-and-down-left-from-center'} text-[13px] leading-none"></i>
 				</button>
 
 				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">

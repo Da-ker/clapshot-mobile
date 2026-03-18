@@ -30,6 +30,7 @@ let videoReviewRootEl: HTMLDivElement | undefined = $state();
 let videoPanelEl: HTMLDivElement | undefined = $state();
 let mobileCommentInputHeight = $state(88);
 let commentsTopPx = $state(0);
+let desktopCommentsHeight = $state(0);
 const LAYOUT_SECTION_GAP_PX = 8;
 let debugLayout: boolean = false;
 let uiConnectedState: boolean = $state(false); // true if UI should look like we're connected to the server
@@ -311,6 +312,13 @@ function updateCommentsTop() {
     commentsTopPx = Math.max(0, Math.round(panelRect.bottom - rootRect.top + LAYOUT_SECTION_GAP_PX));
 }
 
+function updateDesktopCommentsHeight() {
+    if (!videoPanelEl || !commentInputDockEl) return;
+    const panelTop = videoPanelEl.getBoundingClientRect().top;
+    const inputBottom = commentInputDockEl.getBoundingClientRect().bottom;
+    desktopCommentsHeight = Math.max(0, Math.round(inputBottom - panelTop));
+}
+
 $effect(() => {
     if (!commentInputDockEl) return;
     updateMobileCommentInputHeight();
@@ -335,6 +343,21 @@ $effect(() => {
         ro.disconnect();
         window.removeEventListener('resize', updateCommentsTop);
         window.visualViewport?.removeEventListener('resize', updateCommentsTop);
+    };
+});
+
+$effect(() => {
+    if (!videoPanelEl || !commentInputDockEl) return;
+    updateDesktopCommentsHeight();
+    const ro = new ResizeObserver(() => updateDesktopCommentsHeight());
+    ro.observe(videoPanelEl);
+    ro.observe(commentInputDockEl);
+    window.addEventListener('resize', updateDesktopCommentsHeight);
+    window.visualViewport?.addEventListener('resize', updateDesktopCommentsHeight);
+    return () => {
+        ro.disconnect();
+        window.removeEventListener('resize', updateDesktopCommentsHeight);
+        window.visualViewport?.removeEventListener('resize', updateDesktopCommentsHeight);
     };
 });
 
@@ -1375,7 +1398,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
 
         <!-- ========== video review widgets ============= -->
         <div bind:this={videoReviewRootEl} class="relative h-full min-h-0 overflow-hidden">
-            <div class="px-2 md:px-6 pt-2 pb-0">
+            <div class="px-2 md:hidden pt-2 pb-0">
                 <div class="rounded-xl bg-slate-900/55 px-2.5 md:px-3 py-[2px] backdrop-blur-sm">
                     <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
                         <span class="top-left-controls inline-flex flex-[0_1_70%] md:flex-[0_1_74%] items-center rounded-lg bg-slate-800/60 px-2 py-[2px] text-slate-100 font-mono text-sm md:text-base min-w-0">
@@ -1391,7 +1414,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 </div>
             </div>
             <div class="w-full px-2 md:px-6 pb-0" style="margin-top: {LAYOUT_SECTION_GAP_PX}px;" data-video-stack>
-                <div class="w-full max-w-[1400px] mx-auto md:grid md:grid-cols-[minmax(0,1fr)_26rem] md:gap-6 md:items-start">
+                <div class="w-full max-w-[1400px] mx-auto md:w-[min(97vw,1680px)] md:max-w-none md:grid md:grid-cols-[minmax(0,calc((100dvh-220px)*16/9))_clamp(260px,28vw,400px)] md:gap-[20px] md:items-stretch md:justify-center">
                     <div class="min-w-0">
                         <div bind:this={videoPanelEl} class="w-full rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)]">
                             <VideoPlayer
@@ -1404,15 +1427,31 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                             />
                         </div>
 
-                        <div bind:this={commentInputDockEl} class="fixed inset-x-0 bottom-[max(0px,env(safe-area-inset-bottom))] md:static md:mt-3 md:w-full md:max-w-none md:mx-0 md:left-auto md:right-auto md:bottom-0 md:shadow-[0_-10px_24px_rgba(0,0,0,0.28)] z-30 pt-0 pb-2 rounded-t-xl md:rounded-xl bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)]">
+                        <div class="hidden md:block mt-2">
+                            <div class="rounded-xl bg-slate-900/55 px-2.5 py-[6px] backdrop-blur-sm">
+                                <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm min-w-0">
+                                    <span class="top-left-controls inline-flex flex-1 items-center rounded-lg bg-slate-800/60 px-2 py-[2px] text-slate-100 font-mono text-sm min-w-0">
+                                        <input class="top-timecode-input bg-transparent rounded px-1 w-[13ch] min-w-[13ch] shrink-0 tabular-nums" value={topTimecode} onchange={onTopTimecodeEdited} />
+                                        <span class="top-fr-group inline-flex items-center gap-1.5 ml-5 shrink-0">
+                                            <span class="text-slate-300 text-xs shrink-0">FR</span>
+                                            <input class="top-frame-input bg-transparent rounded px-1 w-[5ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
+                                        </span>
+                                    </span>
+                                    <span class="rounded-lg bg-slate-800/55 px-2 py-[2px] text-slate-200 ml-auto shrink-0 text-sm font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
+                                    <span class="rounded-lg bg-slate-800/55 px-2 py-[2px] text-slate-200 shrink-0 text-sm font-semibold">{$curVideo?.duration?.fps ?? '-'} fps</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div bind:this={commentInputDockEl} class="fixed inset-x-0 bottom-[max(0px,env(safe-area-inset-bottom))] md:static md:mt-2 md:w-full md:max-w-none md:mx-auto md:left-auto md:right-auto md:bottom-0 md:shadow-[0_-10px_24px_rgba(0,0,0,0.28)] z-30 pt-0 pb-2 rounded-t-xl md:rounded-xl bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)]">
                             <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
                         </div>
                     </div>
 
                     <div
                         data-comments-panel="1"
-                        class="absolute z-20 inset-x-0 mx-auto w-full max-w-[1400px] px-2 top-[var(--comments-top-px)] bottom-[calc(var(--mobile-comment-input-h)+env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 md:static md:inset-auto md:mx-0 md:w-full md:max-w-none md:h-[calc(100dvh-220px)] md:rounded-xl md:px-0 md:top-auto md:bottom-auto md:translate-y-0 md:opacity-100 md:pointer-events-auto"
-                        style="--mobile-comment-input-h: {mobileCommentInputHeight}px; --comments-top-px: {commentsTopPx}px;"
+                        class="absolute z-20 inset-x-0 mx-auto w-full max-w-[1400px] px-2 top-[var(--comments-top-px)] bottom-[calc(var(--mobile-comment-input-h)+env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 md:static md:inset-auto md:mx-0 md:w-full md:max-w-none md:h-[var(--desktop-comments-h)] md:rounded-xl md:px-0 md:top-auto md:bottom-auto md:translate-y-0 md:opacity-100 md:pointer-events-auto"
+                        style="--mobile-comment-input-h: 56px; --comments-top-px: {commentsTopPx}px; --desktop-comments-h: {desktopCommentsHeight}px;"
                     >
                         <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                             <div class="hidden md:flex justify-end">
