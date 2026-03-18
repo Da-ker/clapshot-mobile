@@ -403,27 +403,6 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 </div>
 {/if}
 
-{#if contextMenuOpen}
-<div
-    bind:this={contextMenuEl}
-    data-comment-context-menu="1"
-    class="fixed z-[350] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
-    style="left: {contextMenuX}px; top: {contextMenuY}px;"
-    onclick={(e) => e.stopPropagation()}
->
-    {#if canComplete}
-        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-teal-300" onclick={onContextComplete}>{isCompleted ? '取消完成' : '完成'}</button>
-    {/if}
-    <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-sky-300" onclick={onContextReply}>{$t('comments.reply')}</button>
-    {#if canEdit}
-        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-amber-300" onclick={onContextEdit}>{$t('comments.edit')}</button>
-    {/if}
-    {#if canDelete}
-        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-red-300" onclick={onContextDelete}>{$t('comments.deleteShort')}</button>
-    {/if}
-</div>
-{/if}
-
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
 <div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {isCompleted ? 'border-orange-600/80 bg-orange-950/35' : (indent > 0 ? 'border-slate-700/80 bg-slate-900/35 border-l-[3px] border-l-slate-500/80' : 'border-slate-700/60')}">
     {#if canComplete}
@@ -472,6 +451,25 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
             else if (e.key == "Enter") { onCardClick(); }
         }}
     >
+        {#if contextMenuOpen}
+        <div
+            bind:this={contextMenuEl}
+            data-comment-context-menu="1"
+            class="absolute right-2 top-2 z-[220] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
+            onclick={(e) => e.stopPropagation()}
+        >
+            {#if canComplete}
+                <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-teal-300" onclick={onContextComplete}>{isCompleted ? '取消完成' : '完成'}</button>
+            {/if}
+            <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-sky-300" onclick={onContextReply}>{$t('comments.reply')}</button>
+            {#if canEdit}
+                <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-amber-300" onclick={onContextEdit}>{$t('comments.edit')}</button>
+            {/if}
+            {#if canDelete}
+                <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-red-300" onclick={onContextDelete}>{$t('comments.deleteShort')}</button>
+            {/if}
+        </div>
+        {/if}
 
         <div class="flex items-start px-2.5 py-2 min-w-0 gap-2" lang="en">
             <div class="flex-none w-8 h-8 md:w-8 md:h-8 block"><Avatar username={comment.userId || comment.usernameIfnull}/></div>
