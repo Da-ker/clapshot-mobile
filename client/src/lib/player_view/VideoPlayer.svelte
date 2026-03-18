@@ -534,6 +534,14 @@ function onOverlaySurfaceTap(event: Event) {
     const mouseEvent = event as MouseEvent;
     event.stopPropagation();
 
+    // Desktop-only requirement: disable single-click show/hide in video region.
+    if (isDesktopPointerClick(mouseEvent)) {
+        if (mouseEvent.detail > 1) {
+            cancelPendingSingleSurfaceTap();
+        }
+        return;
+    }
+
     if (mouseEvent.detail > 1) {
         cancelPendingSingleSurfaceTap();
         return;
@@ -564,6 +572,14 @@ function onPlayerSurfaceTap(event: Event) {
     }
     const mouseEvent = event as MouseEvent;
     event.stopPropagation();
+
+    // Desktop-only requirement: disable single-click show/hide in video region.
+    if (isDesktopPointerClick(mouseEvent)) {
+        if (mouseEvent.detail > 1) {
+            cancelPendingSingleSurfaceTap();
+        }
+        return;
+    }
 
     if (mouseEvent.detail > 1) {
         cancelPendingSingleSurfaceTap();
