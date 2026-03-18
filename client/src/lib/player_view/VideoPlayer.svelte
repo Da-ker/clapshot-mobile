@@ -93,6 +93,7 @@ let overlayVisible: boolean = $state(true);
 let overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
 let fullscreenMouseIdleTimer: ReturnType<typeof setTimeout> | null = null;
 let suppressAutoShowOverlayUntil = 0;
+let desktopMouseWakeLocked = false;
 
 
 function initializeVolume() {
@@ -129,10 +130,18 @@ function hideOverlayQuick() {
     overlayVisible = false;
 }
 
+function hideOverlayByDesktopClick() {
+    hideOverlayQuick();
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches) {
+        desktopMouseWakeLocked = true;
+    }
+}
+
 function showOverlay(autoHide: boolean = true) {
     // Any explicit request to show controls should cancel review-mode auto-hide suppression.
     suppressAutoShowOverlayUntil = 0;
     overlayVisible = true;
+    desktopMouseWakeLocked = false;
     clearOverlayHideTimer();
     if (autoHide && !paused) {
         overlayHideTimer = setTimeout(() => {
@@ -156,6 +165,7 @@ function scheduleFullscreenIdleHideFromMouse() {
 }
 
 function onVideoRegionMouseMove() {
+    if (desktopMouseWakeLocked) return;
     if (isSystemFullscreen) {
         showOverlay(false);
         scheduleFullscreenIdleHideFromMouse();
@@ -165,6 +175,7 @@ function onVideoRegionMouseMove() {
 }
 
 function onVideoRegionMouseLeave() {
+    desktopMouseWakeLocked = false;
     if (isSystemFullscreen) return;
     hideOverlayQuick();
 }
@@ -247,7 +258,19 @@ async function toggleSystemFullscreen() {
 
 $effect(() => {
     if (!paused) {
-        // New UX rule: once playback starts, hide controls immediately.
+        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
+        if (isDesktop) {
+            // Desktop: keep controls visible briefly, then auto-hide.
+            if (Date.now() < suppressAutoShowOverlayUntil) {
+                clearOverlayHideTimer();
+                overlayVisible = false;
+                return;
+            }
+            showOverlay(true);
+            return;
+        }
+
+        // Mobile: keep current immediate-hide behavior.
         hideOverlayQuick();
     } else {
         clearOverlayHideTimer();
@@ -476,7 +499,7 @@ function togglePlay() {
 
 function toggleOverlayVisibility() {
     if (overlayVisible) {
-        hideOverlayQuick();
+        hideOverlayByDesktopClick();
     } else {
         revealOverlayFromHidden();
     }
@@ -518,7 +541,7 @@ function onOverlaySurfaceTap(event: Event) {
 
     if (isInCommentReviewTapMode()) {
         if (overlayVisible) {
-            hideOverlayQuick();
+            hideOverlayByDesktopClick();
         } else {
             revealOverlayFromHidden();
         }
@@ -566,7 +589,7 @@ function onPlayerSurfaceTap(event: Event) {
 
     overlayVisibilityBeforeMultiClick = wasVisible;
     scheduleSingleSurfaceTap(() => {
-        hideOverlayQuick();
+        hideOverlayByDesktopClick();
     });
 }
 
@@ -645,6 +668,12 @@ function swallowIfHiddenFirstTap(event: Event): boolean {
     return false;
 }
 
+function isDesktopPointerClick(event: MouseEvent): boolean {
+    if (typeof window === 'undefined') return false;
+    if (event.detail === 0) return false; // keyboard-triggered click
+    return window.matchMedia('(min-width: 768px)').matches;
+}
+
 function clickOnVideo(event: MouseEvent ) {
     pushTapHud(`clickOnVideo type=${event.type} detail=${event.detail} overlay=${overlayVisible}`);
     if (Date.now() < suppressClickUntil) {
@@ -658,6 +687,19 @@ function clickOnVideo(event: MouseEvent ) {
         time = getEffectiveDuration() * frac;
     } else {
         event.stopPropagation();
+
+        // Desktop-only behavior: single click toggles play/pause.
+        if (isDesktopPointerClick(event)) {
+            if (event.detail > 1) {
+                cancelPendingSingleSurfaceTap();
+                return;
+            }
+            scheduleSingleSurfaceTap(() => {
+                if (Date.now() < suppressClickUntil) return;
+                togglePlay();
+            });
+            return;
+        }
 
         if (event.detail > 1) {
             cancelPendingSingleSurfaceTap();
@@ -727,6 +769,13 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     // Swallow follow-up synthetic/single click chain to avoid overlay flicker.
     suppressClickUntil = Date.now() + 450;
 
+    // Desktop-only behavior: double click toggles fullscreen.
+    if (isDesktopPointerClick(event)) {
+        toggleSystemFullscreen();
+        overlayVisibilityBeforeMultiClick = null;
+        return;
+    }
+
     // In comment review hidden-state, first interaction must reveal controls only.
     if (isInCommentReviewTapMode() && (!overlayVisible || shouldConsumeReviewTap())) {
         consumeReviewTapUntil = 0;
@@ -734,7 +783,7 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
         return;
     }
 
-    // Double-click should only toggle playback and preserve current overlay visibility.
+    // Mobile/other behavior remains unchanged.
     togglePlay();
 
     overlayVisibilityBeforeMultiClick = null;
