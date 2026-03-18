@@ -688,19 +688,6 @@ function clickOnVideo(event: MouseEvent ) {
     } else {
         event.stopPropagation();
 
-        // Desktop-only behavior: single click toggles play/pause.
-        if (isDesktopPointerClick(event)) {
-            if (event.detail > 1) {
-                cancelPendingSingleSurfaceTap();
-                return;
-            }
-            scheduleSingleSurfaceTap(() => {
-                if (Date.now() < suppressClickUntil) return;
-                togglePlay();
-            });
-            return;
-        }
-
         if (event.detail > 1) {
             cancelPendingSingleSurfaceTap();
             return;
