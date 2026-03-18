@@ -493,6 +493,8 @@ export function isPaused(): boolean {
 }
 
 function togglePlay() {
+    // When drawing mode is active, clicks should never toggle playback.
+    if (hasDrawing()) return;
     const should_play = paused;
     setPlayback(should_play, "VideoPlayer");
 }
@@ -504,6 +506,8 @@ function toggleOverlayVisibility() {
         revealOverlayFromHidden();
     }
 }
+
+const DESKTOP_SINGLE_CLICK_DELAY_MS = 210;
 
 function scheduleSingleSurfaceTap(action: () => void, delayMs: number = 240) {
     if (pendingSurfaceTapTimer) {
@@ -543,7 +547,7 @@ function onOverlaySurfaceTap(event: Event) {
         scheduleSingleSurfaceTap(() => {
             if (Date.now() < suppressClickUntil) return;
             togglePlay();
-        }, 110);
+        }, DESKTOP_SINGLE_CLICK_DELAY_MS);
         return;
     }
 
@@ -587,7 +591,7 @@ function onPlayerSurfaceTap(event: Event) {
         scheduleSingleSurfaceTap(() => {
             if (Date.now() < suppressClickUntil) return;
             togglePlay();
-        }, 110);
+        }, DESKTOP_SINGLE_CLICK_DELAY_MS);
         return;
     }
 
@@ -721,14 +725,21 @@ function clickOnVideo(event: MouseEvent ) {
 
         const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
         if (isDesktop) {
-            const willPlay = paused;
-            suppressClickUntil = Date.now() + 260;
-            togglePlay();
-            if (willPlay) {
-                showOverlay(true);
-            } else {
-                showOverlay(false);
+            // Drawing mode should consume clicks for strokes only; never toggle play/pause.
+            if (hasDrawing()) {
+                return;
             }
+            scheduleSingleSurfaceTap(() => {
+                if (Date.now() < suppressClickUntil) return;
+                const willPlay = paused;
+                suppressClickUntil = Date.now() + 260;
+                togglePlay();
+                if (willPlay) {
+                    showOverlay(true);
+                } else {
+                    showOverlay(false);
+                }
+            }, 380);
             return;
         }
 
