@@ -50,8 +50,6 @@ let contextMenuOpen = $state(false);
 let contextMenuX = $state(0);
 let contextMenuY = $state(0);
 let contextMenuEl: HTMLDivElement | null = $state(null);
-let debugContextHint = $state('');
-let debugContextHintTimer: ReturnType<typeof setTimeout> | null = null;
 
 function stripCompletedToken(text: string): string {
     return (text || '').replace(COMPLETED_TOKEN, '').replace(LEGACY_COMPLETED_TOKEN, '').trim();
@@ -309,15 +307,6 @@ function onCardClick() {
     if (comment.timecode) onTimecodeClick(comment.timecode);
 }
 
-function showDebugContextHint(msg: string) {
-    debugContextHint = msg;
-    if (debugContextHintTimer) clearTimeout(debugContextHintTimer);
-    debugContextHintTimer = setTimeout(() => {
-        debugContextHint = '';
-        debugContextHintTimer = null;
-    }, 1800);
-}
-
 async function openContextMenuAt(x: number, y: number) {
     closeSwipeActions();
 
@@ -338,20 +327,17 @@ async function openContextMenuAt(x: number, y: number) {
         contextMenuY = Math.max(margin, Math.min(contextMenuY, vh - rect.height - margin));
     }
 
-    showDebugContextHint(`context menu opened @ ${Math.round(contextMenuX)},${Math.round(contextMenuY)}`);
 }
 
 function onCardPointerDown(e: PointerEvent) {
     // Right-click should always open comment context menu on pointer-capable devices.
     if (e.button !== 2) return;
-    showDebugContextHint(`pointerdown right-button on comment ${comment.id.slice(0, 6)}`);
     e.preventDefault();
     e.stopPropagation();
     openContextMenuAt(e.clientX, e.clientY);
 }
 
 function onCardContextMenu(e: MouseEvent) {
-    showDebugContextHint(`contextmenu event on comment ${comment.id.slice(0, 6)}`);
     e.preventDefault();
     e.stopPropagation();
     openContextMenuAt(e.clientX, e.clientY);
@@ -397,14 +383,8 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 
 <svelte:window onmousedown={onGlobalPointerDownForContextMenu} onscroll={closeContextMenu} onblur={closeContextMenu} />
 
-{#if debugContextHint}
-<div class="fixed right-4 top-4 z-[500] rounded-md border border-lime-400/40 bg-black/80 px-3 py-1.5 text-xs text-lime-300 shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
-    {debugContextHint}
-</div>
-{/if}
-
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
-<div class="relative w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {isCompleted ? 'border-orange-600/80 bg-orange-950/35' : (indent > 0 ? 'border-slate-700/80 bg-slate-900/35 border-l-[3px] border-l-slate-500/80' : 'border-slate-700/60')}">
+<div class="relative w-full min-w-0 rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] {contextMenuOpen ? 'overflow-visible z-[250]' : 'overflow-hidden'} {isCompleted ? 'border-orange-600/80 bg-orange-950/35' : (indent > 0 ? 'border-slate-700/80 bg-slate-900/35 border-l-[3px] border-l-slate-500/80' : 'border-slate-700/60')}">
     {#if canComplete}
     <div class="absolute inset-y-0 left-0 z-0 flex items-stretch transition-opacity {swipeOffsetPx > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}">
         <button
@@ -435,7 +415,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 
     <div
         id="comment_card_{comment.id}"
-        class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gradient-to-b {isCompleted ? 'from-orange-900 to-orange-950 hover:from-orange-800 hover:to-orange-900' : 'from-slate-800 to-slate-900'} {!!comment.timecode && !isCompleted ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
+        class="relative z-10 block box-border w-full min-w-0 max-w-full {contextMenuOpen ? 'overflow-visible' : 'overflow-hidden'} text-ellipsis bg-gradient-to-b {isCompleted ? 'from-orange-900 to-orange-950 hover:from-orange-800 hover:to-orange-900' : 'from-slate-800 to-slate-900'} {!!comment.timecode && !isCompleted ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
         tabindex="0"
         role="link"
         style="transform: translateX({swipeOffsetPx}px); transition: {swipeActive ? 'none' : 'transform 180ms ease-out'};"
@@ -455,7 +435,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
         <div
             bind:this={contextMenuEl}
             data-comment-context-menu="1"
-            class="absolute right-2 top-2 z-[220] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
+            class="absolute right-2 top-2 z-[320] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
             onclick={(e) => e.stopPropagation()}
         >
             {#if canComplete}
