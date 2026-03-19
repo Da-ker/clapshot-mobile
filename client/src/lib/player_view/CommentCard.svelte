@@ -329,6 +329,14 @@ async function openContextMenuAt(x: number, y: number) {
     }
 }
 
+function onCardPointerDown(e: PointerEvent) {
+    const isSecondary = e.button === 2 || (e.button === 0 && !!e.ctrlKey);
+    if (!isSecondary) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openContextMenuAt(e.clientX, e.clientY);
+}
+
 function onCardContextMenu(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -416,6 +424,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
         ontouchend={onCardTouchEnd}
         ontouchcancel={onCardTouchEnd}
         onclick={onCardClick}
+        onpointerdown={onCardPointerDown}
         oncontextmenu={onCardContextMenu}
         onkeydown={(e) => {
             if (e.key == "Escape") { editing = false; closeSwipeActions(); closeContextMenu(); }
@@ -477,7 +486,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 <div
     bind:this={contextMenuEl}
     data-comment-context-menu="1"
-    class="fixed z-[420] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
+    class="fixed z-[1200] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
     style="left: {contextMenuX}px; top: {contextMenuY}px;"
     onclick={(e) => e.stopPropagation()}
 >
