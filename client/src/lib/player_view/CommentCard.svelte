@@ -50,7 +50,7 @@ let contextMenuOpen = $state(false);
 let contextMenuX = $state(0);
 let contextMenuY = $state(0);
 let contextMenuEl: HTMLDivElement | null = $state(null);
-let commentCardEl: HTMLDivElement | null = $state(null);
+let contextMenuSuppressClickUntil = $state(0);
 
 function stripCompletedToken(text: string): string {
     return (text || '').replace(COMPLETED_TOKEN, '').replace(LEGACY_COMPLETED_TOKEN, '').trim();
@@ -291,11 +291,10 @@ function onCardTouchEnd() {
     swipeActive = false;
 }
 
-function onCardClick() {
-    if (contextMenuOpen) {
-        contextMenuOpen = false;
-        return;
-    }
+function onCardClick(e?: MouseEvent) {
+    if (contextMenuSuppressClickUntil > Date.now()) return;
+    if (e && e.button !== 0) return;
+    if (contextMenuOpen) return;
     if (showReply || editing) return;
     if (swipeDidMove) {
         swipeDidMove = false;
@@ -310,30 +309,23 @@ function onCardClick() {
 
 async function openContextMenuAt(x: number, y: number) {
     closeSwipeActions();
+    contextMenuSuppressClickUntil = Date.now() + 320;
 
     const margin = 8;
     const fallbackW = 168;
     const fallbackH = 176;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
 
-    const cardRect = commentCardEl?.getBoundingClientRect();
-    if (cardRect) {
-        const relX = x - cardRect.left;
-        const relY = y - cardRect.top;
-        contextMenuX = Math.max(margin, Math.min(relX, cardRect.width - fallbackW - margin));
-        contextMenuY = Math.max(margin, Math.min(relY, cardRect.height - fallbackH - margin));
-    } else {
-        contextMenuX = margin;
-        contextMenuY = margin;
-    }
-
+    contextMenuX = vw > 0 ? Math.max(margin, Math.min(x, vw - fallbackW - margin)) : x;
+    contextMenuY = vh > 0 ? Math.max(margin, Math.min(y, vh - fallbackH - margin)) : y;
     contextMenuOpen = true;
 
     await tick();
-    if (contextMenuEl && cardRect) {
-        const maxX = Math.max(margin, cardRect.width - contextMenuEl.offsetWidth - margin);
-        const maxY = Math.max(margin, cardRect.height - contextMenuEl.offsetHeight - margin);
-        contextMenuX = Math.max(margin, Math.min(contextMenuX, maxX));
-        contextMenuY = Math.max(margin, Math.min(contextMenuY, maxY));
+    if (contextMenuEl && vw > 0 && vh > 0) {
+        const rect = contextMenuEl.getBoundingClientRect();
+        contextMenuX = Math.max(margin, Math.min(contextMenuX, vw - rect.width - margin));
+        contextMenuY = Math.max(margin, Math.min(contextMenuY, vh - rect.height - margin));
     }
 }
 
@@ -389,7 +381,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 
 </script>
 
-<svelte:window onmousedown={onGlobalPointerDownForContextMenu} onscroll={closeContextMenu} onblur={closeContextMenu} />
+<svelte:window onmousedown={onGlobalPointerDownForContextMenu} />
 
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
 <div class="relative w-full min-w-0 rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] overflow-hidden {isCompleted ? 'border-orange-600/80 bg-orange-950/35' : (indent > 0 ? 'border-slate-700/80 bg-slate-900/35 border-l-[3px] border-l-slate-500/80' : 'border-slate-700/60')}">
@@ -423,7 +415,6 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 
     <div
         id="comment_card_{comment.id}"
-        bind:this={commentCardEl}
         class="relative z-10 block box-border w-full min-w-0 max-w-full overflow-hidden text-ellipsis bg-gradient-to-b {isCompleted ? 'from-orange-900 to-orange-950 hover:from-orange-800 hover:to-orange-900' : 'from-slate-800 to-slate-900'} {!!comment.timecode && !isCompleted ? 'hover:from-slate-700 hover:to-slate-800' : ''}"
         tabindex="0"
         role="link"
@@ -440,27 +431,6 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
             else if (e.key == "Enter") { onCardClick(); }
         }}
     >
-        {#if contextMenuOpen}
-            <div
-                bind:this={contextMenuEl}
-                data-comment-context-menu="1"
-                class="absolute z-[320] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
-                style="left: {contextMenuX}px; top: {contextMenuY}px;"
-                onclick={(e) => e.stopPropagation()}
-            >
-                {#if canComplete}
-                    <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-teal-300" onclick={onContextComplete}>{isCompleted ? '取消完成' : '完成'}</button>
-                {/if}
-                <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-sky-300" onclick={onContextReply}>{$t('comments.reply')}</button>
-                {#if canEdit}
-                    <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-amber-300" onclick={onContextEdit}>{$t('comments.edit')}</button>
-                {/if}
-                {#if canDelete}
-                    <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-red-300" onclick={onContextDelete}>{$t('comments.deleteShort')}</button>
-                {/if}
-            </div>
-        {/if}
-
         <div class="flex items-start px-2.5 py-2 min-w-0 gap-2" lang="en">
             <div class="flex-none w-8 h-8 md:w-8 md:h-8 block"><Avatar username={comment.userId || comment.usernameIfnull}/></div>
             {#if editing}
@@ -511,6 +481,27 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
     </div>
 </div>
 </div>
+
+{#if contextMenuOpen}
+<div
+    bind:this={contextMenuEl}
+    data-comment-context-menu="1"
+    class="fixed z-[420] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
+    style="left: {contextMenuX}px; top: {contextMenuY}px;"
+    onclick={(e) => e.stopPropagation()}
+>
+    {#if canComplete}
+        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-teal-300" onclick={onContextComplete}>{isCompleted ? '取消完成' : '完成'}</button>
+    {/if}
+    <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-sky-300" onclick={onContextReply}>{$t('comments.reply')}</button>
+    {#if canEdit}
+        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-amber-300" onclick={onContextEdit}>{$t('comments.edit')}</button>
+    {/if}
+    {#if canDelete}
+        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-red-300" onclick={onContextDelete}>{$t('comments.deleteShort')}</button>
+    {/if}
+</div>
+{/if}
 
 <style>
 button {
