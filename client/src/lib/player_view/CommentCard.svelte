@@ -329,14 +329,6 @@ async function openContextMenuAt(x: number, y: number) {
     }
 }
 
-function onCardPointerDown(e: PointerEvent) {
-    // Right-click should always open comment context menu on pointer-capable devices.
-    if (e.button !== 2) return;
-    e.preventDefault();
-    e.stopPropagation();
-    openContextMenuAt(e.clientX, e.clientY);
-}
-
 function onCardContextMenu(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -424,7 +416,6 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
         ontouchend={onCardTouchEnd}
         ontouchcancel={onCardTouchEnd}
         onclick={onCardClick}
-        onpointerdown={onCardPointerDown}
         oncontextmenu={onCardContextMenu}
         onkeydown={(e) => {
             if (e.key == "Escape") { editing = false; closeSwipeActions(); closeContextMenu(); }
