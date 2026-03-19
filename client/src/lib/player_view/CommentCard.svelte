@@ -344,6 +344,17 @@ async function openContextMenuAt(x: number, y: number) {
         contextMenuX = Math.max(margin, Math.min(contextMenuX, vw - rect.width - margin));
         contextMenuY = Math.max(margin, Math.min(contextMenuY, vh - rect.height - margin));
         pushContextMenuDiag(`menu rect ${Math.round(rect.width)}x${Math.round(rect.height)} final ${Math.round(contextMenuX)},${Math.round(contextMenuY)}`);
+
+        // Render in Top Layer when supported to bypass clipping/stacking contexts.
+        try {
+            const anyEl = contextMenuEl as unknown as { showPopover?: () => void };
+            if (anyEl.showPopover) {
+                anyEl.showPopover();
+                pushContextMenuDiag('showPopover ok');
+            }
+        } catch (err) {
+            pushContextMenuDiag(`showPopover fail: ${String(err)}`);
+        }
     } else {
         pushContextMenuDiag('menu element missing after tick');
     }
@@ -366,6 +377,12 @@ function onCardContextMenu(e: MouseEvent) {
 
 function closeContextMenu() {
     if (contextMenuOpen) pushContextMenuDiag('menu closed');
+    if (contextMenuEl) {
+        try {
+            const anyEl = contextMenuEl as unknown as { hidePopover?: () => void; matches?: (q: string) => boolean };
+            if (anyEl.hidePopover && anyEl.matches?.(':popover-open')) anyEl.hidePopover();
+        } catch {}
+    }
     contextMenuOpen = false;
     contextMenuEl = null;
 }
@@ -514,9 +531,10 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 {#if contextMenuOpen}
 <div
     bind:this={contextMenuEl}
+    popover="manual"
     data-comment-context-menu="1"
     class="fixed z-[1200] min-w-[120px] rounded-lg border border-slate-600 bg-slate-900/95 shadow-[0_6px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm p-1"
-    style="left: {contextMenuX}px; top: {contextMenuY}px;"
+    style="left: {contextMenuX}px; top: {contextMenuY}px; margin: 0;"
     onclick={(e) => e.stopPropagation()}
 >
     {#if canComplete}
