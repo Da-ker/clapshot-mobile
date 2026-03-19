@@ -52,8 +52,6 @@ let contextMenuY = $state(0);
 let contextMenuEl: HTMLDivElement | null = $state(null);
 let contextMenuSuppressClickUntil = $state(0);
 const CONTEXT_MENU_OPEN_EVENT = 'clapshot-comment-context-menu-open';
-const CONTEXT_MENU_DIAG = true;
-let contextMenuDiagLines = $state<string[]>([]);
 
 function stripCompletedToken(text: string): string {
     return (text || '').replace(COMPLETED_TOKEN, '').replace(LEGACY_COMPLETED_TOKEN, '').trim();
@@ -203,13 +201,6 @@ function closeSwipeActions() {
     swipeOffsetPx = 0;
 }
 
-function pushContextMenuDiag(msg: string) {
-    if (!CONTEXT_MENU_DIAG) return;
-    const now = new Date();
-    const stamp = `${now.toLocaleTimeString('zh-CN', { hour12: false })}.${String(now.getMilliseconds()).padStart(3, '0')}`;
-    contextMenuDiagLines = [`${stamp} ${msg}`, ...contextMenuDiagLines].slice(0, 8);
-}
-
 function openLeftSwipeActions() {
     swipeOffsetPx = -maxSwipeLeftPx;
 }
@@ -318,15 +309,9 @@ function onCardTouchEnd() {
 }
 
 function onCardClick(e?: MouseEvent) {
-    if (contextMenuSuppressClickUntil > Date.now()) {
-        pushContextMenuDiag(`click suppressed button=${e?.button ?? 'n/a'}`);
-        return;
-    }
+    if (contextMenuSuppressClickUntil > Date.now()) return;
     if (e && e.button !== 0) return;
-    if (contextMenuOpen) {
-        pushContextMenuDiag('click ignored because menu already open');
-        return;
-    }
+    if (contextMenuOpen) return;
     if (showReply || editing) return;
     if (swipeDidMove) {
         swipeDidMove = false;
@@ -348,7 +333,6 @@ async function openContextMenuAt(x: number, y: number) {
             detail: { commentId: comment.id }
         }));
     }
-    pushContextMenuDiag(`open request @${Math.round(x)},${Math.round(y)}`);
 
     const margin = 8;
     const fallbackW = 168;
@@ -359,27 +343,19 @@ async function openContextMenuAt(x: number, y: number) {
     contextMenuX = vw > 0 ? Math.max(margin, Math.min(x, vw - fallbackW - margin)) : x;
     contextMenuY = vh > 0 ? Math.max(margin, Math.min(y, vh - fallbackH - margin)) : y;
     contextMenuOpen = true;
-    pushContextMenuDiag(`menu open tentative ${Math.round(contextMenuX)},${Math.round(contextMenuY)}`);
 
     await tick();
     if (contextMenuEl && vw > 0 && vh > 0) {
         const rect = contextMenuEl.getBoundingClientRect();
         contextMenuX = Math.max(margin, Math.min(contextMenuX, vw - rect.width - margin));
         contextMenuY = Math.max(margin, Math.min(contextMenuY, vh - rect.height - margin));
-        pushContextMenuDiag(`menu rect ${Math.round(rect.width)}x${Math.round(rect.height)} final ${Math.round(contextMenuX)},${Math.round(contextMenuY)}`);
-
         // Render in Top Layer when supported to bypass clipping/stacking contexts.
         try {
             const anyEl = contextMenuEl as unknown as { showPopover?: () => void };
             if (anyEl.showPopover) {
                 anyEl.showPopover();
-                pushContextMenuDiag('showPopover ok');
             }
-        } catch (err) {
-            pushContextMenuDiag(`showPopover fail: ${String(err)}`);
-        }
-    } else {
-        pushContextMenuDiag('menu element missing after tick');
+        } catch {}
     }
 }
 
@@ -392,14 +368,12 @@ function onCardPointerDown(e: PointerEvent) {
 }
 
 function onCardContextMenu(e: MouseEvent) {
-    pushContextMenuDiag(`contextmenu event button=${e.button} @${Math.round(e.clientX)},${Math.round(e.clientY)}`);
     e.preventDefault();
     e.stopPropagation();
     openContextMenuAt(e.clientX, e.clientY);
 }
 
 function closeContextMenu() {
-    if (contextMenuOpen) pushContextMenuDiag('menu closed');
     if (contextMenuEl) {
         try {
             const anyEl = contextMenuEl as unknown as { hidePopover?: () => void; matches?: (q: string) => boolean };
@@ -434,16 +408,9 @@ function onContextComplete() {
 function onGlobalPointerDownForContextMenu(e: MouseEvent) {
     if (!contextMenuOpen) return;
     // Ignore right-button down so opening by right click won't be closed immediately.
-    if (e.button === 2) {
-        pushContextMenuDiag('global mousedown ignored: right button');
-        return;
-    }
+    if (e.button === 2) return;
     const target = e.target as HTMLElement | null;
-    if (target?.closest?.('[data-comment-context-menu="1"]')) {
-        pushContextMenuDiag('global mousedown inside menu');
-        return;
-    }
-    pushContextMenuDiag(`global mousedown outside menu button=${e.button}`);
+    if (target?.closest?.('[data-comment-context-menu="1"]')) return;
     closeContextMenu();
 }
 
@@ -570,15 +537,6 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
     {#if canDelete}
         <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-red-300" onclick={onContextDelete}>{$t('comments.deleteShort')}</button>
     {/if}
-</div>
-{/if}
-
-{#if CONTEXT_MENU_DIAG && contextMenuDiagLines.length > 0}
-<div class="fixed right-3 top-3 z-[520] max-w-[360px] rounded-md border border-lime-500/40 bg-black/85 px-2.5 py-2 text-[11px] leading-4 text-lime-300 shadow-[0_6px_20px_rgba(0,0,0,0.55)]">
-    <div class="mb-1 text-lime-200/90 font-semibold">Comment Menu Diag</div>
-    {#each contextMenuDiagLines as line}
-        <div class="break-all">{line}</div>
-    {/each}
 </div>
 {/if}
 
