@@ -51,6 +51,7 @@ let contextMenuX = $state(0);
 let contextMenuY = $state(0);
 let contextMenuEl: HTMLDivElement | null = $state(null);
 let contextMenuSuppressClickUntil = $state(0);
+const CONTEXT_MENU_OPEN_EVENT = 'clapshot-comment-context-menu-open';
 const CONTEXT_MENU_DIAG = true;
 let contextMenuDiagLines = $state<string[]>([]);
 
@@ -71,6 +72,22 @@ $effect(() => {
 
 $effect(() => {
     if (editing) closeSwipeActions();
+});
+
+$effect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onOtherMenuOpened = (event: Event) => {
+        const detail = (event as CustomEvent<{ commentId?: string }>).detail;
+        if (!detail?.commentId) return;
+        if (detail.commentId === comment.id) return;
+        closeContextMenu();
+    };
+
+    window.addEventListener(CONTEXT_MENU_OPEN_EVENT, onOtherMenuOpened as EventListener);
+    return () => {
+        window.removeEventListener(CONTEXT_MENU_OPEN_EVENT, onOtherMenuOpened as EventListener);
+    };
 });
 
 function onTimecodeClick(tc: string) {
@@ -325,6 +342,12 @@ function onCardClick(e?: MouseEvent) {
 async function openContextMenuAt(x: number, y: number) {
     closeSwipeActions();
     contextMenuSuppressClickUntil = Date.now() + 320;
+
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(CONTEXT_MENU_OPEN_EVENT, {
+            detail: { commentId: comment.id }
+        }));
+    }
     pushContextMenuDiag(`open request @${Math.round(x)},${Math.round(y)}`);
 
     const margin = 8;
