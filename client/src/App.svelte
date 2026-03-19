@@ -1452,6 +1452,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                         data-comments-panel="1"
                         class="absolute z-20 inset-x-0 mx-auto w-full max-w-[1400px] px-2 top-[var(--comments-top-px)] bottom-[calc(var(--mobile-comment-input-h)+env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 md:static md:inset-auto md:mx-0 md:w-full md:max-w-none md:h-[var(--desktop-comments-h)] md:rounded-xl md:px-0 md:top-auto md:bottom-auto md:translate-y-0 md:opacity-100 md:pointer-events-auto"
                         style="--mobile-comment-input-h: 56px; --comments-top-px: {commentsTopPx}px; --desktop-comments-h: {desktopCommentsHeight}px;"
+                        oncontextmenu={(e) => e.preventDefault()}
                     >
                         <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                             <div class="hidden md:flex justify-end">
