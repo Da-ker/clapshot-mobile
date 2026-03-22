@@ -132,9 +132,9 @@ function hideOverlayQuick() {
 
 function hideOverlayByDesktopClick() {
     hideOverlayQuick();
-    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches) {
-        desktopMouseWakeLocked = true;
-    }
+    // Do not lock desktop mouse wake-up:
+    // moving mouse over video should always be able to reveal controls.
+    desktopMouseWakeLocked = false;
 }
 
 function showOverlay(autoHide: boolean = true) {
@@ -165,7 +165,6 @@ function scheduleFullscreenIdleHideFromMouse() {
 }
 
 function onVideoRegionMouseMove() {
-    if (desktopMouseWakeLocked && !isInCommentReviewTapMode()) return;
     if (isInCommentReviewTapMode()) {
         desktopMouseWakeLocked = false;
         reviewFirstTapGuard = false;
@@ -702,8 +701,9 @@ function onCommentReviewRevealTap(event: Event) {
 }
 
 function onReviewHiddenCaptureTap(event: Event) {
-    // Hard interception path: whenever controls are hidden, first tap anywhere
-    // must only reveal controls and never fall through to play/pause handlers.
+    // Hard interception path is only for comment-review hidden-state.
+    // Outside review mode, hidden-state taps should follow normal play/pause behavior.
+    if (!isInCommentReviewTapMode()) return;
     if (overlayVisible) return;
     onCommentReviewRevealTap(event);
 }
