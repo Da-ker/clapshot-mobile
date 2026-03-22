@@ -493,8 +493,10 @@ export function isPaused(): boolean {
 }
 
 function togglePlay() {
-    // When drawing mode is active, clicks should never toggle playback.
-    if (hasDrawing()) return;
+    // Block play/pause toggle only while actively drawing (canvas consuming input).
+    // Comment snapshot overlays are visible too, but non-interactive (pointerEvents:none)
+    // and should not prevent normal playback resume.
+    if (hasDrawing() && draw_canvas?.style.pointerEvents !== "none") return;
     const should_play = paused;
     setPlayback(should_play, "VideoPlayer");
 }
