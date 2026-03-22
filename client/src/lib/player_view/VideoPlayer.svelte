@@ -165,7 +165,11 @@ function scheduleFullscreenIdleHideFromMouse() {
 }
 
 function onVideoRegionMouseMove() {
-    if (desktopMouseWakeLocked) return;
+    if (desktopMouseWakeLocked && !isInCommentReviewTapMode()) return;
+    if (isInCommentReviewTapMode()) {
+        desktopMouseWakeLocked = false;
+        reviewFirstTapGuard = false;
+    }
     if (isSystemFullscreen) {
         showOverlay(false);
         scheduleFullscreenIdleHideFromMouse();
@@ -528,6 +532,12 @@ function cancelPendingSingleSurfaceTap() {
     pendingSurfaceTapTimer = null;
 }
 
+function cancelPendingHiddenOverlayReveal() {
+    if (!hiddenOverlayTapTimer) return;
+    clearTimeout(hiddenOverlayTapTimer);
+    hiddenOverlayTapTimer = null;
+}
+
 function onOverlaySurfaceTap(event: Event) {
     if (Date.now() < suppressClickUntil) {
         event.stopPropagation();
@@ -631,8 +641,23 @@ function onHiddenOverlayTap(event: Event) {
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
     consumeReviewTapUntil = 0;
-    revealOverlayFromHidden();
-    suppressClickUntil = Date.now() + 260;
+
+    const mouseEvent = event as MouseEvent;
+    const isDesktop = isDesktopPointerClick(mouseEvent);
+    if (isDesktop) {
+        cancelPendingHiddenOverlayReveal();
+        revealOverlayFromHidden();
+        suppressClickUntil = Date.now() + 260;
+        return;
+    }
+
+    // Mobile: delay reveal slightly so a double-tap can cancel it and play/pause without control flicker.
+    cancelPendingHiddenOverlayReveal();
+    hiddenOverlayTapTimer = setTimeout(() => {
+        hiddenOverlayTapTimer = null;
+        revealOverlayFromHidden();
+        suppressClickUntil = Date.now() + 260;
+    }, 240);
 }
 
 function onCommentReviewRevealTap(event: Event) {
@@ -640,6 +665,7 @@ function onCommentReviewRevealTap(event: Event) {
     event.preventDefault();
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
+    cancelPendingHiddenOverlayReveal();
     consumeReviewTapUntil = 0;
     reviewFirstTapGuard = false;
     revealOverlayFromHidden();
@@ -780,6 +806,7 @@ let gestureStartVolume = 0;
 let suppressClickUntil = 0;
 let overlayVisibilityBeforeMultiClick: boolean | null = null;
 let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
+let hiddenOverlayTapTimer: ReturnType<typeof setTimeout> | null = null;
 let forceRevealOverlayUntil = 0;
 let consumeReviewTapUntil = 0;
 let reviewFirstTapGuard = $state(false);
@@ -797,6 +824,8 @@ export function enterCommentReviewTapMode(durationMs: number = 60000) {
     // First tap in review mode should only reveal controls, never trigger playback.
     consumeReviewTapUntil = Date.now() + Math.min(durationMs, 1500);
     reviewFirstTapGuard = true;
+    desktopMouseWakeLocked = false;
+    cancelPendingHiddenOverlayReveal();
     // Keep controls hidden by default while reviewing comments.
     suppressAutoShowOverlayUntil = Date.now() + durationMs;
     hideOverlayQuick();
@@ -805,6 +834,7 @@ export function enterCommentReviewTapMode(durationMs: number = 60000) {
 function onVideoSurfaceDoubleClick(event: MouseEvent) {
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
+    cancelPendingHiddenOverlayReveal();
     // Swallow follow-up synthetic/single click chain to avoid overlay flicker.
     suppressClickUntil = Date.now() + 450;
 
@@ -822,7 +852,9 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
         return;
     }
 
-    // Mobile/other behavior remains unchanged.
+    // Mobile: double tap play/pause should not flash controls.
+    hideOverlayQuick();
+    reviewFirstTapGuard = false;
     togglePlay();
 
     overlayVisibilityBeforeMultiClick = null;
