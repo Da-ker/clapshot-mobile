@@ -261,9 +261,24 @@ async function toggleSystemFullscreen() {
 }
 
 $effect(() => {
+    if (typeof window === 'undefined') {
+        isDesktopViewport = false;
+        return;
+    }
+
+    const media = window.matchMedia('(min-width: 768px)');
+    const apply = () => {
+        isDesktopViewport = media.matches;
+    };
+
+    apply();
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+});
+
+$effect(() => {
     if (!paused) {
-        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
-        if (isDesktop) {
+        if (isDesktopViewport) {
             // Desktop: keep controls visible briefly, then auto-hide.
             if (Date.now() < suppressAutoShowOverlayUntil) {
                 clearOverlayHideTimer();
@@ -642,16 +657,29 @@ function onHiddenOverlayTap(event: Event) {
     cancelPendingSingleSurfaceTap();
     consumeReviewTapUntil = 0;
 
-    const mouseEvent = event as MouseEvent;
-    const isDesktop = isDesktopPointerClick(mouseEvent);
-    if (isDesktop) {
+    if (isDesktopViewport) {
         cancelPendingHiddenOverlayReveal();
         revealOverlayFromHidden();
         suppressClickUntil = Date.now() + 260;
         return;
     }
 
-    // Mobile: delay reveal slightly so a double-tap can cancel it and play/pause without control flicker.
+    // Mobile hidden-state double tap: play/pause without control flash.
+    if (event.type === 'touchstart') {
+        const now = Date.now();
+        if (now - lastHiddenOverlayTouchTs < 280) {
+            lastHiddenOverlayTouchTs = 0;
+            cancelPendingHiddenOverlayReveal();
+            hideOverlayQuick();
+            reviewFirstTapGuard = false;
+            suppressClickUntil = now + 450;
+            togglePlay();
+            return;
+        }
+        lastHiddenOverlayTouchTs = now;
+    }
+
+    // Single tap: reveal controls.
     cancelPendingHiddenOverlayReveal();
     hiddenOverlayTapTimer = setTimeout(() => {
         hiddenOverlayTapTimer = null;
@@ -729,7 +757,7 @@ function swallowIfHiddenFirstTap(event: Event): boolean {
 function isDesktopPointerClick(event: MouseEvent): boolean {
     if (typeof window === 'undefined') return false;
     if (event.detail === 0) return false; // keyboard-triggered click
-    return window.matchMedia('(min-width: 768px)').matches;
+    return isDesktopViewport;
 }
 
 function clickOnVideo(event: MouseEvent ) {
@@ -807,9 +835,11 @@ let suppressClickUntil = 0;
 let overlayVisibilityBeforeMultiClick: boolean | null = null;
 let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
 let hiddenOverlayTapTimer: ReturnType<typeof setTimeout> | null = null;
+let lastHiddenOverlayTouchTs = 0;
 let forceRevealOverlayUntil = 0;
 let consumeReviewTapUntil = 0;
 let reviewFirstTapGuard = $state(false);
+let isDesktopViewport = $state(false);
 
 function isInCommentReviewTapMode() {
     return Date.now() < forceRevealOverlayUntil;
@@ -1567,7 +1597,7 @@ function handlePinClick(id: string) {
 				</div>
 			{/if}
 
-			{#if !overlayVisible}
+			{#if !overlayVisible && !isDesktopViewport}
 				<button
 					type="button"
 					class="absolute inset-0 z-40 bg-transparent"
