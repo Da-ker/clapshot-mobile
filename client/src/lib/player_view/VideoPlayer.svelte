@@ -712,20 +712,14 @@ function onRootRevealTap(event: Event) {
     // Final fallback: capture taps at player root level.
     pushTapHud(`onRootRevealTap type=${event.type} overlay=${overlayVisible}`);
 
-    // In comment-review mode:
-    // - hidden controls: first tap forces reveal
-    // - visible controls: allow normal click flow (so next tap can hide)
-    if (isInCommentReviewTapMode()) {
-        if (overlayVisible) return;
-        event.preventDefault();
-        event.stopPropagation();
-        cancelPendingSingleSurfaceTap();
-        reviewFirstTapGuard = false;
-        showOverlay(true);
-        suppressClickUntil = Date.now() + 350;
-        pushTapHud(`force showOverlay from root type=${event.type}`);
+    // Never interfere with interactions inside the video surface.
+    const target = event.target as Node | null;
+    if (videoCanvasContainer && target && videoCanvasContainer.contains(target)) {
         return;
     }
+
+    // Desktop relies on hover/move wake; root tap fallback is mobile-only.
+    if (isDesktopViewport) return;
 
     if (overlayVisible) return;
     onCommentReviewRevealTap(event);
@@ -853,7 +847,9 @@ export function enterCommentReviewTapMode(durationMs: number = 60000) {
     forceRevealOverlayUntil = Date.now() + durationMs;
     // First tap in review mode should only reveal controls, never trigger playback.
     consumeReviewTapUntil = Date.now() + Math.min(durationMs, 1500);
-    reviewFirstTapGuard = true;
+    // Root-level guard overlay blocks desktop hover wake and causes mobile double-tap flash.
+    // Keep it disabled; hidden-overlay button + player handlers are enough.
+    reviewFirstTapGuard = false;
     desktopMouseWakeLocked = false;
     cancelPendingHiddenOverlayReveal();
     // Keep controls hidden by default while reviewing comments.
