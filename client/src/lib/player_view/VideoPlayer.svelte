@@ -248,7 +248,7 @@ async function enterSystemFullscreen() {
     }
 }
 
-async function toggleSystemFullscreen() {
+export async function toggleSystemFullscreen() {
     if (isSystemFullscreen) {
         await exitSystemFullscreen();
     } else {
@@ -530,7 +530,7 @@ export function isPaused(): boolean {
     return paused;
 }
 
-function togglePlay() {
+export function togglePlay() {
     // Block play/pause toggle only while actively drawing (canvas consuming input).
     // Comment snapshot overlays are visible too, but non-interactive (pointerEvents:none)
     // and should not prevent normal playback resume.
@@ -1128,7 +1128,7 @@ export function getCurFrame() {
 }
 
 
-async function step_video(frames: number) {
+export async function step_video(frames: number) {
     if (!videoDecoder) return;
 
     const direction = frames < 0 ? -1 : 1;
@@ -1636,7 +1636,7 @@ function handlePinClick(id: string) {
 			<!-- YouTube-like overlay controls -->
 			<div class="absolute inset-0 z-[180] transition-opacity duration-700 ease-out {overlayVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
 
-				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto">
+				<div class="absolute inset-0 flex md:hidden items-center justify-center gap-12 md:gap-16 pointer-events-auto">
 					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
 					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center w-[4.62rem] h-[4.62rem] md:w-[5.04rem] md:h-[5.04rem] min-w-[4.62rem] min-h-[4.62rem] md:min-w-[5.04rem] md:min-h-[5.04rem] rounded-full bg-white/28 text-white text-[2.45rem] md:text-[2.7rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); const willPlay = paused; suppressClickUntil = Date.now() + 700; togglePlay(); if (!willPlay) showOverlay(false); }} title="Play/Pause" aria-label="Play/Pause"></button>
 					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(1); }} aria-label="Step forwards"></button>
@@ -1644,7 +1644,7 @@ function handlePinClick(id: string) {
 
 				<button
 					type="button"
-					class="absolute right-3 md:right-4 bottom-3 md:bottom-4 p-0 bg-white/28 text-white inline-grid place-items-center leading-none pointer-events-auto shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:bg-white/35 active:scale-95 transition overflow-hidden"
+					class="absolute right-3 md:right-4 bottom-3 md:bottom-4 p-0 bg-white/28 text-white inline-grid place-items-center leading-none pointer-events-auto shadow-[0_6px_20px_rgba(0,0,0,0.4)] hover:bg-white/35 active:scale-95 transition overflow-hidden md:hidden"
 					style="width:30px;height:30px;min-width:30px;min-height:30px;max-width:30px;max-height:30px;border-radius:9999px;"
 					onclick={(e) => { e.stopPropagation(); toggleSystemFullscreen(); }}
 					aria-label={isSystemFullscreen ? "Exit fullscreen" : "Fullscreen"}

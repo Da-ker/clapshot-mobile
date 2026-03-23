@@ -254,6 +254,24 @@ async function onTopFrameEdited(e: Event) {
     refreshTopVideoMeta();
 }
 
+async function onDesktopStepBackward() {
+    await videoPlayer?.step_video?.(-1);
+    refreshTopVideoMeta();
+}
+
+function onDesktopTogglePlayPause() {
+    videoPlayer?.togglePlay?.();
+}
+
+async function onDesktopStepForward() {
+    await videoPlayer?.step_video?.(1);
+    refreshTopVideoMeta();
+}
+
+async function onDesktopToggleFullscreen() {
+    await videoPlayer?.toggleSystemFullscreen?.();
+}
+
 $effect(() => {
     if (!$mediaFileId || !$curVideo) return;
 
@@ -1439,6 +1457,12 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                     </span>
                                     <span class="rounded-lg bg-slate-800/55 px-2 py-[2px] text-slate-200 ml-auto shrink-0 text-sm font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
                                     <span class="rounded-lg bg-slate-800/55 px-2 py-[2px] text-slate-200 shrink-0 text-sm font-semibold">{$curVideo?.duration?.fps ?? '-'} fps</span>
+                                    <span class="inline-flex items-center gap-1.5 ml-2 shrink-0 rounded-lg bg-slate-800/55 px-2 py-[2px]">
+                                        <button class="fa-solid fa-backward text-slate-100 hover:text-white h-7 w-7 inline-flex items-center justify-center" onclick={onDesktopStepBackward} aria-label="Step backward"></button>
+                                        <button class="fa-solid fa-play text-slate-100 hover:text-white h-7 w-7 inline-flex items-center justify-center" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause"></button>
+                                        <button class="fa-solid fa-forward text-slate-100 hover:text-white h-7 w-7 inline-flex items-center justify-center" onclick={onDesktopStepForward} aria-label="Step forward"></button>
+                                        <button class="fa-solid fa-up-right-and-down-left-from-center text-slate-100 hover:text-white h-7 w-7 inline-flex items-center justify-center" onclick={onDesktopToggleFullscreen} aria-label="Fullscreen"></button>
+                                    </span>
                                 </div>
                             </div>
                         </div>
