@@ -47,6 +47,8 @@ let wsSocket: WebSocket | undefined;
 let sendQueue: any[] = [];
 let topTimecode = $state('00:00:00:00');
 let topFrame = $state('0');
+let desktopPaused = $state(true);
+let desktopMuted = $state(false);
 
 
 
@@ -239,6 +241,8 @@ function refreshTopVideoMeta() {
     if (!videoPlayer) return;
     topTimecode = normalizeTimecodeForDisplay(videoPlayer.getCurTimecode());
     topFrame = String(videoPlayer.getCurFrame());
+    desktopPaused = !!videoPlayer.isPaused?.();
+    desktopMuted = !!videoPlayer.isMuted?.();
 }
 
 async function onTopTimecodeEdited(e: Event) {
@@ -261,6 +265,7 @@ async function onDesktopStepBackward() {
 
 function onDesktopTogglePlayPause() {
     videoPlayer?.togglePlay?.();
+    refreshTopVideoMeta();
 }
 
 async function onDesktopStepForward() {
@@ -268,9 +273,11 @@ async function onDesktopStepForward() {
     refreshTopVideoMeta();
 }
 
-async function onDesktopToggleFullscreen() {
-    await videoPlayer?.toggleSystemFullscreen?.();
+function onDesktopToggleMute() {
+    videoPlayer?.toggleMute?.();
+    refreshTopVideoMeta();
 }
+
 
 $effect(() => {
     if (!$mediaFileId || !$curVideo) return;
@@ -1454,13 +1461,17 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                             <span class="text-slate-300 text-xs shrink-0">FR</span>
                                             <input class="top-frame-input bg-transparent rounded px-1 w-[5ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                                         </span>
-                                        <span class="inline-flex flex-1 justify-center ml-4">
-                                            <span class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-700/60 border border-slate-500/40 shadow-inner">
-                                                <button class="h-9 w-9 rounded-lg inline-flex items-center justify-center bg-slate-600/45 hover:bg-slate-500/60 text-slate-100" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[13px]"></i></button>
-                                                <button class="h-9 w-9 rounded-lg inline-flex items-center justify-center bg-cyan-500/25 hover:bg-cyan-500/40 text-cyan-100" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause"><i class="fa-solid fa-play text-[13px]"></i></button>
-                                                <button class="h-9 w-9 rounded-lg inline-flex items-center justify-center bg-slate-600/45 hover:bg-slate-500/60 text-slate-100" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[13px]"></i></button>
-                                                <button class="h-9 w-9 rounded-lg inline-flex items-center justify-center bg-slate-600/45 hover:bg-slate-500/60 text-slate-100" onclick={onDesktopToggleFullscreen} aria-label="Fullscreen"><i class="fa-solid fa-expand text-[13px]"></i></button>
+                                        <span class="inline-flex flex-1 items-center justify-center ml-4 gap-2">
+                                            <button class="h-11 w-11 rounded-full inline-flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 text-white hover:bg-black/45" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause">
+                                                <i class="fa-solid {desktopPaused ? 'fa-play' : 'fa-pause'} text-[15px]"></i>
+                                            </button>
+                                            <span class="h-11 px-2 rounded-full inline-flex items-center gap-2 bg-black/35 backdrop-blur-md border border-white/10">
+                                                <button class="h-9 w-9 rounded-full inline-flex items-center justify-center text-white hover:bg-white/10" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[15px]"></i></button>
+                                                <button class="h-9 w-9 rounded-full inline-flex items-center justify-center text-white hover:bg-white/10" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[15px]"></i></button>
                                             </span>
+                                            <button class="h-11 w-11 rounded-full inline-flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 text-white hover:bg-black/45" onclick={onDesktopToggleMute} aria-label="Mute/Unmute">
+                                                <i class="fa-solid {desktopMuted ? 'fa-volume-xmark' : 'fa-volume-high'} text-[15px]"></i>
+                                            </button>
                                         </span>
                                     </span>
                                     <span class="rounded-lg bg-slate-800/55 px-2 py-[2px] text-slate-200 ml-auto shrink-0 text-sm font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>

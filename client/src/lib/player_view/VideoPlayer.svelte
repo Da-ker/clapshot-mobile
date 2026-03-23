@@ -967,6 +967,8 @@ function getCurrentVolume01(): number {
     return clamp(videoElem?.volume ?? 1, 0, 1);
 }
 
+let lastNonZeroVolume = 1;
+
 function setEffectiveVolume(newVol: number) {
     const vol = clamp(newVol, 0, 1);
     if (volumeGainNode) {
@@ -976,7 +978,22 @@ function setEffectiveVolume(newVol: number) {
         videoElem.volume = vol;
     }
     audio_volume = Math.round(vol * 100);
+    if (vol > 0.001) lastNonZeroVolume = vol;
     showVolumeHud(vol);
+}
+
+export function isMuted(): boolean {
+    return getCurrentVolume01() <= 0.001;
+}
+
+export function toggleMute() {
+    const cur = getCurrentVolume01();
+    if (cur > 0.001) {
+        lastNonZeroVolume = cur;
+        setEffectiveVolume(0);
+    } else {
+        setEffectiveVolume(lastNonZeroVolume > 0.001 ? lastNonZeroVolume : 1);
+    }
 }
 
 function onVideoTouchStart(e: TouchEvent) {
