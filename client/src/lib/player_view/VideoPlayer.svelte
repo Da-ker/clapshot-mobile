@@ -1636,9 +1636,10 @@ function handlePinClick(id: string) {
 			</div>
 
 		</div>
+	</div>
 
 		<!-- Standalone timeline (progress bar + comment tick marks): always visible -->
-		<div class="px-3 md:px-4 mt-2 mb-1 pointer-events-auto">
+		<div class="w-full px-3 md:px-4 mt-2 mb-1 pointer-events-auto">
 			<div class="relative h-3 md:h-4">
 				<div
 					bind:this={seekSliderEl}
@@ -1676,7 +1677,6 @@ function handlePinClick(id: string) {
 				<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-red-500 z-40 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)]" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.375rem);"></div>
 			</div>
 		</div>
-	</div>
 
 </div>
 
