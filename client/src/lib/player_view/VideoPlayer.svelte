@@ -1633,57 +1633,48 @@ function handlePinClick(id: string) {
 					<i class="fa-solid {isSystemFullscreen ? 'fa-down-left-and-up-right-to-center' : 'fa-up-right-and-down-left-from-center'} text-[13px] leading-none"></i>
 				</button>
 
-				<div class="absolute inset-x-3 md:inset-x-4 bottom-2 md:bottom-3 pointer-events-auto">
-					<div class="relative h-2 md:h-3">
-						<div
-							bind:this={seekSliderEl}
-							role="slider"
-							aria-label="Seek"
-							aria-valuemin="0"
-							aria-valuemax={Math.floor(getEffectiveDuration())}
-							aria-valuenow={Math.floor(time)}
-							tabindex="0"
-							class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-8 bg-transparent hover:cursor-pointer"
-							onclick={(e) => e.stopPropagation()}
-							onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, e.currentTarget); })}
-							onmousemove={(e)=>{ handleMove(e as MouseEvent, e.currentTarget); }}
-							onmouseup={onSeekEnd}
-							ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, e.currentTarget); })}
-							ontouchmove={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
-							ontouchend={onSeekEnd}
-							ontouchcancel={onSeekEnd}
-						>
-							<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[3px] md:h-1 rounded-full overflow-hidden bg-white/45">
-								<div class="absolute inset-y-0 left-0 bg-red-600 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
-							</div>
-						</div>
-						<!-- Larger invisible hit area for easier knob dragging -->
-						<div
-							class="absolute top-1/2 -translate-y-1/2 w-10 h-10 z-80"
-							style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 1.25rem);"
-							onclick={(e) => e.stopPropagation()}
-							onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, seekSliderEl ?? null); })}
-							ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, seekSliderEl ?? null); })}
-						></div>
-						<!-- Seek knob in sibling layer to avoid being clipped by slider overflow -->
-						<div class="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-red-500 z-50 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-150 {isSeekingThumb ? 'scale-125' : 'scale-100'}" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.4375rem);"></div>
-						<!-- Comment markers are rendered in a sibling layer to avoid slider overflow clipping -->
-						<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-full z-70 pointer-events-none">
-							{#each commentsWithTc as item}
-								<div
-									class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500 h-[130%]' : 'bg-white/85 h-[72%]'}"
-									style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
-									title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
-								></div>
-							{/each}
-						</div>
-						{#if loopStartTime>0 || loopEndTime>0}
-							<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
-						{/if}
-					</div>
-				</div>
 			</div>
 
+		</div>
+
+		<!-- Standalone timeline (progress bar + comment tick marks): always visible -->
+		<div class="px-3 md:px-4 mt-2 mb-1 pointer-events-auto">
+			<div class="relative h-3 md:h-4">
+				<div
+					bind:this={seekSliderEl}
+					role="slider"
+					aria-label="Seek"
+					aria-valuemin="0"
+					aria-valuemax={Math.floor(getEffectiveDuration())}
+					aria-valuenow={Math.floor(time)}
+					tabindex="0"
+					class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-8 bg-transparent hover:cursor-pointer"
+					onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, e.currentTarget); })}
+					onmousemove={(e)=>{ handleMove(e as MouseEvent, e.currentTarget); }}
+					onmouseup={onSeekEnd}
+					ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, e.currentTarget); })}
+					ontouchmove={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
+					ontouchend={onSeekEnd}
+					ontouchcancel={onSeekEnd}
+				>
+					<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[3px] md:h-1 rounded-full overflow-hidden bg-white/45">
+						<div class="absolute inset-y-0 left-0 bg-red-600 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
+					</div>
+				</div>
+				<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-full z-30 pointer-events-none">
+					{#each commentsWithTc as item}
+						<div
+							class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500 h-[130%]' : 'bg-white/85 h-[72%]'}"
+							style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
+							title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
+						></div>
+					{/each}
+				</div>
+				{#if loopStartTime>0 || loopEndTime>0}
+					<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
+				{/if}
+				<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-red-500 z-40 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)]" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.375rem);"></div>
+			</div>
 		</div>
 	</div>
 
