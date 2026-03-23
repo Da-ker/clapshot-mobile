@@ -996,6 +996,14 @@ export function toggleMute() {
     }
 }
 
+export function getVolume01(): number {
+    return getCurrentVolume01();
+}
+
+export function setVolume01(vol: number) {
+    setEffectiveVolume(vol);
+}
+
 function onVideoTouchStart(e: TouchEvent) {
     if (!e.touches || e.touches.length !== 1) return;
     void ensureIOSVolumeGainReady();

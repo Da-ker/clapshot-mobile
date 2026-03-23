@@ -49,6 +49,7 @@ let topTimecode = $state('00:00:00:00');
 let topFrame = $state('0');
 let desktopPaused = $state(true);
 let desktopMuted = $state(false);
+let desktopVolume = $state(1);
 
 
 
@@ -243,6 +244,7 @@ function refreshTopVideoMeta() {
     topFrame = String(videoPlayer.getCurFrame());
     desktopPaused = !!videoPlayer.isPaused?.();
     desktopMuted = !!videoPlayer.isMuted?.();
+    desktopVolume = Math.max(0, Math.min(1, Number(videoPlayer.getVolume01?.() ?? 1)));
 }
 
 async function onTopTimecodeEdited(e: Event) {
@@ -275,6 +277,13 @@ async function onDesktopStepForward() {
 
 function onDesktopToggleMute() {
     videoPlayer?.toggleMute?.();
+    refreshTopVideoMeta();
+}
+
+function onDesktopVolumeInput(e: Event) {
+    const v = Number((e.target as HTMLInputElement).value);
+    if (Number.isNaN(v)) return;
+    videoPlayer?.setVolume01?.(v);
     refreshTopVideoMeta();
 }
 
@@ -1461,17 +1470,20 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                             <span class="text-slate-300 text-xs shrink-0">FR</span>
                                             <input class="top-frame-input bg-transparent rounded px-1 w-[5ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                                         </span>
-                                        <span class="inline-flex flex-1 items-center justify-center ml-4 gap-2">
-                                            <button class="h-11 w-11 rounded-full inline-flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 text-white hover:bg-black/45" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause">
-                                                <i class="fa-solid {desktopPaused ? 'fa-play' : 'fa-pause'} text-[15px]"></i>
+                                        <span class="inline-flex flex-1 items-center justify-center ml-4 gap-2.5">
+                                            <button class="h-11 w-11 rounded-full inline-flex items-center justify-center bg-black/45 border border-white/12 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_8px_20px_rgba(0,0,0,0.35)] hover:bg-black/55" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause">
+                                                <i class="fa-solid {desktopPaused ? 'fa-play' : 'fa-pause'} text-[16px]"></i>
                                             </button>
-                                            <span class="h-11 px-2 rounded-full inline-flex items-center gap-2 bg-black/35 backdrop-blur-md border border-white/10">
+                                            <span class="h-11 px-2.5 rounded-full inline-flex items-center gap-2 bg-black/45 border border-white/12 shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_8px_20px_rgba(0,0,0,0.35)]">
                                                 <button class="h-9 w-9 rounded-full inline-flex items-center justify-center text-white hover:bg-white/10" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[15px]"></i></button>
                                                 <button class="h-9 w-9 rounded-full inline-flex items-center justify-center text-white hover:bg-white/10" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[15px]"></i></button>
                                             </span>
-                                            <button class="h-11 w-11 rounded-full inline-flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 text-white hover:bg-black/45" onclick={onDesktopToggleMute} aria-label="Mute/Unmute">
-                                                <i class="fa-solid {desktopMuted ? 'fa-volume-xmark' : 'fa-volume-high'} text-[15px]"></i>
-                                            </button>
+                                            <span class="h-11 pl-3 pr-2 rounded-full inline-flex items-center gap-2 bg-black/45 border border-white/12 shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_8px_20px_rgba(0,0,0,0.35)]">
+                                                <button class="h-8 w-8 rounded-full inline-flex items-center justify-center text-white hover:bg-white/10" onclick={onDesktopToggleMute} aria-label="Mute/Unmute">
+                                                    <i class="fa-solid {desktopMuted ? 'fa-volume-xmark' : 'fa-volume-high'} text-[14px]"></i>
+                                                </button>
+                                                <input type="range" min="0" max="1" step="0.01" value={desktopVolume} oninput={onDesktopVolumeInput} class="w-24 accent-white" aria-label="Volume" />
+                                            </span>
                                         </span>
                                     </span>
                                     <span class="rounded-lg bg-slate-800/55 px-2 py-[2px] text-slate-200 ml-auto shrink-0 text-sm font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
