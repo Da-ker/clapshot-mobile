@@ -427,13 +427,53 @@ setInterval(() => { loop = videoElem?.loop }, 500);
 
 let isSeekingThumb = $state(false);
 let seekSliderEl: HTMLDivElement | undefined;
+let pendingSeekTime: number | null = null;
+let seekRafId: number | null = null;
+let decoderSeekInFlight = false;
+
+function scheduleSeekApply() {
+    if (seekRafId !== null) return;
+    seekRafId = requestAnimationFrame(async () => {
+        seekRafId = null;
+        if (pendingSeekTime === null) return;
+        const targetTime = pendingSeekTime;
+
+        // Use stepper for seeking (handles both HTML5 and Mediabunny modes),
+        // but coalesce rapid drag updates to avoid lag.
+        if (videoDecoder) {
+            if (decoderSeekInFlight) return;
+            decoderSeekInFlight = true;
+            try {
+                const pos = await videoDecoder.seekToTime(targetTime);
+                time = pos.timestamp;
+            } finally {
+                decoderSeekInFlight = false;
+                if (pendingSeekTime !== targetTime) {
+                    scheduleSeekApply();
+                }
+            }
+        } else if (videoElem) {
+            time = targetTime;
+            videoElem.currentTime = targetTime;
+        }
+
+        seekSideEffects();
+    });
+}
 
 function onSeekStart() {
     isSeekingThumb = true;
+    highlightedCommentId = undefined;
+    if (videoElem) {
+        videoElem.pause();
+        videoElem.focus();
+    }
+    paused = true;
 }
 
 function onSeekEnd() {
     isSeekingThumb = false;
+    send_collab_report();
 }
 
 function onGlobalSeekMove(e: MouseEvent | TouchEvent) {
@@ -441,34 +481,18 @@ function onGlobalSeekMove(e: MouseEvent | TouchEvent) {
     handleMove(e, seekSliderEl);
 }
 
-async function handleMove(e: MouseEvent | TouchEvent, target: EventTarget|null) {
+function handleMove(e: MouseEvent | TouchEvent, target: EventTarget|null) {
     if (!target) throw new Error("progress bar missing");
     const effectiveDuration = getEffectiveDuration();
     if (!effectiveDuration) return; // video not loaded yet
     // Check for touch event using 'touches' property (TouchEvent global may not exist on desktop Safari)
     const isTouch = 'touches' in e;
     if (!isTouch && !(e.buttons & 1)) return; // mouse not down
-    // Any manual seek movement should clear comment highlight immediately.
-    highlightedCommentId = undefined;
-    videoElem.pause();
     const clientX = isTouch ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const { left, right } = (target as HTMLProgressElement).getBoundingClientRect();
-    const newTime = effectiveDuration * (clientX - left) / (right - left);
-
-    // Use stepper for seeking (handles both HTML5 and Mediabunny modes)
-    if (videoDecoder) {
-        const pos = await videoDecoder.seekToTime(newTime);
-        time = pos.timestamp;
-    } else {
-        // Fallback before stepper is initialized
-        time = newTime;
-        videoElem.currentTime = time;
-    }
-
-    seekSideEffects();
-    paused = true;
-    send_collab_report();
-    if (videoElem) { videoElem.focus(); }
+    const ratio = Math.max(0, Math.min(1, (clientX - left) / Math.max(right - left, 1)));
+    pendingSeekTime = effectiveDuration * ratio;
+    scheduleSeekApply();
 }
 
 let playback_request_source: string|undefined = undefined;
@@ -1662,7 +1686,7 @@ function handlePinClick(id: string) {
 						<div class="absolute inset-y-0 left-0 bg-red-600 z-20" style="width: {Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}%"></div>
 					</div>
 				</div>
-				<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-full z-30 pointer-events-none">
+				<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-full z-[90] pointer-events-none">
 					{#each commentsWithTc as item}
 						<div
 							class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500 h-[130%]' : 'bg-white/85 h-[72%]'}"
@@ -1674,7 +1698,13 @@ function handlePinClick(id: string) {
 				{#if loopStartTime>0 || loopEndTime>0}
 					<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
 				{/if}
-				<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-red-500 z-40 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)]" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.375rem);"></div>
+				<div
+					class="absolute top-1/2 -translate-y-1/2 w-10 h-10 z-[45]"
+					style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 1.25rem);"
+					onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, seekSliderEl ?? null); })}
+					ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, seekSliderEl ?? null); })}
+				></div>
+				<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-red-500 z-50 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-120 {isSeekingThumb ? 'scale-125' : 'scale-100'}" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.375rem);"></div>
 			</div>
 		</div>
 
