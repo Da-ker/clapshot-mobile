@@ -1454,11 +1454,13 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                             <span class="text-slate-300 text-xs shrink-0">FR</span>
                                             <input class="top-frame-input bg-transparent rounded px-1 w-[5ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                                         </span>
-                                        <span class="inline-flex items-center gap-1 ml-4 px-1.5 py-1 rounded-md bg-slate-700/55 border border-slate-500/35 shadow-inner shrink-0">
-                                            <button class="h-6 w-6 rounded-md inline-flex items-center justify-center bg-slate-600/40 hover:bg-slate-500/55 text-slate-100" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[11px]"></i></button>
-                                            <button class="h-6 w-6 rounded-md inline-flex items-center justify-center bg-cyan-500/22 hover:bg-cyan-500/35 text-cyan-100" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause"><i class="fa-solid fa-play text-[11px]"></i></button>
-                                            <button class="h-6 w-6 rounded-md inline-flex items-center justify-center bg-slate-600/40 hover:bg-slate-500/55 text-slate-100" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[11px]"></i></button>
-                                            <button class="h-6 w-6 rounded-md inline-flex items-center justify-center bg-slate-600/40 hover:bg-slate-500/55 text-slate-100" onclick={onDesktopToggleFullscreen} aria-label="Fullscreen"><i class="fa-solid fa-expand text-[11px]"></i></button>
+                                        <span class="inline-flex flex-1 justify-center ml-4">
+                                            <span class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-700/60 border border-slate-500/40 shadow-inner">
+                                                <button class="h-9 w-9 rounded-lg inline-flex items-center justify-center bg-slate-600/45 hover:bg-slate-500/60 text-slate-100" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[13px]"></i></button>
+                                                <button class="h-9 w-9 rounded-lg inline-flex items-center justify-center bg-cyan-500/25 hover:bg-cyan-500/40 text-cyan-100" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause"><i class="fa-solid fa-play text-[13px]"></i></button>
+                                                <button class="h-9 w-9 rounded-lg inline-flex items-center justify-center bg-slate-600/45 hover:bg-slate-500/60 text-slate-100" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[13px]"></i></button>
+                                                <button class="h-9 w-9 rounded-lg inline-flex items-center justify-center bg-slate-600/45 hover:bg-slate-500/60 text-slate-100" onclick={onDesktopToggleFullscreen} aria-label="Fullscreen"><i class="fa-solid fa-expand text-[13px]"></i></button>
+                                            </span>
                                         </span>
                                     </span>
                                     <span class="rounded-lg bg-slate-800/55 px-2 py-[2px] text-slate-200 ml-auto shrink-0 text-sm font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
