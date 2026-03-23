@@ -156,9 +156,8 @@ function revealOverlayFromHidden() {
     suppressClickUntil = Date.now() + 260;
 }
 
-function scheduleFullscreenIdleHideFromMouse() {
+function scheduleDesktopIdleHideFromMouse() {
     clearFullscreenMouseIdleTimer();
-    if (!isSystemFullscreen) return;
     fullscreenMouseIdleTimer = setTimeout(() => {
         overlayVisible = false;
     }, 1000);
@@ -169,12 +168,10 @@ function onVideoRegionMouseMove() {
         desktopMouseWakeLocked = false;
         reviewFirstTapGuard = false;
     }
-    if (isSystemFullscreen) {
-        showOverlay(false);
-        scheduleFullscreenIdleHideFromMouse();
-        return;
-    }
     showOverlay(false);
+    if (isDesktopViewport) {
+        scheduleDesktopIdleHideFromMouse();
+    }
 }
 
 function onVideoRegionMouseLeave() {
