@@ -487,7 +487,6 @@ function handleMove(e: MouseEvent | TouchEvent, target: EventTarget|null) {
     if (!effectiveDuration) return; // video not loaded yet
     // Check for touch event using 'touches' property (TouchEvent global may not exist on desktop Safari)
     const isTouch = 'touches' in e;
-    if (!isTouch && !(e.buttons & 1)) return; // mouse not down
     const clientX = isTouch ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
     const { left, right } = (target as HTMLProgressElement).getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - left) / Math.max(right - left, 1)));
@@ -1675,7 +1674,7 @@ function handlePinClick(id: string) {
 					tabindex="0"
 					class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-8 bg-transparent hover:cursor-pointer"
 					onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, e.currentTarget); })}
-					onmousemove={(e)=>{ handleMove(e as MouseEvent, e.currentTarget); }}
+					onmousemove={(e)=>{ if (isSeekingThumb) handleMove(e as MouseEvent, e.currentTarget); }}
 					onmouseup={onSeekEnd}
 					ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, e.currentTarget); })}
 					ontouchmove={preventDefault((e)=>{ handleMove(e as TouchEvent, e.currentTarget); })}
@@ -1699,12 +1698,12 @@ function handlePinClick(id: string) {
 					<div class="absolute top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none bg-amber-500/50" style="left: {loopStartTime/getEffectiveDuration()*100.0}%; width: {(loopEndTime-loopStartTime)/getEffectiveDuration()*100.0}%"></div>
 				{/if}
 				<div
-					class="absolute top-1/2 -translate-y-1/2 w-10 h-10 z-[45]"
-					style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 1.25rem);"
+					class="absolute top-1/2 -translate-y-1/2 w-7 h-7 z-[45]"
+					style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.875rem);"
 					onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, seekSliderEl ?? null); })}
 					ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, seekSliderEl ?? null); })}
 				></div>
-				<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-red-500 z-50 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-120 {isSeekingThumb ? 'scale-125' : 'scale-100'}" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.375rem);"></div>
+				<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-red-500 z-50 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-120 {isSeekingThumb ? 'scale-125' : 'scale-100'}" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.375rem);" onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, seekSliderEl ?? null); })} ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, seekSliderEl ?? null); })}></div>
 			</div>
 		</div>
 
