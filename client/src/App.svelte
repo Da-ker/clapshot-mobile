@@ -1471,20 +1471,20 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                             <input class="top-frame-input bg-transparent rounded px-1 w-[5ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                                         </span>
                                         <span class="inline-flex flex-1 items-center justify-center ml-4 gap-3">
-                                            <button class="h-12 w-12 min-h-12 min-w-12 rounded-full inline-flex items-center justify-center text-white border transition {desktopPaused ? 'bg-black/45 border-white/12 shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_10px_24px_rgba(0,0,0,0.35)] hover:bg-white/20 hover:border-white/45 hover:ring-2 hover:ring-white/25' : 'bg-white/18 border-white/35 ring-2 ring-white/35 shadow-[0_0_0_1px_rgba(255,255,255,0.18)_inset,0_10px_24px_rgba(0,0,0,0.35)]'}" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause">
+                                            <button class="h-12 w-12 min-h-12 min-w-12 rounded-full inline-flex items-center justify-center text-white border transition hover:bg-white/12 {desktopPaused ? 'bg-black/45 border-white/12 shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_10px_24px_rgba(0,0,0,0.35)]' : 'bg-white/18 border-white/35 ring-2 ring-white/35 shadow-[0_0_0_1px_rgba(255,255,255,0.18)_inset,0_10px_24px_rgba(0,0,0,0.35)]'}" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause">
                                                 <i class="fa-solid {desktopPaused ? 'fa-play' : 'fa-pause'} text-[18px]"></i>
                                             </button>
                                             <span class="h-12 px-3 rounded-full inline-flex items-center gap-2 bg-black/35 border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_8px_20px_rgba(0,0,0,0.28)]">
                                                 <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-white hover:bg-white/12" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
                                                 <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-white hover:bg-white/12" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
                                             </span>
-                                            <span class="group relative h-12 w-[188px] rounded-full bg-black/35 border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_8px_20px_rgba(0,0,0,0.28)] overflow-hidden">
-                                                <div class="absolute inset-y-0 right-0 w-12 flex items-center justify-center">
+                                            <span class="group relative h-12 w-12 hover:w-[188px] focus-within:w-[188px] rounded-full bg-black/35 border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_8px_20px_rgba(0,0,0,0.28)] overflow-hidden transition-[width] duration-220 ease-out">
+                                                <div class="absolute inset-y-0 left-0 w-12 flex items-center justify-center z-10">
                                                     <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-white transition group-hover:bg-white/12 group-focus-within:bg-white/12" onclick={onDesktopToggleMute} aria-label="Mute/Unmute">
                                                         <i class="fa-solid {desktopMuted ? 'fa-volume-xmark' : 'fa-volume-high'} text-[17px]"></i>
                                                     </button>
                                                 </div>
-                                                <div class="absolute inset-y-0 right-12 flex items-center origin-right transition-all duration-220 ease-out opacity-0 scale-x-0 group-hover:opacity-100 group-hover:scale-x-100 group-focus-within:opacity-100 group-focus-within:scale-x-100 w-[126px] pr-2">
+                                                <div class="absolute inset-y-0 left-12 flex items-center origin-left transition-all duration-220 ease-out opacity-0 scale-x-0 group-hover:opacity-100 group-hover:scale-x-100 group-focus-within:opacity-100 group-focus-within:scale-x-100 w-[126px] pl-2 pr-2">
                                                     <input type="range" min="0" max="1" step="0.01" value={desktopVolume} oninput={onDesktopVolumeInput} class="w-full accent-white" aria-label="Volume" />
                                                 </div>
                                             </span>
