@@ -288,6 +288,10 @@ function onDesktopVolumeInput(e: Event) {
     refreshTopVideoMeta();
 }
 
+async function onDesktopToggleFullscreen() {
+    await videoPlayer?.toggleSystemFullscreen?.();
+}
+
 
 $effect(() => {
     if (!$mediaFileId || !$curVideo) return;
@@ -1495,6 +1499,9 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                     </span>
                                     <span class="rounded-lg bg-slate-800/40 px-2 py-[2px] text-slate-200 ml-auto shrink-0 text-sm font-semibold">⏱ {formatDurationShort($curVideo?.duration?.duration)}</span>
                                     <span class="rounded-lg bg-slate-800/40 px-2 py-[2px] text-slate-200 shrink-0 text-sm font-semibold">{$curVideo?.duration?.fps ?? '-'} fps</span>
+                                    <button class="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-slate-800/45 text-slate-200 border border-slate-500/45 transition-colors hover:bg-slate-600/55 hover:text-white shrink-0" onclick={onDesktopToggleFullscreen} aria-label="Toggle fullscreen" title="Fullscreen">
+                                        <i class="fa-solid fa-expand text-[13px]"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
