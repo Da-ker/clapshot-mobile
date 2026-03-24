@@ -1474,12 +1474,12 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                             <button class="h-12 w-12 min-h-12 min-w-12 rounded-full inline-flex items-center justify-center text-slate-100 border border-slate-500/55 transition-colors {desktopPaused ? 'bg-slate-700/45 hover:bg-slate-600/55' : 'bg-slate-500/55 hover:bg-slate-400/65'}" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause">
                                                 <i class="fa-solid {desktopPaused ? 'fa-play' : 'fa-pause'} text-[18px]"></i>
                                             </button>
-                                            <span class="h-12 px-3 rounded-full inline-flex items-center gap-2 bg-slate-800/55 border border-slate-500/45">
-                                                <span class="h-10 w-10 rounded-full p-[1px] bg-slate-900/45 border border-slate-500/35">
-                                                    <button class="h-full w-full rounded-full inline-flex items-center justify-center text-slate-100 transition-colors hover:bg-slate-600/55" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
+                                            <span class="inline-flex items-center gap-2">
+                                                <span class="h-12 w-12 rounded-full inline-flex items-center justify-center bg-slate-800/55 border border-slate-500/45">
+                                                    <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors hover:bg-slate-600/55" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
                                                 </span>
-                                                <span class="h-10 w-10 rounded-full p-[1px] bg-slate-900/45 border border-slate-500/35">
-                                                    <button class="h-full w-full rounded-full inline-flex items-center justify-center text-slate-100 transition-colors hover:bg-slate-600/55" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
+                                                <span class="h-12 w-12 rounded-full inline-flex items-center justify-center bg-slate-800/55 border border-slate-500/45">
+                                                    <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors hover:bg-slate-600/55" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
                                                 </span>
                                             </span>
                                             <span class="relative h-12 w-[188px] inline-flex justify-start">
