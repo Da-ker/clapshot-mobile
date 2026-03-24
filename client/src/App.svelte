@@ -1471,18 +1471,24 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                             <input class="top-frame-input bg-transparent rounded px-1 w-[5ch] min-w-[5ch] shrink-0 tabular-nums" value={topFrame} onchange={onTopFrameEdited} />
                                         </span>
                                         <span class="inline-flex flex-1 items-center justify-center ml-4 gap-3">
-                                            <button class="h-12 w-12 min-h-12 min-w-12 rounded-full inline-flex items-center justify-center text-white border transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_12px_28px_rgba(8,145,178,0.28)] active:translate-y-0 {desktopPaused ? 'bg-gradient-to-b from-slate-700/70 to-slate-900/75 border-white/20 shadow-[0_0_0_1px_rgba(255,255,255,0.08)_inset,0_8px_22px_rgba(0,0,0,0.35)] hover:border-cyan-300/40' : 'bg-gradient-to-b from-cyan-300/35 to-cyan-500/30 border-cyan-200/60 ring-2 ring-cyan-200/45 shadow-[0_0_0_1px_rgba(255,255,255,0.2)_inset,0_10px_26px_rgba(6,182,212,0.32)]'}" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause">
+                                            <button class="h-12 w-12 min-h-12 min-w-12 rounded-full inline-flex items-center justify-center text-slate-100 border border-slate-500/55 transition-colors {desktopPaused ? 'bg-slate-700/45 hover:bg-slate-600/55' : 'bg-slate-500/55 hover:bg-slate-400/65'}" onclick={onDesktopTogglePlayPause} aria-label="Play/Pause">
                                                 <i class="fa-solid {desktopPaused ? 'fa-play' : 'fa-pause'} text-[18px]"></i>
                                             </button>
-                                            <span class="h-12 px-3 rounded-full inline-flex items-center gap-2 bg-gradient-to-b from-slate-700/45 to-slate-900/55 border border-white/15 shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_10px_24px_rgba(0,0,0,0.3)]">
-                                                <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-all duration-200 hover:bg-white/14 hover:text-white hover:-translate-y-[1px] active:translate-y-0" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
-                                                <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-all duration-200 hover:bg-white/14 hover:text-white hover:-translate-y-[1px] active:translate-y-0" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
+                                            <span class="h-12 px-3 rounded-full inline-flex items-center gap-2 bg-slate-800/55 border border-slate-500/45">
+                                                <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors hover:bg-slate-600/55" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
+                                                <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors hover:bg-slate-600/55" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
                                             </span>
-                                            <span class="h-12 w-[188px] rounded-full inline-flex items-center gap-2 pl-2 pr-3 bg-gradient-to-b from-slate-700/45 to-slate-900/55 border border-white/15 shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_10px_24px_rgba(0,0,0,0.3)]">
-                                                <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-all duration-200 hover:bg-white/14 hover:text-white hover:-translate-y-[1px] active:translate-y-0" onclick={onDesktopToggleMute} aria-label="Mute/Unmute">
-                                                    <i class="fa-solid {desktopMuted ? 'fa-volume-xmark' : 'fa-volume-high'} text-[17px]"></i>
-                                                </button>
-                                                <input type="range" min="0" max="1" step="0.01" value={desktopVolume} oninput={onDesktopVolumeInput} class="w-full accent-cyan-300" aria-label="Volume" />
+                                            <span class="relative h-12 w-[188px] inline-flex justify-end">
+                                                <span class="group relative h-12 w-12 hover:w-[188px] focus-within:w-[188px] rounded-full bg-slate-800/55 border border-slate-500/45 overflow-hidden transition-[width] duration-220 ease-out">
+                                                    <div class="absolute inset-y-0 right-0 w-12 flex items-center justify-center z-10">
+                                                        <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors group-hover:bg-slate-600/55 group-focus-within:bg-slate-600/55" onclick={onDesktopToggleMute} aria-label="Mute/Unmute">
+                                                            <i class="fa-solid {desktopMuted ? 'fa-volume-xmark' : 'fa-volume-high'} text-[17px]"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div class="absolute inset-y-0 right-12 flex items-center origin-right transition-all duration-220 ease-out opacity-0 scale-x-0 group-hover:opacity-100 group-hover:scale-x-100 group-focus-within:opacity-100 group-focus-within:scale-x-100 w-[126px] pr-2">
+                                                        <input type="range" min="0" max="1" step="0.01" value={desktopVolume} oninput={onDesktopVolumeInput} class="w-full accent-slate-300" aria-label="Volume" />
+                                                    </div>
+                                                </span>
                                             </span>
                                         </span>
                                     </span>
