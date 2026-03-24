@@ -1475,8 +1475,12 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                                 <i class="fa-solid {desktopPaused ? 'fa-play' : 'fa-pause'} text-[18px]"></i>
                                             </button>
                                             <span class="h-12 px-1.5 rounded-full inline-flex items-center gap-1 bg-slate-800/55 border border-slate-500/45">
-                                                <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors hover:bg-slate-600/55" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
-                                                <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors hover:bg-slate-600/55" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
+                                                <span class="group h-12 w-12 inline-flex items-center justify-center">
+                                                    <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors group-hover:bg-slate-600/55" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
+                                                </span>
+                                                <span class="group h-12 w-12 inline-flex items-center justify-center">
+                                                    <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors group-hover:bg-slate-600/55" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
+                                                </span>
                                             </span>
                                             <span class="relative h-12 w-[188px] inline-flex justify-start">
                                                 <span class="group relative h-12 w-12 hover:w-[188px] rounded-full bg-slate-800/55 border border-slate-500/45 overflow-hidden transition-[width] duration-220 ease-out">
