@@ -1478,7 +1478,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                                 <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-white hover:bg-white/12" onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
                                                 <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-white hover:bg-white/12" onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
                                             </span>
-                                            <span class="group relative h-12 w-[188px] rounded-full bg-black/35 border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_8px_20px_rgba(0,0,0,0.28)] overflow-hidden">
+                                            <span class="group relative h-12 w-12 hover:w-[188px] focus-within:w-[188px] rounded-full bg-black/35 border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_8px_20px_rgba(0,0,0,0.28)] overflow-hidden transition-[width] duration-220 ease-out">
                                                 <div class="absolute inset-y-0 left-0 w-12 flex items-center justify-center z-10">
                                                     <button class="h-10 w-10 rounded-full inline-flex items-center justify-center text-white transition group-hover:bg-white/12 group-focus-within:bg-white/12" onclick={onDesktopToggleMute} aria-label="Mute/Unmute">
                                                         <i class="fa-solid {desktopMuted ? 'fa-volume-xmark' : 'fa-volume-high'} text-[17px]"></i>
