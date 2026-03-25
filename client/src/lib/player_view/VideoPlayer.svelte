@@ -424,9 +424,37 @@ setInterval(() => { loop = videoElem?.loop }, 500);
 
 let isSeekingThumb = $state(false);
 let seekSliderEl: HTMLDivElement | undefined;
+let seekSliderWidthPx = $state(0);
 let pendingSeekTime: number | null = null;
 let seekRafId: number | null = null;
 let decoderSeekInFlight = false;
+
+function refreshSeekSliderMetrics() {
+    seekSliderWidthPx = seekSliderEl?.clientWidth ?? 0;
+}
+
+onMount(() => {
+    refreshSeekSliderMetrics();
+
+    const onResize = () => refreshSeekSliderMetrics();
+    window.addEventListener('resize', onResize);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && seekSliderEl) {
+        ro = new ResizeObserver(() => refreshSeekSliderMetrics());
+        ro.observe(seekSliderEl);
+    }
+
+    return () => {
+        window.removeEventListener('resize', onResize);
+        ro?.disconnect();
+    };
+});
+
+$effect(() => {
+    if (!seekSliderEl) return;
+    refreshSeekSliderMetrics();
+});
 
 function scheduleSeekApply() {
     if (seekRafId !== null) return;
@@ -1388,11 +1416,10 @@ function tcToDurationFract(timecode: string|undefined) {
 
 function tickLeftStyle(timecode: string|undefined) {
     const frac = Math.max(0, Math.min(1, tcToDurationFract(timecode)));
-    const sliderWidth = seekSliderEl?.clientWidth ?? 0;
 
     // Snap to whole CSS pixels when possible to keep all vertical ticks visually consistent.
-    if (sliderWidth > 0) {
-        const snappedPx = Math.round(frac * sliderWidth);
+    if (seekSliderWidthPx > 0) {
+        const snappedPx = Math.round(frac * seekSliderWidthPx);
         return `left: ${snappedPx}px`;
     }
 
