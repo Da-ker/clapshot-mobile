@@ -1184,6 +1184,9 @@ export function getCurFrame() {
 export async function step_video(frames: number) {
     if (!videoDecoder) return;
 
+    // Leaving the exact comment frame via step controls should clear timeline highlight.
+    highlightedCommentId = undefined;
+
     const direction = frames < 0 ? -1 : 1;
     const position = await videoDecoder.stepFrame(direction as 1 | -1, Math.abs(frames));
     time = position.timestamp;
