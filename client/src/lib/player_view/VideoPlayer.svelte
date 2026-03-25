@@ -1718,7 +1718,7 @@ function handlePinClick(id: string) {
 							onmousedown={preventDefault((e) => { e.stopPropagation(); handlePinClick(item.id); })}
 							onclick={(e) => { e.stopPropagation(); }}
 						>
-							<div class="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full pointer-events-none shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500 h-[50%] w-[2px]' : 'bg-white/85 h-[42%] w-[2px]'}"></div>
+							<div class="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full pointer-events-none shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500 h-[50%] w-[3px]' : 'bg-white/85 h-[36%] w-[1.5px]'}"></div>
 						</button>
 					{/each}
 				</div>
