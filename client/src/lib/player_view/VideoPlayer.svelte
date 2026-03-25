@@ -1709,11 +1709,17 @@ function handlePinClick(id: string) {
 				</div>
 				<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-full z-[90] pointer-events-none">
 					{#each commentsWithTc as item}
-						<div
-							class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500 h-[130%]' : 'bg-white/85 h-[72%]'}"
+						<button
+							type="button"
+							class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[10px] h-full pointer-events-auto bg-transparent cursor-pointer"
 							style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
 							title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
-						></div>
+							aria-label={`Jump to comment by ${item.usernameIfnull || item.userId || '?'} at ${item.timecode}`}
+							onmousedown={preventDefault((e) => { e.stopPropagation(); handlePinClick(item.id); })}
+							onclick={(e) => { e.stopPropagation(); }}
+						>
+							<span class="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] rounded-full shadow-[0_0_0_1px_rgba(15,23,42,0.35)] {String(item.id) === highlightedCommentId ? 'bg-yellow-500 h-[130%]' : 'bg-white/85 h-[72%]'}"></span>
+						</button>
 					{/each}
 				</div>
 				{#if loopStartTime>0 || loopEndTime>0}
