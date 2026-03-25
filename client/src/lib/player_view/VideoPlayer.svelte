@@ -1386,6 +1386,19 @@ function tcToDurationFract(timecode: string|undefined) {
     return pos / getEffectiveDuration();
 }
 
+function tickLeftStyle(timecode: string|undefined) {
+    const frac = Math.max(0, Math.min(1, tcToDurationFract(timecode)));
+    const sliderWidth = seekSliderEl?.clientWidth ?? 0;
+
+    // Snap to whole CSS pixels when possible to keep all vertical ticks visually consistent.
+    if (sliderWidth > 0) {
+        const snappedPx = Math.round(frac * sliderWidth);
+        return `left: ${snappedPx}px`;
+    }
+
+    return `left: ${frac * 100}%`;
+}
+
 // Input element event handlers
 function onTimecodeEdited(e: Event) {
     seekToSMPTE((e.target as HTMLInputElement).value);
@@ -1712,7 +1725,7 @@ function handlePinClick(id: string) {
 						<button
 							type="button"
 							class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[10px] h-full pointer-events-auto bg-transparent cursor-pointer"
-							style="left: {Math.max(0, Math.min(100, tcToDurationFract(item.timecode) * 100))}%"
+							style={tickLeftStyle(item.timecode)}
 							title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
 							aria-label={`Jump to comment by ${item.usernameIfnull || item.userId || '?'} at ${item.timecode}`}
 							onmousedown={preventDefault((e) => { e.stopPropagation(); handlePinClick(item.id); })}
