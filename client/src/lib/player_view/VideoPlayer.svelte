@@ -770,6 +770,14 @@ $effect(() => {
 
 function swallowIfHiddenFirstTap(event: Event): boolean {
     if (!overlayVisible) {
+        const target = event.currentTarget as HTMLElement | null;
+        const isStepButton = !!target?.getAttribute('aria-label')?.match(/^Step /);
+        if (isStepButton) {
+            lastHiddenActionTapTs = 0;
+            onHiddenOverlayTap(event);
+            return true;
+        }
+
         const now = Date.now();
         if (now - lastHiddenActionTapTs < 320) {
             lastHiddenActionTapTs = 0;
