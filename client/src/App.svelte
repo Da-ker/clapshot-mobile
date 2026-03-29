@@ -243,7 +243,8 @@ function refreshTopVideoMeta() {
     if (!videoPlayer) return;
     topTimecode = normalizeTimecodeForDisplay(videoPlayer.getCurTimecode());
     topFrame = String(videoPlayer.getCurFrame());
-    desktopPaused = !!videoPlayer.isPaused?.();
+    const longPressSeeking = !!videoPlayer.isLongPressSeeking?.();
+    desktopPaused = longPressSeeking ? true : !!videoPlayer.isPaused?.();
     desktopMuted = !!videoPlayer.isMuted?.();
     desktopVolume = Math.max(0, Math.min(1, Number(videoPlayer.getVolume01?.() ?? 1)));
 }

@@ -549,6 +549,10 @@ export function isPaused(): boolean {
     return paused;
 }
 
+export function isLongPressSeeking(): boolean {
+    return longPressSeekActive;
+}
+
 export function togglePlay() {
     // Block play/pause toggle only while actively drawing (canvas consuming input).
     // Comment snapshot overlays are visible too, but non-interactive (pointerEvents:none)
@@ -1215,7 +1219,7 @@ export function cancelStepButtonLongPress() {
 let longPressSeekTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressSeekInterval: ReturnType<typeof setInterval> | null = null;
 let longPressSeekDirection: -1 | 1 | 0 = 0;
-let longPressSeekActive = false;
+let longPressSeekActive = $state(false);
 let longPressSavedMuted: boolean | null = null;
 let longPressSavedVolume: number | null = null;
 const LONG_PRESS_SEEK_DELAY_MS = 500;
@@ -1815,7 +1819,7 @@ function handlePinClick(id: string) {
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto md:hidden">
 					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); }} onpointerdown={(e) => { onStepButtonPress(e, -1); }} onpointerup={(e) => { onStepButtonRelease(e, -1); }} onmousedown={(e) => onStepButtonMouseDown(e, -1)} onmouseup={(e) => onStepButtonMouseUp(e, -1)} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onpointercancel={onStepButtonCancel} onpointerleave={onStepButtonCancel} onmouseleave={onStepButtonCancel} aria-label="Step backwards"></button>
-					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center w-[4.62rem] h-[4.62rem] md:w-[5.04rem] md:h-[5.04rem] min-w-[4.62rem] min-h-[4.62rem] md:min-w-[5.04rem] md:min-h-[5.04rem] rounded-full bg-white/28 text-white text-[2.45rem] md:text-[2.7rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)] select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); const willPlay = paused; suppressClickUntil = Date.now() + 700; togglePlay(); if (!willPlay) showOverlay(false); }} title="Play/Pause" aria-label="Play/Pause"></button>
+					<button class="fa-solid {(paused || longPressSeekActive) ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center w-[4.62rem] h-[4.62rem] md:w-[5.04rem] md:h-[5.04rem] min-w-[4.62rem] min-h-[4.62rem] md:min-w-[5.04rem] md:min-h-[5.04rem] rounded-full bg-white/28 text-white text-[2.45rem] md:text-[2.7rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)] select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); const willPlay = paused; suppressClickUntil = Date.now() + 700; togglePlay(); if (!willPlay) showOverlay(false); }} title="Play/Pause" aria-label="Play/Pause"></button>
 					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); }} onpointerdown={(e) => { onStepButtonPress(e, 1); }} onpointerup={(e) => { onStepButtonRelease(e, 1); }} onmousedown={(e) => onStepButtonMouseDown(e, 1)} onmouseup={(e) => onStepButtonMouseUp(e, 1)} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onpointercancel={onStepButtonCancel} onpointerleave={onStepButtonCancel} onmouseleave={onStepButtonCancel} aria-label="Step forwards"></button>
 				</div>
 
