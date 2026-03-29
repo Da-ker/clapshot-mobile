@@ -138,6 +138,8 @@ function hideOverlayByDesktopClick() {
 }
 
 function showOverlay(autoHide: boolean = true) {
+    // Hard isolation window: block any late single-click callback from re-showing controls.
+    if (isOverlayShowBlocked()) return;
     // Any explicit request to show controls should cancel review-mode auto-hide suppression.
     suppressAutoShowOverlayUntil = 0;
     overlayVisible = true;
@@ -151,6 +153,8 @@ function showOverlay(autoHide: boolean = true) {
 }
 
 function revealOverlayFromHidden() {
+    // Hard isolation window: never reveal controls while blocked by double-tap chain.
+    if (isOverlayShowBlocked()) return;
     // First tap when hidden: reveal controls only.
     showOverlay(true);
     suppressClickUntil = Date.now() + 260;
@@ -711,22 +715,7 @@ function onHiddenOverlayTap(event: Event) {
         return;
     }
 
-    // Mobile hidden-state double tap: play/pause without control flash.
-    if (event.type === 'touchstart') {
-        const now = Date.now();
-        if (now - lastHiddenOverlayTouchTs < 280) {
-            lastHiddenOverlayTouchTs = 0;
-            cancelPendingHiddenOverlayReveal();
-            hideOverlayQuick();
-            reviewFirstTapGuard = false;
-            suppressClickUntil = now + 450;
-            togglePlay();
-            return;
-        }
-        lastHiddenOverlayTouchTs = now;
-    }
-
-    // Single tap: reveal controls.
+    // Mobile hidden-state tap now only reveals controls.
     cancelPendingHiddenOverlayReveal();
     hiddenOverlayTapTimer = setTimeout(() => {
         hiddenOverlayTapTimer = null;
@@ -877,11 +866,19 @@ let suppressClickUntil = 0;
 let overlayVisibilityBeforeMultiClick: boolean | null = null;
 let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
 let hiddenOverlayTapTimer: ReturnType<typeof setTimeout> | null = null;
-let lastHiddenOverlayTouchTs = 0;
 let forceRevealOverlayUntil = 0;
 let consumeReviewTapUntil = 0;
 let reviewFirstTapGuard = $state(false);
 let isDesktopViewport = $state(false);
+let blockOverlayShowUntil = 0;
+
+function startOverlayShowBlock(durationMs: number = 450) {
+    blockOverlayShowUntil = Date.now() + durationMs;
+}
+
+function isOverlayShowBlocked() {
+    return Date.now() < blockOverlayShowUntil;
+}
 
 function isInCommentReviewTapMode() {
     return Date.now() < forceRevealOverlayUntil;
@@ -909,8 +906,11 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
     cancelPendingHiddenOverlayReveal();
+    // Hard isolation window after double tap:
+    // even if delayed single-click callback fires, controls are not allowed to re-show.
+    startOverlayShowBlock(520);
     // Swallow follow-up synthetic/single click chain to avoid overlay flicker.
-    suppressClickUntil = Date.now() + 450;
+    suppressClickUntil = Date.now() + 520;
 
     // Desktop-only behavior: double click toggles fullscreen.
     if (isDesktopPointerClick(event)) {
