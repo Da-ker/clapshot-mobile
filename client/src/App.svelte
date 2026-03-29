@@ -266,6 +266,26 @@ async function onDesktopStepBackward() {
     refreshTopVideoMeta();
 }
 
+function onDesktopStepBackwardPress(e: MouseEvent | PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if ('button' in e && e.button !== 0) return;
+    videoPlayer?.beginStepButtonLongPress?.(-1);
+}
+
+function onDesktopStepBackwardRelease(e: MouseEvent | PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    videoPlayer?.endStepButtonLongPress?.(-1);
+    refreshTopVideoMeta();
+}
+
+function onDesktopStepBackwardCancel(e: MouseEvent | PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    videoPlayer?.cancelStepButtonLongPress?.();
+}
+
 function onDesktopTogglePlayPause() {
     videoPlayer?.togglePlay?.();
     refreshTopVideoMeta();
@@ -274,6 +294,26 @@ function onDesktopTogglePlayPause() {
 async function onDesktopStepForward() {
     await videoPlayer?.step_video?.(1);
     refreshTopVideoMeta();
+}
+
+function onDesktopStepForwardPress(e: MouseEvent | PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if ('button' in e && e.button !== 0) return;
+    videoPlayer?.beginStepButtonLongPress?.(1);
+}
+
+function onDesktopStepForwardRelease(e: MouseEvent | PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    videoPlayer?.endStepButtonLongPress?.(1);
+    refreshTopVideoMeta();
+}
+
+function onDesktopStepForwardCancel(e: MouseEvent | PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    videoPlayer?.cancelStepButtonLongPress?.();
 }
 
 function onDesktopToggleMute() {
@@ -1480,8 +1520,8 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                                 <i class="fa-solid {desktopPaused ? 'fa-play' : 'fa-pause'} text-[18px]"></i>
                                             </button>
                                             <span class="h-12 px-1.5 rounded-full inline-flex items-center gap-1 bg-slate-800/55 border border-slate-500/45">
-                                                <button class={desktopControlInnerBtnClass} onclick={onDesktopStepBackward} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
-                                                <button class={desktopControlInnerBtnClass} onclick={onDesktopStepForward} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
+                                                <button class={desktopControlInnerBtnClass} onclick={onDesktopStepBackward} onpointerdown={onDesktopStepBackwardPress} onpointerup={onDesktopStepBackwardRelease} onpointercancel={onDesktopStepBackwardCancel} onpointerleave={onDesktopStepBackwardCancel} onmousedown={onDesktopStepBackwardPress} onmouseup={onDesktopStepBackwardRelease} onmouseleave={onDesktopStepBackwardCancel} aria-label="Step backward"><i class="fa-solid fa-backward-step text-[17px]"></i></button>
+                                                <button class={desktopControlInnerBtnClass} onclick={onDesktopStepForward} onpointerdown={onDesktopStepForwardPress} onpointerup={onDesktopStepForwardRelease} onpointercancel={onDesktopStepForwardCancel} onpointerleave={onDesktopStepForwardCancel} onmousedown={onDesktopStepForwardPress} onmouseup={onDesktopStepForwardRelease} onmouseleave={onDesktopStepForwardCancel} aria-label="Step forward"><i class="fa-solid fa-forward-step text-[17px]"></i></button>
                                             </span>
                                             <span class="relative h-12 w-[188px] inline-flex justify-start">
                                                 <span class="group relative h-12 w-12 hover:w-[188px] rounded-full bg-slate-800/55 border border-slate-500/45 overflow-hidden transition-[width] duration-220 ease-out">
