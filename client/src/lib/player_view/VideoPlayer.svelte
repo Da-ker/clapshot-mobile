@@ -1195,6 +1195,87 @@ export async function step_video(frames: number) {
     send_collab_report();
 }
 
+let longPressSeekTimer: ReturnType<typeof setTimeout> | null = null;
+let longPressSeekInterval: ReturnType<typeof setInterval> | null = null;
+let longPressSeekDirection: -1 | 1 | 0 = 0;
+let longPressSeekActive = false;
+let longPressSavedMuted: boolean | null = null;
+let longPressSavedVolume: number | null = null;
+const LONG_PRESS_SEEK_DELAY_MS = 500;
+const LONG_PRESS_SEEK_INTERVAL_MS = 80;
+const LONG_PRESS_SEEK_STEP_FRAMES = 1;
+
+function stopLongPressSeek() {
+    if (longPressSeekTimer) {
+        clearTimeout(longPressSeekTimer);
+        longPressSeekTimer = null;
+    }
+    if (longPressSeekInterval) {
+        clearInterval(longPressSeekInterval);
+        longPressSeekInterval = null;
+    }
+    if (videoElem) {
+        videoElem.pause();
+        videoElem.playbackRate = 1;
+        if (longPressSavedMuted !== null) videoElem.muted = longPressSavedMuted;
+        if (longPressSavedVolume !== null) videoElem.volume = longPressSavedVolume;
+    }
+    longPressSavedMuted = null;
+    longPressSavedVolume = null;
+    longPressSeekDirection = 0;
+    longPressSeekActive = false;
+}
+
+async function tickLongPressSeek(direction: -1 | 1) {
+    if (!videoDecoder || !videoElem) return;
+    const position = await videoDecoder.stepFrame(direction, LONG_PRESS_SEEK_STEP_FRAMES);
+    time = position.timestamp;
+    videoElem.pause();
+    seekSideEffects();
+    send_collab_report();
+}
+
+function startLongPressSeek(direction: -1 | 1) {
+    stopLongPressSeek();
+    longPressSeekDirection = direction;
+    longPressSeekTimer = setTimeout(async () => {
+        longPressSeekTimer = null;
+        longPressSeekActive = true;
+        if (videoElem) {
+            longPressSavedMuted = videoElem.muted;
+            longPressSavedVolume = videoElem.volume;
+            videoElem.pause();
+            videoElem.muted = true;
+            videoElem.volume = 0;
+            videoElem.playbackRate = 0.5;
+        }
+        await tickLongPressSeek(direction);
+        longPressSeekInterval = setInterval(() => {
+            void tickLongPressSeek(direction);
+        }, LONG_PRESS_SEEK_INTERVAL_MS);
+    }, LONG_PRESS_SEEK_DELAY_MS);
+}
+
+function onStepButtonPress(event: Event, direction: -1 | 1) {
+    event.stopPropagation();
+    startLongPressSeek(direction);
+}
+
+function onStepButtonRelease(event: Event, direction: -1 | 1) {
+    event.stopPropagation();
+    const wasLongPress = longPressSeekActive;
+    const pressedDirection = longPressSeekDirection;
+    stopLongPressSeek();
+    if (!wasLongPress && pressedDirection === direction) {
+        void step_video(direction);
+    }
+}
+
+function onStepButtonCancel(event: Event) {
+    event.stopPropagation();
+    stopLongPressSeek();
+}
+
 const INTERACTIVE_ELEMS = ['input', 'textarea', 'select', 'option', 'button'];
 const INTERACTIVE_ROLES = ['textbox', 'combobox', 'listbox', 'menu', 'menubar', 'grid', 'dialog', 'alertdialog'];
 const WINDOW_KEY_ACTIONS: {[key: string]: (e: KeyboardEvent)=>any} = {
@@ -1705,9 +1786,9 @@ function handlePinClick(id: string) {
 			<div class="absolute inset-0 z-[180] transition-opacity duration-700 ease-out {overlayVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
 
 				<div class="absolute inset-0 flex md:hidden items-center justify-center gap-12 md:gap-16 pointer-events-auto">
-					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(-1); }} aria-label="Step backwards"></button>
+					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); }} onpointerdown={(e) => { if (!overlayVisible) return; onStepButtonPress(e, -1); }} onpointerup={(e) => { if (!overlayVisible) return; onStepButtonRelease(e, -1); }} onpointercancel={onStepButtonCancel} onpointerleave={onStepButtonCancel} aria-label="Step backwards"></button>
 					<button class="fa-solid {paused ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center w-[4.62rem] h-[4.62rem] md:w-[5.04rem] md:h-[5.04rem] min-w-[4.62rem] min-h-[4.62rem] md:min-w-[5.04rem] md:min-h-[5.04rem] rounded-full bg-white/28 text-white text-[2.45rem] md:text-[2.7rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)]" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); const willPlay = paused; suppressClickUntil = Date.now() + 700; togglePlay(); if (!willPlay) showOverlay(false); }} title="Play/Pause" aria-label="Play/Pause"></button>
-					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); step_video(1); }} aria-label="Step forwards"></button>
+					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); }} onpointerdown={(e) => { if (!overlayVisible) return; onStepButtonPress(e, 1); }} onpointerup={(e) => { if (!overlayVisible) return; onStepButtonRelease(e, 1); }} onpointercancel={onStepButtonCancel} onpointerleave={onStepButtonCancel} aria-label="Step forwards"></button>
 				</div>
 
 				<button
