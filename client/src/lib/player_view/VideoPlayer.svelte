@@ -766,6 +766,18 @@ $effect(() => {
 
 function swallowIfHiddenFirstTap(event: Event): boolean {
     if (!overlayVisible) {
+        const now = Date.now();
+        if (now - lastHiddenActionTapTs < 320) {
+            lastHiddenActionTapTs = 0;
+            event.stopPropagation();
+            cancelPendingHiddenOverlayReveal();
+            hideOverlayQuick();
+            reviewFirstTapGuard = false;
+            suppressClickUntil = now + 450;
+            togglePlay();
+            return true;
+        }
+        lastHiddenActionTapTs = now;
         onHiddenOverlayTap(event);
         return true;
     }
@@ -853,6 +865,7 @@ let suppressClickUntil = 0;
 let overlayVisibilityBeforeMultiClick: boolean | null = null;
 let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
 let hiddenOverlayTapTimer: ReturnType<typeof setTimeout> | null = null;
+let lastHiddenActionTapTs = 0;
 let forceRevealOverlayUntil = 0;
 let consumeReviewTapUntil = 0;
 let reviewFirstTapGuard = $state(false);
