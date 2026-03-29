@@ -1279,16 +1279,18 @@ function startLongPressSeek(direction: -1 | 1) {
 
 function onStepButtonPress(event: Event, direction: -1 | 1) {
     event.stopPropagation();
+    if (!overlayVisible) return;
     if (event instanceof MouseEvent && event.button !== 0) return;
     startLongPressSeek(direction);
 }
 
 function onStepButtonRelease(event: Event, direction: -1 | 1) {
     event.stopPropagation();
+    if (!overlayVisible && !longPressSeekActive) return;
     const wasLongPress = longPressSeekActive;
     const pressedDirection = longPressSeekDirection;
     stopLongPressSeek();
-    if (!wasLongPress && pressedDirection === direction) {
+    if (!wasLongPress && pressedDirection === direction && overlayVisible) {
         void step_video(direction);
     }
 }
