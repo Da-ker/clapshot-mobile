@@ -1527,9 +1527,9 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 </div>
             </div>
             <div class={`w-full px-2 pb-0 ${useDesktopReviewLayout ? 'px-6 flex-1 min-h-0' : ''}`} style="margin-top: {LAYOUT_SECTION_GAP_PX}px;" data-video-stack>
-                <div class={`w-full max-w-[1400px] mx-auto ${useDesktopReviewLayout ? 'max-w-none grid grid-cols-[minmax(0,1fr)_clamp(260px,24vw,380px)] gap-[20px] items-stretch justify-center h-full min-h-0' : ''}`}>
-                    <div class={`min-w-0 ${useDesktopReviewLayout ? 'min-h-0 h-full w-fit max-w-full justify-self-center flex flex-col' : ''}`}>
-                        <div bind:this={videoPanelEl} class={`w-full rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)] overflow-hidden ${useDesktopReviewLayout ? 'min-h-0 w-fit max-w-full self-center' : ''}`}>
+                <div class={`w-full max-w-[1400px] mx-auto ${useDesktopReviewLayout ? 'max-w-none grid grid-cols-[minmax(0,1fr)_340px] gap-[20px] items-stretch h-full min-h-0' : ''}`}>
+                    <div class={`min-w-0 ${useDesktopReviewLayout ? 'min-h-0 h-full w-full flex flex-col' : ''}`}>
+                        <div bind:this={videoPanelEl} class={`w-full rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)] overflow-hidden ${useDesktopReviewLayout ? 'min-h-0 w-full' : ''}`}>
                             <VideoPlayer
                                 bind:this={videoPlayer} src={$curVideo.playbackUrl}
                                 onseeked={onPlayerSeeked}
