@@ -749,15 +749,15 @@ function onHiddenOverlayTap(event: Event) {
 
 function onCommentReviewRevealTap(event: Event) {
     pushTapHud(`onCommentReviewRevealTap type=${event.type} overlay=${overlayVisible}`);
+    debugReviewTap(`commentReviewReveal ignored type=${event.type} overlay=${overlayVisible}`);
     event.preventDefault();
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
     cancelPendingHiddenOverlayReveal();
-    consumeReviewTapUntil = 0;
-    reviewFirstTapGuard = false;
-    revealOverlayFromHidden('comment-review-reveal');
-    // iOS may emit a follow-up synthetic click after touch/pointer; swallow it.
-    suppressClickUntil = Date.now() + 600;
+    // Do not reveal controls here. This capture/fallback path was the source of the
+    // first-double-tap flash after comment jump. Hidden-state interactions must be
+    // handled only by the dedicated hidden tap state machine below.
+    suppressClickUntil = Math.max(suppressClickUntil, Date.now() + 280);
 }
 
 function onCommentReviewHiddenTap(event: Event) {
@@ -830,13 +830,12 @@ $effect(() => {
     if (!videoCanvasContainer) return;
 
     const captureHandler = (event: Event) => onReviewHiddenCaptureTap(event);
-    videoCanvasContainer.addEventListener('pointerdown', captureHandler, true);
-    videoCanvasContainer.addEventListener('touchstart', captureHandler, true);
+    // Only keep click capture as a last-resort signal for diagnosis. Pointer/touch capture
+    // was pre-empting the dedicated hidden tap state machine and causing the first double-tap
+    // to reveal controls before dblclick fired.
     videoCanvasContainer.addEventListener('click', captureHandler, true);
 
     return () => {
-        videoCanvasContainer?.removeEventListener('pointerdown', captureHandler, true);
-        videoCanvasContainer?.removeEventListener('touchstart', captureHandler, true);
         videoCanvasContainer?.removeEventListener('click', captureHandler, true);
     };
 });
