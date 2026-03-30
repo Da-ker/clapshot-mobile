@@ -765,6 +765,16 @@ function onCommentReviewHiddenTap(event: Event) {
     // single tap reveals controls, double tap toggles play/pause without revealing controls.
     pushTapHud(`onCommentReviewHiddenTap type=${event.type} overlay=${overlayVisible}`);
     debugReviewTap(`hiddenTap type=${event.type} overlay=${overlayVisible}`);
+
+    // Only handle the primary pointerdown entry for review-mode hidden interactions.
+    // Synthetic click/touchend follow-ups were duplicating the same gesture and breaking
+    // both single-tap reveal and first double-tap play/pause behavior.
+    if (event.type !== 'pointerdown') {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
@@ -802,11 +812,10 @@ function onCommentReviewHiddenTap(event: Event) {
 }
 
 function onReviewHiddenCaptureTap(event: Event) {
-    // Hard interception path is only for comment-review hidden-state.
-    // Outside review mode, hidden-state taps should follow normal play/pause behavior.
+    // Diagnostic only. Do not intercept review hidden interactions here anymore.
     if (!isInCommentReviewTapMode()) return;
     if (overlayVisible) return;
-    onCommentReviewRevealTap(event);
+    debugReviewTap(`capture seen type=${event.type} overlay=${overlayVisible}`);
 }
 
 function onRootRevealTap(event: Event) {
@@ -1949,10 +1958,10 @@ function handlePinClick(id: string) {
 					type="button"
 					class="absolute inset-0 z-40 bg-transparent"
 					onpointerdown={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
-					onclick={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
+					onclick={isInCommentReviewTapMode() ? ((e) => { e.preventDefault(); e.stopPropagation(); }) : onHiddenOverlayTap}
 					ondblclick={onVideoSurfaceDoubleClick}
-					ontouchstart={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
-					ontouchend={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
+					ontouchstart={isInCommentReviewTapMode() ? ((e) => { e.preventDefault(); e.stopPropagation(); }) : onHiddenOverlayTap}
+					ontouchend={isInCommentReviewTapMode() ? ((e) => { e.preventDefault(); e.stopPropagation(); }) : onHiddenOverlayTap}
 					aria-label="Show playback controls"
 				></button>
 			{/if}
