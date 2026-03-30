@@ -154,7 +154,7 @@ function showOverlay(autoHide: boolean = true) {
 
 function revealOverlayFromHidden() {
     // Hard isolation window: never reveal controls while blocked by double-tap chain.
-    if (isOverlayShowBlocked()) return;
+    if (isOverlayShowBlocked() || isOverlayRevealSuppressed()) return;
     // First tap when hidden: reveal controls only.
     showOverlay(true);
     suppressClickUntil = Date.now() + 260;
@@ -699,6 +699,11 @@ function onHiddenOverlayTap(event: Event) {
     cancelPendingSingleSurfaceTap();
     consumeReviewTapUntil = 0;
 
+    if (isOverlayRevealSuppressed()) {
+        cancelPendingHiddenOverlayReveal();
+        return;
+    }
+
     if (isDesktopViewport) {
         cancelPendingHiddenOverlayReveal();
         revealOverlayFromHidden();
@@ -878,6 +883,7 @@ let hiddenOverlayTapTimer: ReturnType<typeof setTimeout> | null = null;
 let lastHiddenActionTapTs = 0;
 let forceRevealOverlayUntil = 0;
 let consumeReviewTapUntil = 0;
+let suppressOverlayRevealUntil = 0;
 let reviewFirstTapGuard = $state(false);
 let isDesktopViewport = $state(false);
 let blockOverlayShowUntil = 0;
@@ -888,6 +894,10 @@ function startOverlayShowBlock(durationMs: number = 450) {
 
 function isOverlayShowBlocked() {
     return Date.now() < blockOverlayShowUntil;
+}
+
+function isOverlayRevealSuppressed() {
+    return Date.now() < suppressOverlayRevealUntil;
 }
 
 function isInCommentReviewTapMode() {
@@ -930,8 +940,10 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
         return;
     }
 
+    const hiddenReviewFirstInteraction = isInCommentReviewTapMode() && (!overlayVisible || shouldConsumeReviewTap());
+
     // In comment review hidden-state, first interaction must reveal controls only.
-    if (isInCommentReviewTapMode() && (!overlayVisible || shouldConsumeReviewTap())) {
+    if (hiddenReviewFirstInteraction) {
         consumeReviewTapUntil = 0;
         revealOverlayFromHidden();
         return;
@@ -944,6 +956,7 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     // for playback, so trailing touchend/click events cannot re-open controls.
     consumeReviewTapUntil = 0;
     forceRevealOverlayUntil = now;
+    suppressOverlayRevealUntil = now + 700;
     togglePlay();
 
     overlayVisibilityBeforeMultiClick = null;
@@ -1118,14 +1131,14 @@ function onVideoTouchEnd(e: TouchEvent) {
 
     e.stopPropagation();
 
-    // Prevent synthetic click from immediately toggling twice after touchend.
-    suppressClickUntil = now + 350;
-
-    // During comment review, touchend from a double-tap sequence must not force-reveal
-    // controls after onVideoSurfaceDoubleClick already handled play/pause.
-    if (Date.now() < suppressClickUntil && isInCommentReviewTapMode() && !overlayVisible) {
+    // If a double-tap playback action just happened, ignore trailing touchend reveal logic.
+    if (isOverlayRevealSuppressed() && !overlayVisible) {
+        suppressClickUntil = Math.max(suppressClickUntil, now + 350);
         return;
     }
+
+    // Prevent synthetic click from immediately toggling twice after touchend.
+    suppressClickUntil = now + 350;
 
     if (isInCommentReviewTapMode()) {
         revealOverlayFromHidden();
