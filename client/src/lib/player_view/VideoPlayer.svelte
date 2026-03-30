@@ -756,6 +756,10 @@ function onCommentReviewHiddenTap(event: Event) {
     cancelPendingSingleSurfaceTap();
     cancelPendingHiddenOverlayReveal();
 
+    if (event.type === 'click' || event.type === 'touchend') {
+        return;
+    }
+
     if (overlayVisible) return;
     if (!isInCommentReviewTapMode()) return;
     if (isOverlayRevealSuppressed() || isReviewPlayLocked()) return;
@@ -995,6 +999,7 @@ export function enterCommentReviewTapMode(durationMs: number = 60000) {
 }
 
 function onVideoSurfaceDoubleClick(event: MouseEvent) {
+    event.preventDefault();
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
     cancelPendingHiddenOverlayReveal();
@@ -1205,6 +1210,14 @@ function onVideoTouchEnd(e: TouchEvent) {
 
     e.stopPropagation();
 
+    // Review-mode / post-review-lock mobile taps are handled exclusively by the hidden overlay button.
+    // Do not let video touchend participate, otherwise the same physical double tap can still
+    // leak a late reveal/hide cycle and cause a visible controls flash.
+    if ((isInCommentReviewTapMode() || isReviewPlayLocked()) && !isDesktopViewport) {
+        suppressClickUntil = Math.max(suppressClickUntil, now + 420);
+        return;
+    }
+
     // If a double-tap playback action just happened, ignore trailing touchend reveal logic.
     if (isOverlayRevealSuppressed() && !overlayVisible) {
         suppressClickUntil = Math.max(suppressClickUntil, now + 350);
@@ -1213,14 +1226,6 @@ function onVideoTouchEnd(e: TouchEvent) {
 
     // Prevent synthetic click from immediately toggling twice after touchend.
     suppressClickUntil = now + 350;
-
-    // Mobile review-mode hidden-state is isolated and does not use generic touchend reveal.
-    if (isInCommentReviewTapMode() || isReviewPlayLocked()) {
-        if (overlayVisible) {
-            hideOverlayQuick();
-        }
-        return;
-    }
 
     // Hidden-state first tap: reveal only. Visible-state tap: toggle controls.
     if (!overlayVisible) {
@@ -1878,7 +1883,14 @@ function handlePinClick(id: string) {
 				oncanplay={prepare_drawing}
 				onclick={clickOnVideo}
 				onwheel={preventDefault((e)=>onVideoWheel(e as WheelEvent))}
-				ondblclick={onVideoSurfaceDoubleClick}
+				ondblclick={(e) => {
+					if (!overlayVisible && !isDesktopViewport && (isInCommentReviewTapMode() || isReviewPlayLocked())) {
+						e.preventDefault();
+						e.stopPropagation();
+						return;
+					}
+					onVideoSurfaceDoubleClick(e);
+				}}
 				ontouchstart={onVideoTouchStart}
 				ontouchmove={preventDefault((e)=>onVideoTouchMove(e as TouchEvent))}
 				ontouchend={onVideoTouchEnd}
@@ -1907,11 +1919,17 @@ function handlePinClick(id: string) {
 				<button
 					type="button"
 					class="absolute inset-0 z-40 bg-transparent"
-					onpointerdown={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
-					onclick={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
-					ondblclick={onVideoSurfaceDoubleClick}
-					ontouchstart={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
-					ontouchend={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
+					onpointerdown={(e) => {
+						if (isInCommentReviewTapMode()) {
+							onCommentReviewHiddenTap(e);
+							return;
+						}
+						onHiddenOverlayTap(e);
+					}}
+					ondblclick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
 					aria-label="Show playback controls"
 				></button>
 			{/if}
@@ -1924,7 +1942,7 @@ function handlePinClick(id: string) {
 		-->
 
 			<!-- YouTube-like overlay controls -->
-			<div class="absolute inset-0 z-[180] transition-opacity duration-700 ease-out {overlayVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
+			<div class="absolute inset-0 z-[180] transition-opacity duration-700 ease-out {overlayVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { if (!isDesktopViewport) { e.preventDefault(); e.stopPropagation(); return; } const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto md:hidden">
 					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); }} onpointerdown={(e) => { onStepButtonPress(e, -1); }} onpointerup={(e) => { onStepButtonRelease(e, -1); }} onmousedown={(e) => onStepButtonMouseDown(e, -1)} onmouseup={(e) => onStepButtonMouseUp(e, -1)} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onpointercancel={onStepButtonCancel} onpointerleave={onStepButtonCancel} onmouseleave={onStepButtonCancel} aria-label="Step backwards"></button>
