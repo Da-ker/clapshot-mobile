@@ -839,6 +839,7 @@ function onReviewHiddenCaptureTap(event: Event) {
 
     if (isSecondTap) {
         reviewCaptureLastTapTs = 0;
+        reviewCaptureAwaitingSecondTap = false;
         cancelPendingReviewCaptureSingleTap();
         reviewPlayLockUntil = now + 700;
         exitCommentReviewTapMode();
@@ -851,10 +852,12 @@ function onReviewHiddenCaptureTap(event: Event) {
     }
 
     reviewCaptureLastTapTs = now;
+    reviewCaptureAwaitingSecondTap = true;
     cancelPendingReviewCaptureSingleTap();
     reviewCaptureSingleTapTimer = setTimeout(() => {
         reviewCaptureSingleTapTimer = null;
         reviewCaptureLastTapTs = 0;
+        reviewCaptureAwaitingSecondTap = false;
         if (isReviewPlayLocked() || !isInCommentReviewTapMode() || overlayVisible) return;
         debugReviewTap('capture singleTap -> reveal');
         revealOverlayFromHidden('review-capture-single');
@@ -1016,6 +1019,7 @@ let reviewHudVisible = $state(false);
 let reviewHudLines = $state<string[]>([]);
 let reviewCaptureLastTapTs = 0;
 let reviewCaptureSingleTapTimer: ReturnType<typeof setTimeout> | null = null;
+let reviewCaptureAwaitingSecondTap = false;
 
 function startOverlayShowBlock(durationMs: number = 450) {
     blockOverlayShowUntil = Date.now() + durationMs;
@@ -1048,6 +1052,7 @@ function shouldBlockFirstReviewDoubleTapReveal() {
 function exitCommentReviewTapMode() {
     forceRevealOverlayUntil = 0;
     consumeReviewTapUntil = 0;
+    reviewCaptureAwaitingSecondTap = false;
 }
 
 export function enterCommentReviewTapMode(durationMs: number = 60000) {
@@ -1059,6 +1064,7 @@ export function enterCommentReviewTapMode(durationMs: number = 60000) {
     reviewPlayLockUntil = 0;
     lastReviewHiddenTapTs = 0;
     reviewCaptureLastTapTs = 0;
+    reviewCaptureAwaitingSecondTap = false;
     cancelPendingReviewHiddenSingleTap();
     cancelPendingReviewCaptureSingleTap();
     // First tap in review mode should only reveal controls, never trigger playback.
@@ -1095,9 +1101,11 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
 
     const hiddenReviewFirstInteraction = isInCommentReviewTapMode() && !isReviewPlayLocked() && (!overlayVisible || shouldConsumeReviewTap());
 
-    // Only the very first hidden-state interaction after comment jump should reveal controls.
-    // If the user goes straight into a first double-tap, suppress that initial reveal path.
-    if (hiddenReviewFirstInteraction) {
+    // If capture logic already marked this gesture as the second tap in a review-mode sequence,
+    // do not fall back to the old "first interaction reveals controls" branch.
+    if (hiddenReviewFirstInteraction && reviewCaptureAwaitingSecondTap) {
+        consumeReviewTapUntil = 0;
+    } else if (hiddenReviewFirstInteraction) {
         if (shouldBlockFirstReviewDoubleTapReveal() && !overlayVisible) {
             consumeReviewTapUntil = 0;
             firstReviewDoubleTapGuardUntil = 0;
