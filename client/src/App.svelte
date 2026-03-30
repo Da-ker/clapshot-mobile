@@ -1502,7 +1502,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                 </div>
             </div>
             <div class="w-full px-2 md:px-6 pb-0 md:flex-1 md:min-h-0" style="margin-top: {LAYOUT_SECTION_GAP_PX}px;" data-video-stack>
-                <div class="w-full max-w-[1400px] mx-auto md:w-[min(99vw,1800px)] md:max-w-none md:grid md:grid-cols-[minmax(0,min(calc((100dvh-150px)*16/9),calc(100vw-420px)))_clamp(260px,24vw,380px)] md:gap-[20px] md:items-stretch md:justify-center md:h-full md:min-h-0 md:max-h-full">
+                <div class="w-full max-w-[1400px] mx-auto md:w-fit md:max-w-none md:grid md:grid-cols-[minmax(0,min(calc((100dvh-150px)*16/9),calc(100vw-420px)))_clamp(260px,24vw,380px)] md:gap-[20px] md:items-stretch md:justify-center md:h-full md:min-h-0 md:max-h-full">
                     <div class="min-w-0 md:min-h-0 md:h-full md:flex md:flex-col">
                         <div bind:this={videoPanelEl} class="w-full rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)] md:min-h-0 md:flex-1 md:max-h-[calc(100dvh-150px)] overflow-hidden">
                             <VideoPlayer
