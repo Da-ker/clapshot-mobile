@@ -155,18 +155,6 @@ function showOverlay(autoHide: boolean = true) {
 function revealOverlayFromHidden() {
     // Hard isolation window: never reveal controls while blocked by double-tap chain.
     if (isOverlayShowBlocked() || isOverlayRevealSuppressed()) return;
-
-    // During the first hidden-state phase after comment jump, only explicit single-tap
-    // paths may reveal controls. Any reveal attempt coming from double-tap/capture/fallback
-    // paths is rejected to avoid the first-double-tap flash.
-    if (isInCommentReviewTapMode() && !overlayVisible) {
-        if (reviewRevealSource !== 'single-tap') {
-            reviewRevealSource = 'none';
-            return;
-        }
-    }
-
-    reviewRevealSource = 'none';
     // First tap when hidden: reveal controls only.
     showOverlay(true);
     suppressClickUntil = Date.now() + 260;
@@ -754,7 +742,6 @@ function onCommentReviewRevealTap(event: Event) {
     cancelPendingHiddenOverlayReveal();
     consumeReviewTapUntil = 0;
     reviewFirstTapGuard = false;
-    reviewRevealSource = 'capture';
     revealOverlayFromHidden();
     // iOS may emit a follow-up synthetic click after touch/pointer; swallow it.
     suppressClickUntil = Date.now() + 600;
@@ -795,7 +782,6 @@ function onCommentReviewHiddenTap(event: Event) {
         lastReviewHiddenTapTs = 0;
         if (isReviewPlayLocked() || !isInCommentReviewTapMode() || overlayVisible) return;
         consumeReviewTapUntil = 0;
-        reviewRevealSource = 'single-tap';
         revealOverlayFromHidden();
         suppressClickUntil = Date.now() + 260;
     }, 260);
@@ -958,7 +944,6 @@ let forceRevealOverlayUntil = 0;
 let consumeReviewTapUntil = 0;
 let suppressOverlayRevealUntil = 0;
 let firstReviewDoubleTapGuardUntil = 0;
-let reviewRevealSource: 'none' | 'single-tap' | 'double-tap' | 'capture' = 'none';
 let reviewPlayLockUntil = 0;
 let reviewFirstTapGuard = $state(false);
 let isDesktopViewport = $state(false);
@@ -1000,7 +985,6 @@ function exitCommentReviewTapMode() {
 export function enterCommentReviewTapMode(durationMs: number = 60000) {
     forceRevealOverlayUntil = Date.now() + durationMs;
     firstReviewDoubleTapGuardUntil = Date.now() + 1200;
-    reviewRevealSource = 'none';
     reviewPlayLockUntil = 0;
     lastReviewHiddenTapTs = 0;
     cancelPendingReviewHiddenSingleTap();
@@ -1043,10 +1027,8 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
         if (shouldBlockFirstReviewDoubleTapReveal() && !overlayVisible) {
             consumeReviewTapUntil = 0;
             firstReviewDoubleTapGuardUntil = 0;
-            reviewRevealSource = 'double-tap';
         } else {
             consumeReviewTapUntil = 0;
-            reviewRevealSource = 'single-tap';
             revealOverlayFromHidden();
             return;
         }
@@ -1059,7 +1041,6 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     // immediately exit review mode and lock out its reveal path for the trailing event chain.
     reviewPlayLockUntil = now + 900;
     firstReviewDoubleTapGuardUntil = 0;
-    reviewRevealSource = 'none';
     lastReviewHiddenTapTs = 0;
     exitCommentReviewTapMode();
     suppressOverlayRevealUntil = now + 900;
