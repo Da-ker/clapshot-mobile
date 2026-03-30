@@ -259,7 +259,7 @@ $effect(() => {
         return;
     }
 
-    const media = window.matchMedia('(min-width: 768px)');
+    const media = window.matchMedia('(min-width: 1025px)');
     const apply = () => {
         isDesktopViewport = media.matches;
     };
@@ -949,7 +949,7 @@ function clickOnVideo(event: MouseEvent ) {
             return;
         }
 
-        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
+        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1025px)').matches;
         if (isDesktop) {
             // Drawing mode should consume clicks for strokes only; never toggle play/pause.
             if (hasDrawing()) {
