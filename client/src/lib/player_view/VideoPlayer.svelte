@@ -595,6 +595,12 @@ function cancelPendingHiddenOverlayReveal() {
     hiddenOverlayTapTimer = null;
 }
 
+function cancelPendingReviewHiddenSingleTap() {
+    if (!reviewHiddenSingleTapTimer) return;
+    clearTimeout(reviewHiddenSingleTapTimer);
+    reviewHiddenSingleTapTimer = null;
+}
+
 function onOverlaySurfaceTap(event: Event) {
     if (Date.now() < suppressClickUntil) {
         event.stopPropagation();
@@ -754,13 +760,31 @@ function onCommentReviewHiddenTap(event: Event) {
     if (!isInCommentReviewTapMode()) return;
     if (isOverlayRevealSuppressed() || isReviewPlayLocked()) return;
 
-    hiddenOverlayTapTimer = setTimeout(() => {
-        hiddenOverlayTapTimer = null;
-        if (isReviewPlayLocked()) return;
+    const now = Date.now();
+    const isSecondTap = now - lastReviewHiddenTapTs < 280;
+
+    if (isSecondTap) {
+        lastReviewHiddenTapTs = 0;
+        cancelPendingReviewHiddenSingleTap();
+        reviewPlayLockUntil = now + 900;
+        exitCommentReviewTapMode();
+        suppressOverlayRevealUntil = now + 900;
+        suppressClickUntil = now + 520;
+        hideOverlayQuick();
+        togglePlay();
+        return;
+    }
+
+    lastReviewHiddenTapTs = now;
+    cancelPendingReviewHiddenSingleTap();
+    reviewHiddenSingleTapTimer = setTimeout(() => {
+        reviewHiddenSingleTapTimer = null;
+        lastReviewHiddenTapTs = 0;
+        if (isReviewPlayLocked() || !isInCommentReviewTapMode() || overlayVisible) return;
         consumeReviewTapUntil = 0;
         revealOverlayFromHidden();
         suppressClickUntil = Date.now() + 260;
-    }, 240);
+    }, 260);
 }
 
 function onReviewHiddenCaptureTap(event: Event) {
@@ -913,7 +937,9 @@ let suppressClickUntil = 0;
 let overlayVisibilityBeforeMultiClick: boolean | null = null;
 let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
 let hiddenOverlayTapTimer: ReturnType<typeof setTimeout> | null = null;
+let reviewHiddenSingleTapTimer: ReturnType<typeof setTimeout> | null = null;
 let lastHiddenActionTapTs = 0;
+let lastReviewHiddenTapTs = 0;
 let forceRevealOverlayUntil = 0;
 let consumeReviewTapUntil = 0;
 let suppressOverlayRevealUntil = 0;
@@ -954,6 +980,8 @@ function exitCommentReviewTapMode() {
 export function enterCommentReviewTapMode(durationMs: number = 60000) {
     forceRevealOverlayUntil = Date.now() + durationMs;
     reviewPlayLockUntil = 0;
+    lastReviewHiddenTapTs = 0;
+    cancelPendingReviewHiddenSingleTap();
     // First tap in review mode should only reveal controls, never trigger playback.
     consumeReviewTapUntil = Date.now() + Math.min(durationMs, 1500);
     // Root-level guard overlay blocks desktop hover wake and causes mobile double-tap flash.
@@ -970,6 +998,7 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
     cancelPendingHiddenOverlayReveal();
+    cancelPendingReviewHiddenSingleTap();
     const now = Date.now();
     // Hard isolation window after double tap:
     // even if delayed single-click callback fires, controls are not allowed to re-show.
@@ -999,6 +1028,7 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     // Once hidden-state double-tap intentionally starts playback from comment review,
     // immediately exit review mode and lock out its reveal path for the trailing event chain.
     reviewPlayLockUntil = now + 900;
+    lastReviewHiddenTapTs = 0;
     exitCommentReviewTapMode();
     suppressOverlayRevealUntil = now + 900;
     togglePlay();
