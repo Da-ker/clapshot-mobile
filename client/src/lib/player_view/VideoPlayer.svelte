@@ -625,11 +625,12 @@ function onOverlaySurfaceTap(event: Event) {
         return;
     }
 
+    // Mobile review-mode overlay uses an isolated state machine: visible tap hides,
+    // hidden interactions are handled by dedicated hidden/review handlers only.
     if (isInCommentReviewTapMode()) {
         if (overlayVisible) {
-            hideOverlayByDesktopClick();
-        } else {
-            revealOverlayFromHidden();
+            hideOverlayQuick();
+            suppressClickUntil = Date.now() + 260;
         }
         return;
     }
@@ -671,10 +672,12 @@ function onPlayerSurfaceTap(event: Event) {
 
     const wasVisible = overlayVisible;
 
-    // In comment review mode, hidden-state tap should only reveal controls.
-    if (isInCommentReviewTapMode() && !wasVisible) {
-        cancelPendingSingleSurfaceTap();
-        revealOverlayFromHidden();
+    // Mobile review-mode hidden-state no longer uses generic player-surface logic.
+    if (isInCommentReviewTapMode()) {
+        if (wasVisible) {
+            hideOverlayQuick();
+            suppressClickUntil = Date.now() + 260;
+        }
         return;
     }
 
@@ -693,11 +696,16 @@ function onPlayerSurfaceTap(event: Event) {
 }
 
 function onHiddenOverlayTap(event: Event) {
-    // In hidden state, first tap should ONLY reveal controls and never trigger playback actions.
+    // Normal hidden-state input machine: reveal controls only.
     pushTapHud(`onHiddenOverlayTap type=${event.type} overlay=${overlayVisible}`);
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
     consumeReviewTapUntil = 0;
+
+    // Review-mode hidden-state is handled by a dedicated isolated handler.
+    if (isInCommentReviewTapMode()) {
+        return;
+    }
 
     if (isOverlayRevealSuppressed()) {
         cancelPendingHiddenOverlayReveal();
@@ -731,6 +739,27 @@ function onCommentReviewRevealTap(event: Event) {
     revealOverlayFromHidden();
     // iOS may emit a follow-up synthetic click after touch/pointer; swallow it.
     suppressClickUntil = Date.now() + 600;
+}
+
+function onCommentReviewHiddenTap(event: Event) {
+    // Isolated mobile comment-review hidden-state machine:
+    // single tap reveals controls, double tap toggles play/pause without revealing controls.
+    pushTapHud(`onCommentReviewHiddenTap type=${event.type} overlay=${overlayVisible}`);
+    event.preventDefault();
+    event.stopPropagation();
+    cancelPendingSingleSurfaceTap();
+    cancelPendingHiddenOverlayReveal();
+
+    if (overlayVisible) return;
+    if (!isInCommentReviewTapMode()) return;
+    if (isOverlayRevealSuppressed()) return;
+
+    hiddenOverlayTapTimer = setTimeout(() => {
+        hiddenOverlayTapTimer = null;
+        consumeReviewTapUntil = 0;
+        revealOverlayFromHidden();
+        suppressClickUntil = Date.now() + 260;
+    }, 240);
 }
 
 function onReviewHiddenCaptureTap(event: Event) {
@@ -846,9 +875,12 @@ function clickOnVideo(event: MouseEvent ) {
 
         const wasVisible = overlayVisible;
 
-        if (isInCommentReviewTapMode() && !wasVisible) {
-            cancelPendingSingleSurfaceTap();
-            revealOverlayFromHidden();
+        // Mobile review-mode hidden-state no longer routes through generic click handling.
+        if (isInCommentReviewTapMode()) {
+            if (wasVisible) {
+                hideOverlayQuick();
+                suppressClickUntil = Date.now() + 260;
+            }
             return;
         }
 
@@ -1140,8 +1172,11 @@ function onVideoTouchEnd(e: TouchEvent) {
     // Prevent synthetic click from immediately toggling twice after touchend.
     suppressClickUntil = now + 350;
 
+    // Mobile review-mode hidden-state is isolated and does not use generic touchend reveal.
     if (isInCommentReviewTapMode()) {
-        revealOverlayFromHidden();
+        if (overlayVisible) {
+            hideOverlayQuick();
+        }
         return;
     }
 
@@ -1830,11 +1865,11 @@ function handlePinClick(id: string) {
 				<button
 					type="button"
 					class="absolute inset-0 z-40 bg-transparent"
-					onpointerdown={onHiddenOverlayTap}
-					onclick={onHiddenOverlayTap}
+					onpointerdown={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
+					onclick={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
 					ondblclick={onVideoSurfaceDoubleClick}
-					ontouchstart={onHiddenOverlayTap}
-					ontouchend={onHiddenOverlayTap}
+					ontouchstart={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
+					ontouchend={isInCommentReviewTapMode() ? onCommentReviewHiddenTap : onHiddenOverlayTap}
 					aria-label="Show playback controls"
 				></button>
 			{/if}
