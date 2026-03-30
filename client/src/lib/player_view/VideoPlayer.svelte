@@ -1980,7 +1980,7 @@ function handlePinClick(id: string) {
 
 	<div  class={`flex-1 flex justify-center relative min-h-[9em] ${isDesktopViewport ? 'items-center min-h-[12em]' : 'items-start'}`}
 			 style="{debug_layout?'border: 2px solid orange;':''}">
-		<div bind:this={videoCanvasContainer} class={`relative rounded-xl bg-black overflow-hidden ${debug_layout ? 'border-4 border-x-zinc-50' : ''} ${isDesktopViewport ? 'w-auto h-auto' : 'w-full max-w-full max-h-full aspect-video'}`} style={isDesktopViewport ? 'aspect-ratio: 16 / 9; width: min(100%, calc((100vh - 220px) * 16 / 9)); max-width: 100%; max-height: 100%;' : ''} onclick={onPlayerSurfaceTap} onmouseenter={onVideoRegionMouseMove} onmousemove={onVideoRegionMouseMove} onmouseleave={onVideoRegionMouseLeave}>
+		<div bind:this={videoCanvasContainer} class={`relative rounded-xl bg-black overflow-hidden ${debug_layout ? 'border-4 border-x-zinc-50' : ''} ${isDesktopViewport ? 'w-auto h-auto' : 'w-full max-w-full max-h-full aspect-video'}`} style={isDesktopViewport ? 'aspect-ratio: 16 / 9; width: min(100%, calc((100vh - 320px) * 16 / 9)); max-width: 100%; max-height: 100%;' : ''} onclick={onPlayerSurfaceTap} onmouseenter={onVideoRegionMouseMove} onmousemove={onVideoRegionMouseMove} onmouseleave={onVideoRegionMouseLeave}>
 			<video
 				transition:scale
 				src="{src}"
