@@ -52,6 +52,7 @@ let desktopLongPressSeeking = $state(false);
 let desktopMuted = $state(false);
 let desktopVolume = $state(1);
 const desktopControlInnerBtnClass = 'h-10 w-10 rounded-full inline-flex items-center justify-center text-slate-100 transition-colors hover:bg-slate-600/55';
+let useDesktopReviewLayout = $state(false);
 
 
 
@@ -407,6 +408,17 @@ function updateDesktopCommentsHeight() {
     desktopCommentsHeight = Math.max(0, Math.round(inputBottom - panelTop));
 }
 
+function detectDesktopReviewLayout() {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const isIPad = /iPad/i.test(ua)
+        || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)
+        || (/Mac OS X/i.test(ua) && navigator.maxTouchPoints > 1);
+    const isLandscape = window.innerWidth > window.innerHeight;
+    if (isIPad) return isLandscape;
+    return window.innerWidth >= 1025;
+}
+
 $effect(() => {
     if (!commentInputDockEl) return;
     updateMobileCommentInputHeight();
@@ -431,6 +443,19 @@ $effect(() => {
         ro.disconnect();
         window.removeEventListener('resize', updateCommentsTop);
         window.visualViewport?.removeEventListener('resize', updateCommentsTop);
+    };
+});
+
+$effect(() => {
+    const applyReviewLayout = () => {
+        useDesktopReviewLayout = detectDesktopReviewLayout();
+    };
+    applyReviewLayout();
+    window.addEventListener('resize', applyReviewLayout);
+    window.visualViewport?.addEventListener('resize', applyReviewLayout);
+    return () => {
+        window.removeEventListener('resize', applyReviewLayout);
+        window.visualViewport?.removeEventListener('resize', applyReviewLayout);
     };
 });
 
@@ -1485,8 +1510,8 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
         {:else if $mediaFileId && $curVideo && $curVideo.playbackUrl}
 
         <!-- ========== video review widgets ============= -->
-        <div bind:this={videoReviewRootEl} class="relative h-full min-h-0 overflow-hidden md:flex md:flex-col">
-            <div class="px-2 md:hidden pt-2 pb-0">
+        <div bind:this={videoReviewRootEl} class={`relative h-full min-h-0 overflow-hidden ${useDesktopReviewLayout ? 'flex flex-col' : ''}`}>
+            <div class={`px-2 pt-2 pb-0 ${useDesktopReviewLayout ? 'hidden' : ''}`}>
                 <div class="rounded-xl bg-slate-900/55 px-2.5 md:px-3 py-[2px] backdrop-blur-sm">
                     <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm md:text-base min-w-0">
                         <span class="top-left-controls inline-flex flex-[0_1_70%] md:flex-[0_1_74%] items-center rounded-lg bg-slate-800/60 px-2 py-[2px] text-slate-100 font-mono text-sm md:text-base min-w-0">
@@ -1501,10 +1526,10 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     </div>
                 </div>
             </div>
-            <div class="w-full px-2 md:px-6 pb-0 md:flex-1 md:min-h-0" style="margin-top: {LAYOUT_SECTION_GAP_PX}px;" data-video-stack>
-                <div class="w-full max-w-[1400px] mx-auto md:w-fit md:max-w-none md:grid md:grid-cols-[minmax(0,min(calc((100dvh-150px)*16/9),calc(100vw-420px)))_clamp(260px,24vw,380px)] md:gap-[20px] md:items-stretch md:justify-center md:h-full md:min-h-0 md:max-h-full">
-                    <div class="min-w-0 md:min-h-0 md:h-full md:flex md:flex-col">
-                        <div bind:this={videoPanelEl} class="w-full rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)] md:min-h-0 md:flex-1 md:max-h-[calc(100dvh-150px)] overflow-hidden">
+            <div class={`w-full px-2 pb-0 ${useDesktopReviewLayout ? 'px-6 flex-1 min-h-0' : ''}`} style="margin-top: {LAYOUT_SECTION_GAP_PX}px;" data-video-stack>
+                <div class={`w-full max-w-[1400px] mx-auto ${useDesktopReviewLayout ? 'w-fit max-w-none grid grid-cols-[minmax(0,min(calc((100dvh-150px)*16/9),calc(100vw-420px)))_clamp(260px,24vw,380px)] gap-[20px] items-stretch justify-center h-full min-h-0 max-h-full' : ''}`}>
+                    <div class={`min-w-0 ${useDesktopReviewLayout ? 'min-h-0 h-full flex flex-col' : ''}`}>
+                        <div bind:this={videoPanelEl} class={`w-full rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)] overflow-hidden ${useDesktopReviewLayout ? 'min-h-0 flex-1 max-h-[calc(100dvh-150px)]' : ''}`}>
                             <VideoPlayer
                                 bind:this={videoPlayer} src={$curVideo.playbackUrl}
                                 onseeked={onPlayerSeeked}
@@ -1515,7 +1540,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                             />
                         </div>
 
-                        <div class="hidden md:block mt-2">
+                        <div class={`${useDesktopReviewLayout ? 'block' : 'hidden'} mt-2`}>
                             <div class="rounded-xl bg-slate-900/35 px-2.5 py-[6px] backdrop-blur-sm">
                                 <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm min-w-0">
                                     <span class="top-left-controls inline-flex flex-1 items-center rounded-lg bg-slate-800/45 px-2 py-[2px] text-slate-100 font-mono text-sm min-w-0">
@@ -1555,14 +1580,14 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                             </div>
                         </div>
 
-                        <div bind:this={commentInputDockEl} class="fixed inset-x-0 bottom-[max(0px,env(safe-area-inset-bottom))] md:static md:mt-2 md:w-full md:max-w-none md:mx-auto md:left-auto md:right-auto md:bottom-0 md:shrink-0 md:shadow-[0_-10px_24px_rgba(0,0,0,0.28)] z-30 pt-0 pb-2 rounded-t-xl md:rounded-xl bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)]">
+                        <div bind:this={commentInputDockEl} class={`fixed inset-x-0 bottom-[max(0px,env(safe-area-inset-bottom))] z-30 pt-0 pb-2 rounded-t-xl bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)] ${useDesktopReviewLayout ? 'static mt-2 w-full max-w-none mx-auto left-auto right-auto bottom-0 shrink-0 rounded-xl shadow-[0_-10px_24px_rgba(0,0,0,0.28)]' : ''}`}>
                             <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
                         </div>
                     </div>
 
                     <div
                         data-comments-panel="1"
-                        class="absolute z-20 inset-x-0 mx-auto w-full max-w-[1400px] px-2 top-[var(--comments-top-px)] bottom-[calc(var(--mobile-comment-input-h)+env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 md:static md:inset-auto md:mx-0 md:w-full md:max-w-none md:h-[var(--desktop-comments-h)] md:min-h-0 md:rounded-xl md:px-0 md:top-auto md:bottom-auto md:translate-y-0 md:opacity-100 md:pointer-events-auto"
+                        class={`absolute z-20 inset-x-0 mx-auto w-full max-w-[1400px] px-2 top-[var(--comments-top-px)] bottom-[calc(var(--mobile-comment-input-h)+env(safe-area-inset-bottom))] flex flex-col min-h-0 overflow-hidden rounded-t-2xl bg-[#0f1728]/88 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.38)] transition-all duration-200 ${useDesktopReviewLayout ? 'static inset-auto mx-0 w-full max-w-none h-[var(--desktop-comments-h)] min-h-0 rounded-xl px-0 top-auto bottom-auto translate-y-0 opacity-100 pointer-events-auto' : ''}`}
                         style="--mobile-comment-input-h: 56px; --comments-top-px: {commentsTopPx}px; --desktop-comments-h: {desktopCommentsHeight}px;"
                         oncontextmenu={(e) => e.preventDefault()}
                     >

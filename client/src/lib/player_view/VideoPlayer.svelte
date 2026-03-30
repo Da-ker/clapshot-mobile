@@ -253,20 +253,34 @@ export async function toggleSystemFullscreen() {
     }
 }
 
+function detectDesktopViewport() {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const isIPad = /iPad/i.test(ua)
+        || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)
+        || (/Mac OS X/i.test(ua) && navigator.maxTouchPoints > 1);
+    const isLandscape = window.innerWidth > window.innerHeight;
+    if (isIPad) return isLandscape;
+    return window.matchMedia('(min-width: 1025px)').matches;
+}
+
 $effect(() => {
     if (typeof window === 'undefined') {
         isDesktopViewport = false;
         return;
     }
 
-    const media = window.matchMedia('(min-width: 1025px)');
     const apply = () => {
-        isDesktopViewport = media.matches;
+        isDesktopViewport = detectDesktopViewport();
     };
 
     apply();
-    media.addEventListener('change', apply);
-    return () => media.removeEventListener('change', apply);
+    window.addEventListener('resize', apply);
+    window.visualViewport?.addEventListener('resize', apply);
+    return () => {
+        window.removeEventListener('resize', apply);
+        window.visualViewport?.removeEventListener('resize', apply);
+    };
 });
 
 $effect(() => {
@@ -949,7 +963,7 @@ function clickOnVideo(event: MouseEvent ) {
             return;
         }
 
-        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1025px)').matches;
+        const isDesktop = detectDesktopViewport();
         if (isDesktop) {
             // Drawing mode should consume clicks for strokes only; never toggle play/pause.
             if (hasDrawing()) {
