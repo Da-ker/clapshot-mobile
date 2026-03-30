@@ -253,34 +253,20 @@ export async function toggleSystemFullscreen() {
     }
 }
 
-function detectDesktopViewport() {
-    if (typeof window === 'undefined') return false;
-    const ua = navigator.userAgent || '';
-    const isIPad = /iPad/i.test(ua)
-        || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)
-        || (/Mac OS X/i.test(ua) && navigator.maxTouchPoints > 1);
-    const isLandscape = window.innerWidth > window.innerHeight;
-    if (isIPad) return isLandscape;
-    return window.matchMedia('(min-width: 1025px)').matches;
-}
-
 $effect(() => {
     if (typeof window === 'undefined') {
         isDesktopViewport = false;
         return;
     }
 
+    const media = window.matchMedia('(min-width: 768px)');
     const apply = () => {
-        isDesktopViewport = detectDesktopViewport();
+        isDesktopViewport = media.matches;
     };
 
     apply();
-    window.addEventListener('resize', apply);
-    window.visualViewport?.addEventListener('resize', apply);
-    return () => {
-        window.removeEventListener('resize', apply);
-        window.visualViewport?.removeEventListener('resize', apply);
-    };
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
 });
 
 $effect(() => {
@@ -963,7 +949,7 @@ function clickOnVideo(event: MouseEvent ) {
             return;
         }
 
-        const isDesktop = detectDesktopViewport();
+        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
         if (isDesktop) {
             // Drawing mode should consume clicks for strokes only; never toggle play/pause.
             if (hasDrawing()) {
@@ -1978,16 +1964,16 @@ function handlePinClick(id: string) {
 		</div>
 	{/if}
 
-	<div  class={`flex-1 flex justify-center relative min-h-[9em] ${isDesktopViewport ? 'items-center min-h-[12em]' : 'items-start'}`}
+	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
 			 style="{debug_layout?'border: 2px solid orange;':''}">
-		<div bind:this={videoCanvasContainer} class={`relative rounded-xl bg-black overflow-hidden ${debug_layout ? 'border-4 border-x-zinc-50' : ''} ${isDesktopViewport ? 'w-full' : 'w-full max-w-full max-h-full aspect-video'}`} style={isDesktopViewport ? 'aspect-ratio: 16 / 9; width: 100%; max-width: 100%; max-height: calc(100vh - 190px);' : ''} onclick={onPlayerSurfaceTap} onmouseenter={onVideoRegionMouseMove} onmousemove={onVideoRegionMouseMove} onmouseleave={onVideoRegionMouseLeave}>
+		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap} onmouseenter={onVideoRegionMouseMove} onmousemove={onVideoRegionMouseMove} onmouseleave={onVideoRegionMouseLeave}>
 			<video
 				transition:scale
 				src="{src}"
 				crossOrigin="anonymous"
 				preload="auto"
 				playsinline
-				class="absolute inset-0 w-full h-full object-cover bg-black touch-none select-none"
+				class="absolute inset-0 w-full h-full object-contain bg-black touch-none select-none"
 				style="opacity: 1; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;"
 				bind:this={videoElem}
 				onloadedmetadata={prepare_drawing}
