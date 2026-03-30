@@ -2093,8 +2093,8 @@ function handlePinClick(id: string) {
 					{#each commentsWithTc as item}
 						<button
 							type="button"
-							class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[10px] h-full pointer-events-auto bg-transparent cursor-pointer"
-							style={tickLeftStyle(item.timecode)}
+							class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[10px] h-full bg-transparent cursor-pointer"
+							style={`${tickLeftStyle(item.timecode)}; pointer-events: ${isDesktopViewport ? 'auto' : 'none'};`}
 							title={`${item.usernameIfnull || item.userId || '?'}: ${item.comment}`}
 							aria-label={`Jump to comment by ${item.usernameIfnull || item.userId || '?'} at ${item.timecode}`}
 							onmousedown={preventDefault((e) => { e.stopPropagation(); if (isDesktopViewport) handlePinClick(item.id); })}
