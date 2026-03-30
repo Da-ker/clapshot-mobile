@@ -608,6 +608,12 @@ function cancelPendingHiddenOverlayReveal() {
     hiddenOverlayTapTimer = null;
 }
 
+function cancelPendingReviewOverlayHide() {
+    if (!reviewOverlayHideTimer) return;
+    clearTimeout(reviewOverlayHideTimer);
+    reviewOverlayHideTimer = null;
+}
+
 function cancelPendingReviewHiddenSingleTap() {
     if (!reviewHiddenSingleTapTimer) return;
     clearTimeout(reviewHiddenSingleTapTimer);
@@ -654,8 +660,13 @@ function onOverlaySurfaceTap(event: Event) {
     // hidden interactions are handled by dedicated hidden/review handlers only.
     if (isInCommentReviewTapMode() || isReviewPlayLocked()) {
         if (overlayVisible) {
-            hideOverlayQuick();
-            suppressClickUntil = Date.now() + 260;
+            cancelPendingReviewOverlayHide();
+            reviewOverlayHideTimer = setTimeout(() => {
+                reviewOverlayHideTimer = null;
+                if (!overlayVisible) return;
+                hideOverlayQuick();
+                suppressClickUntil = Date.now() + 220;
+            }, 150);
         }
         return;
     }
@@ -1003,6 +1014,7 @@ let suppressClickUntil = 0;
 let overlayVisibilityBeforeMultiClick: boolean | null = null;
 let pendingSurfaceTapTimer: ReturnType<typeof setTimeout> | null = null;
 let hiddenOverlayTapTimer: ReturnType<typeof setTimeout> | null = null;
+let reviewOverlayHideTimer: ReturnType<typeof setTimeout> | null = null;
 let reviewHiddenSingleTapTimer: ReturnType<typeof setTimeout> | null = null;
 let lastHiddenActionTapTs = 0;
 let lastReviewHiddenTapTs = 0;
@@ -1084,6 +1096,7 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
     cancelPendingHiddenOverlayReveal();
+    cancelPendingReviewOverlayHide();
     cancelPendingReviewHiddenSingleTap();
     const now = Date.now();
     // Hard isolation window after double tap:
