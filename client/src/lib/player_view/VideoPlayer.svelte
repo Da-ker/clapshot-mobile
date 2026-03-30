@@ -152,9 +152,19 @@ function showOverlay(autoHide: boolean = true) {
     }
 }
 
-function revealOverlayFromHidden() {
+function debugReviewTap(message: string) {
+    if (Date.now() < reviewDebugWindowUntil) {
+        console.log(`[review-tap] ${message}`);
+    }
+}
+
+function revealOverlayFromHidden(source: string = 'unknown') {
     // Hard isolation window: never reveal controls while blocked by double-tap chain.
-    if (isOverlayShowBlocked() || isOverlayRevealSuppressed()) return;
+    if (isOverlayShowBlocked() || isOverlayRevealSuppressed()) {
+        debugReviewTap(`reveal blocked source=${source} overlay=${overlayVisible}`);
+        return;
+    }
+    debugReviewTap(`reveal source=${source} overlay=${overlayVisible}`);
     // First tap when hidden: reveal controls only.
     showOverlay(true);
     suppressClickUntil = Date.now() + 260;
@@ -720,7 +730,7 @@ function onHiddenOverlayTap(event: Event) {
 
     if (isDesktopViewport) {
         cancelPendingHiddenOverlayReveal();
-        revealOverlayFromHidden();
+        revealOverlayFromHidden('hidden-overlay-desktop');
         suppressClickUntil = Date.now() + 260;
         return;
     }
@@ -729,7 +739,7 @@ function onHiddenOverlayTap(event: Event) {
     cancelPendingHiddenOverlayReveal();
     hiddenOverlayTapTimer = setTimeout(() => {
         hiddenOverlayTapTimer = null;
-        revealOverlayFromHidden();
+        revealOverlayFromHidden('hidden-overlay-mobile');
         suppressClickUntil = Date.now() + 260;
     }, 240);
 }
@@ -742,7 +752,7 @@ function onCommentReviewRevealTap(event: Event) {
     cancelPendingHiddenOverlayReveal();
     consumeReviewTapUntil = 0;
     reviewFirstTapGuard = false;
-    revealOverlayFromHidden();
+    revealOverlayFromHidden('comment-review-reveal');
     // iOS may emit a follow-up synthetic click after touch/pointer; swallow it.
     suppressClickUntil = Date.now() + 600;
 }
@@ -782,7 +792,7 @@ function onCommentReviewHiddenTap(event: Event) {
         lastReviewHiddenTapTs = 0;
         if (isReviewPlayLocked() || !isInCommentReviewTapMode() || overlayVisible) return;
         consumeReviewTapUntil = 0;
-        revealOverlayFromHidden();
+        revealOverlayFromHidden('comment-review-single');
         suppressClickUntil = Date.now() + 260;
     }, 260);
 }
@@ -948,6 +958,7 @@ let reviewPlayLockUntil = 0;
 let reviewFirstTapGuard = $state(false);
 let isDesktopViewport = $state(false);
 let blockOverlayShowUntil = 0;
+let reviewDebugWindowUntil = 0;
 
 function startOverlayShowBlock(durationMs: number = 450) {
     blockOverlayShowUntil = Date.now() + durationMs;
@@ -984,6 +995,7 @@ function exitCommentReviewTapMode() {
 
 export function enterCommentReviewTapMode(durationMs: number = 60000) {
     forceRevealOverlayUntil = Date.now() + durationMs;
+    reviewDebugWindowUntil = Date.now() + 3000;
     firstReviewDoubleTapGuardUntil = Date.now() + 1200;
     reviewPlayLockUntil = 0;
     lastReviewHiddenTapTs = 0;
@@ -1029,7 +1041,7 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
             firstReviewDoubleTapGuardUntil = 0;
         } else {
             consumeReviewTapUntil = 0;
-            revealOverlayFromHidden();
+            revealOverlayFromHidden('first-review-double-click-fallback');
             return;
         }
     }
