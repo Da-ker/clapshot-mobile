@@ -627,7 +627,7 @@ function onOverlaySurfaceTap(event: Event) {
 
     // Mobile review-mode overlay uses an isolated state machine: visible tap hides,
     // hidden interactions are handled by dedicated hidden/review handlers only.
-    if (isInCommentReviewTapMode()) {
+    if (isInCommentReviewTapMode() || isReviewPlayLocked()) {
         if (overlayVisible) {
             hideOverlayQuick();
             suppressClickUntil = Date.now() + 260;
@@ -673,7 +673,7 @@ function onPlayerSurfaceTap(event: Event) {
     const wasVisible = overlayVisible;
 
     // Mobile review-mode hidden-state no longer uses generic player-surface logic.
-    if (isInCommentReviewTapMode()) {
+    if (isInCommentReviewTapMode() || isReviewPlayLocked()) {
         if (wasVisible) {
             hideOverlayQuick();
             suppressClickUntil = Date.now() + 260;
@@ -703,7 +703,7 @@ function onHiddenOverlayTap(event: Event) {
     consumeReviewTapUntil = 0;
 
     // Review-mode hidden-state is handled by a dedicated isolated handler.
-    if (isInCommentReviewTapMode()) {
+    if (isInCommentReviewTapMode() || isReviewPlayLocked()) {
         return;
     }
 
@@ -752,10 +752,11 @@ function onCommentReviewHiddenTap(event: Event) {
 
     if (overlayVisible) return;
     if (!isInCommentReviewTapMode()) return;
-    if (isOverlayRevealSuppressed()) return;
+    if (isOverlayRevealSuppressed() || isReviewPlayLocked()) return;
 
     hiddenOverlayTapTimer = setTimeout(() => {
         hiddenOverlayTapTimer = null;
+        if (isReviewPlayLocked()) return;
         consumeReviewTapUntil = 0;
         revealOverlayFromHidden();
         suppressClickUntil = Date.now() + 260;
@@ -876,7 +877,7 @@ function clickOnVideo(event: MouseEvent ) {
         const wasVisible = overlayVisible;
 
         // Mobile review-mode hidden-state no longer routes through generic click handling.
-        if (isInCommentReviewTapMode()) {
+        if (isInCommentReviewTapMode() || isReviewPlayLocked()) {
             if (wasVisible) {
                 hideOverlayQuick();
                 suppressClickUntil = Date.now() + 260;
@@ -916,6 +917,7 @@ let lastHiddenActionTapTs = 0;
 let forceRevealOverlayUntil = 0;
 let consumeReviewTapUntil = 0;
 let suppressOverlayRevealUntil = 0;
+let reviewPlayLockUntil = 0;
 let reviewFirstTapGuard = $state(false);
 let isDesktopViewport = $state(false);
 let blockOverlayShowUntil = 0;
@@ -940,8 +942,18 @@ function shouldConsumeReviewTap() {
     return Date.now() < consumeReviewTapUntil;
 }
 
+function isReviewPlayLocked() {
+    return Date.now() < reviewPlayLockUntil;
+}
+
+function exitCommentReviewTapMode() {
+    forceRevealOverlayUntil = 0;
+    consumeReviewTapUntil = 0;
+}
+
 export function enterCommentReviewTapMode(durationMs: number = 60000) {
     forceRevealOverlayUntil = Date.now() + durationMs;
+    reviewPlayLockUntil = 0;
     // First tap in review mode should only reveal controls, never trigger playback.
     consumeReviewTapUntil = Date.now() + Math.min(durationMs, 1500);
     // Root-level guard overlay blocks desktop hover wake and causes mobile double-tap flash.
@@ -972,7 +984,7 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
         return;
     }
 
-    const hiddenReviewFirstInteraction = isInCommentReviewTapMode() && (!overlayVisible || shouldConsumeReviewTap());
+    const hiddenReviewFirstInteraction = isInCommentReviewTapMode() && !isReviewPlayLocked() && (!overlayVisible || shouldConsumeReviewTap());
 
     // In comment review hidden-state, first interaction must reveal controls only.
     if (hiddenReviewFirstInteraction) {
@@ -984,11 +996,11 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     // Mobile: double tap play/pause should not flash controls.
     hideOverlayQuick();
     reviewFirstTapGuard = false;
-    // Exit the short review-tap consume window once user intentionally used double tap
-    // for playback, so trailing touchend/click events cannot re-open controls.
-    consumeReviewTapUntil = 0;
-    forceRevealOverlayUntil = now;
-    suppressOverlayRevealUntil = now + 700;
+    // Once hidden-state double-tap intentionally starts playback from comment review,
+    // immediately exit review mode and lock out its reveal path for the trailing event chain.
+    reviewPlayLockUntil = now + 900;
+    exitCommentReviewTapMode();
+    suppressOverlayRevealUntil = now + 900;
     togglePlay();
 
     overlayVisibilityBeforeMultiClick = null;
@@ -1173,7 +1185,7 @@ function onVideoTouchEnd(e: TouchEvent) {
     suppressClickUntil = now + 350;
 
     // Mobile review-mode hidden-state is isolated and does not use generic touchend reveal.
-    if (isInCommentReviewTapMode()) {
+    if (isInCommentReviewTapMode() || isReviewPlayLocked()) {
         if (overlayVisible) {
             hideOverlayQuick();
         }
