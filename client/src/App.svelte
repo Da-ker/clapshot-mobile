@@ -1501,9 +1501,9 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     </div>
                 </div>
             </div>
-            <div class="w-full px-2 md:px-6 pb-0" style="margin-top: {LAYOUT_SECTION_GAP_PX}px;" data-video-stack>
-                <div class="w-full max-w-[1400px] mx-auto md:w-[min(97vw,1680px)] md:max-w-none md:grid md:grid-cols-[minmax(0,calc((100dvh-220px)*16/9))_clamp(260px,28vw,400px)] md:gap-[20px] md:items-stretch md:justify-center">
-                    <div class="min-w-0">
+            <div class="w-full px-2 md:px-6 pb-0 md:flex-1 md:min-h-0" style="margin-top: {LAYOUT_SECTION_GAP_PX}px;" data-video-stack>
+                <div class="w-full max-w-[1400px] mx-auto md:w-[min(97vw,1680px)] md:max-w-none md:grid md:grid-cols-[minmax(0,calc((100dvh-260px)*16/9))_clamp(260px,28vw,400px)] md:gap-[20px] md:items-stretch md:justify-center md:h-[calc(100dvh-126px)] md:min-h-0">
+                    <div class="min-w-0 md:min-h-0 md:h-full md:flex md:flex-col">
                         <div bind:this={videoPanelEl} class="w-full rounded-2xl bg-[#0b1220]/88 p-0 shadow-[0_14px_36px_rgba(0,0,0,0.35)]">
                             <VideoPlayer
                                 bind:this={videoPlayer} src={$curVideo.playbackUrl}
@@ -1515,7 +1515,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                             />
                         </div>
 
-                        <div class="hidden md:block mt-2">
+                        <div class="hidden md:block mt-2 shrink-0">
                             <div class="rounded-xl bg-slate-900/35 px-2.5 py-[6px] backdrop-blur-sm">
                                 <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm min-w-0">
                                     <span class="top-left-controls inline-flex flex-1 items-center rounded-lg bg-slate-800/45 px-2 py-[2px] text-slate-100 font-mono text-sm min-w-0">
@@ -1555,7 +1555,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                             </div>
                         </div>
 
-                        <div bind:this={commentInputDockEl} class="fixed inset-x-0 bottom-[max(0px,env(safe-area-inset-bottom))] md:static md:mt-2 md:w-full md:max-w-none md:mx-auto md:left-auto md:right-auto md:bottom-0 md:shadow-[0_-10px_24px_rgba(0,0,0,0.28)] z-30 pt-0 pb-2 rounded-t-xl md:rounded-xl bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)]">
+                        <div bind:this={commentInputDockEl} class="fixed inset-x-0 bottom-[max(0px,env(safe-area-inset-bottom))] md:static md:mt-2 md:w-full md:max-w-none md:mx-auto md:left-auto md:right-auto md:bottom-0 md:shrink-0 md:pb-3 md:shadow-[0_-10px_24px_rgba(0,0,0,0.28)] z-30 pt-0 pb-2 rounded-t-xl md:rounded-xl bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)]">
                             <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
                         </div>
                     </div>
