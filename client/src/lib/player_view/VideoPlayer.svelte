@@ -1978,7 +1978,7 @@ function handlePinClick(id: string) {
 		</div>
 	{/if}
 
-	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
+	<div  class={`flex-1 flex justify-center relative min-h-[9em] ${isDesktopViewport ? 'items-center min-h-[12em]' : 'items-start'}`}
 			 style="{debug_layout?'border: 2px solid orange;':''}">
 		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap} onmouseenter={onVideoRegionMouseMove} onmousemove={onVideoRegionMouseMove} onmouseleave={onVideoRegionMouseLeave}>
 			<video
