@@ -1465,6 +1465,8 @@ function startLongPressSeek(direction: -1 | 1) {
     longPressSeekTimer = setTimeout(async () => {
         longPressSeekTimer = null;
         longPressSeekActive = true;
+        // Once long-press stepping is actually triggered, leave comment-focus highlight mode.
+        highlightedCommentId = undefined;
         if (videoElem) {
             longPressSavedMuted = videoElem.muted;
             longPressSavedVolume = videoElem.volume;
@@ -1484,6 +1486,10 @@ function onStepButtonPress(event: Event, direction: -1 | 1) {
     event.stopPropagation();
     if (!overlayVisible) return;
     if (event instanceof MouseEvent && event.button !== 0) return;
+    // Pressing step controls means user has left the exact comment focus interaction.
+    // Clear timeline highlight immediately so long-press and repeated stepping no longer
+    // keep the yellow tick style visible.
+    highlightedCommentId = undefined;
     startLongPressSeek(direction);
 }
 
