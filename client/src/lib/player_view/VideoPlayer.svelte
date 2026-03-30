@@ -2109,11 +2109,10 @@ function handlePinClick(id: string) {
 				{/if}
 				<div
 					class="absolute top-1/2 -translate-y-1/2 w-7 h-7 z-[45]"
-					style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.875rem);"
+					style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.875rem); pointer-events: {isDesktopViewport ? 'auto' : 'none'};"
 					onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, seekSliderEl ?? null); })}
-					ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, seekSliderEl ?? null); })}
 				></div>
-				<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-red-500 z-50 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-120 {isSeekingThumb ? 'scale-125' : 'scale-100'}" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.375rem);" onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, seekSliderEl ?? null); })} ontouchstart={preventDefault((e)=>{ onSeekStart(); handleMove(e as TouchEvent, seekSliderEl ?? null); })}></div>
+				<div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-red-500 z-50 border border-red-300/70 shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-120 {isSeekingThumb ? 'scale-125' : 'scale-100'}" style="left: calc({Math.max(0, Math.min(100, ((time / getEffectiveDuration()) || 0) * 100))}% - 0.375rem); pointer-events: {isDesktopViewport ? 'auto' : 'none'};" onmousedown={preventDefault((e)=>{ onSeekStart(); handleMove(e as MouseEvent, seekSliderEl ?? null); })}></div>
 			</div>
 		</div>
 
