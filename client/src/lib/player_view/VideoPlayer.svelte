@@ -614,6 +614,12 @@ function cancelPendingReviewHiddenSingleTap() {
     reviewHiddenSingleTapTimer = null;
 }
 
+function cancelPendingReviewCaptureSingleTap() {
+    if (!reviewCaptureSingleTapTimer) return;
+    clearTimeout(reviewCaptureSingleTapTimer);
+    reviewCaptureSingleTapTimer = null;
+}
+
 function onOverlaySurfaceTap(event: Event) {
     if (Date.now() < suppressClickUntil) {
         event.stopPropagation();
@@ -812,10 +818,48 @@ function onCommentReviewHiddenTap(event: Event) {
 }
 
 function onReviewHiddenCaptureTap(event: Event) {
-    // Diagnostic only. Do not intercept review hidden interactions here anymore.
     if (!isInCommentReviewTapMode()) return;
     if (overlayVisible) return;
+
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button') || target?.closest('[role="slider"]')) return;
+
     debugReviewTap(`capture seen type=${event.type} overlay=${overlayVisible}`);
+
+    // On some mobile browsers the hidden overlay button does not deliver reliable pointerdown
+    // callbacks, while the container capture click always arrives. Use this capture path as the
+    // authoritative hidden review state machine: single tap reveals, double tap toggles play.
+    event.preventDefault();
+    event.stopPropagation();
+    cancelPendingSingleSurfaceTap();
+    cancelPendingHiddenOverlayReveal();
+
+    const now = Date.now();
+    const isSecondTap = now - reviewCaptureLastTapTs < 280;
+
+    if (isSecondTap) {
+        reviewCaptureLastTapTs = 0;
+        cancelPendingReviewCaptureSingleTap();
+        reviewPlayLockUntil = now + 900;
+        exitCommentReviewTapMode();
+        suppressOverlayRevealUntil = now + 900;
+        suppressClickUntil = now + 520;
+        hideOverlayQuick();
+        debugReviewTap('capture doubleTap -> togglePlay');
+        togglePlay();
+        return;
+    }
+
+    reviewCaptureLastTapTs = now;
+    cancelPendingReviewCaptureSingleTap();
+    reviewCaptureSingleTapTimer = setTimeout(() => {
+        reviewCaptureSingleTapTimer = null;
+        reviewCaptureLastTapTs = 0;
+        if (isReviewPlayLocked() || !isInCommentReviewTapMode() || overlayVisible) return;
+        debugReviewTap('capture singleTap -> reveal');
+        revealOverlayFromHidden('review-capture-single');
+        suppressClickUntil = Date.now() + 260;
+    }, 260);
 }
 
 function onRootRevealTap(event: Event) {
@@ -839,9 +883,6 @@ $effect(() => {
     if (!videoCanvasContainer) return;
 
     const captureHandler = (event: Event) => onReviewHiddenCaptureTap(event);
-    // Only keep click capture as a last-resort signal for diagnosis. Pointer/touch capture
-    // was pre-empting the dedicated hidden tap state machine and causing the first double-tap
-    // to reveal controls before dblclick fired.
     videoCanvasContainer.addEventListener('click', captureHandler, true);
 
     return () => {
@@ -973,6 +1014,8 @@ let blockOverlayShowUntil = 0;
 let reviewDebugWindowUntil = 0;
 let reviewHudVisible = $state(false);
 let reviewHudLines = $state<string[]>([]);
+let reviewCaptureLastTapTs = 0;
+let reviewCaptureSingleTapTimer: ReturnType<typeof setTimeout> | null = null;
 
 function startOverlayShowBlock(durationMs: number = 450) {
     blockOverlayShowUntil = Date.now() + durationMs;
@@ -1015,7 +1058,9 @@ export function enterCommentReviewTapMode(durationMs: number = 60000) {
     firstReviewDoubleTapGuardUntil = Date.now() + 1200;
     reviewPlayLockUntil = 0;
     lastReviewHiddenTapTs = 0;
+    reviewCaptureLastTapTs = 0;
     cancelPendingReviewHiddenSingleTap();
+    cancelPendingReviewCaptureSingleTap();
     // First tap in review mode should only reveal controls, never trigger playback.
     consumeReviewTapUntil = Date.now() + Math.min(durationMs, 1500);
     // Root-level guard overlay blocks desktop hover wake and causes mobile double-tap flash.
