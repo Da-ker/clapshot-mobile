@@ -943,6 +943,7 @@ let lastReviewHiddenTapTs = 0;
 let forceRevealOverlayUntil = 0;
 let consumeReviewTapUntil = 0;
 let suppressOverlayRevealUntil = 0;
+let firstReviewDoubleTapGuardUntil = 0;
 let reviewPlayLockUntil = 0;
 let reviewFirstTapGuard = $state(false);
 let isDesktopViewport = $state(false);
@@ -972,6 +973,10 @@ function isReviewPlayLocked() {
     return Date.now() < reviewPlayLockUntil;
 }
 
+function shouldBlockFirstReviewDoubleTapReveal() {
+    return Date.now() < firstReviewDoubleTapGuardUntil;
+}
+
 function exitCommentReviewTapMode() {
     forceRevealOverlayUntil = 0;
     consumeReviewTapUntil = 0;
@@ -979,6 +984,7 @@ function exitCommentReviewTapMode() {
 
 export function enterCommentReviewTapMode(durationMs: number = 60000) {
     forceRevealOverlayUntil = Date.now() + durationMs;
+    firstReviewDoubleTapGuardUntil = Date.now() + 1200;
     reviewPlayLockUntil = 0;
     lastReviewHiddenTapTs = 0;
     cancelPendingReviewHiddenSingleTap();
@@ -1015,11 +1021,17 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
 
     const hiddenReviewFirstInteraction = isInCommentReviewTapMode() && !isReviewPlayLocked() && (!overlayVisible || shouldConsumeReviewTap());
 
-    // In comment review hidden-state, first interaction must reveal controls only.
+    // Only the very first hidden-state interaction after comment jump should reveal controls.
+    // If the user goes straight into a first double-tap, suppress that initial reveal path.
     if (hiddenReviewFirstInteraction) {
-        consumeReviewTapUntil = 0;
-        revealOverlayFromHidden();
-        return;
+        if (shouldBlockFirstReviewDoubleTapReveal() && !overlayVisible) {
+            consumeReviewTapUntil = 0;
+            firstReviewDoubleTapGuardUntil = 0;
+        } else {
+            consumeReviewTapUntil = 0;
+            revealOverlayFromHidden();
+            return;
+        }
     }
 
     // Mobile: double tap play/pause should not flash controls.
@@ -1028,6 +1040,7 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     // Once hidden-state double-tap intentionally starts playback from comment review,
     // immediately exit review mode and lock out its reveal path for the trailing event chain.
     reviewPlayLockUntil = now + 900;
+    firstReviewDoubleTapGuardUntil = 0;
     lastReviewHiddenTapTs = 0;
     exitCommentReviewTapMode();
     suppressOverlayRevealUntil = now + 900;
