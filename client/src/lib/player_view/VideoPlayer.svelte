@@ -666,7 +666,7 @@ function onOverlaySurfaceTap(event: Event) {
                 if (!overlayVisible) return;
                 hideOverlayQuick();
                 suppressClickUntil = Date.now() + 220;
-            }, 150);
+            }, 110);
         }
         return;
     }
@@ -802,15 +802,15 @@ function onCommentReviewHiddenTap(event: Event) {
     if (isOverlayRevealSuppressed() || isReviewPlayLocked()) return;
 
     const now = Date.now();
-    const isSecondTap = now - lastReviewHiddenTapTs < 240;
+    const isSecondTap = now - lastReviewHiddenTapTs < 210;
 
     if (isSecondTap) {
         lastReviewHiddenTapTs = 0;
         cancelPendingReviewHiddenSingleTap();
-        reviewPlayLockUntil = now + 700;
+        reviewPlayLockUntil = now + 560;
         exitCommentReviewTapMode();
-        suppressOverlayRevealUntil = now + 700;
-        suppressClickUntil = now + 360;
+        suppressOverlayRevealUntil = now + 560;
+        suppressClickUntil = now + 260;
         hideOverlayQuick();
         togglePlay();
         return;
@@ -824,8 +824,8 @@ function onCommentReviewHiddenTap(event: Event) {
         if (isReviewPlayLocked() || !isInCommentReviewTapMode() || overlayVisible) return;
         consumeReviewTapUntil = 0;
         revealOverlayFromHidden('comment-review-single');
-        suppressClickUntil = Date.now() + 220;
-    }, 200);
+        suppressClickUntil = Date.now() + 180;
+    }, 160);
 }
 
 function onReviewHiddenCaptureTap(event: Event) {
@@ -846,16 +846,16 @@ function onReviewHiddenCaptureTap(event: Event) {
     cancelPendingHiddenOverlayReveal();
 
     const now = Date.now();
-    const isSecondTap = now - reviewCaptureLastTapTs < 240;
+    const isSecondTap = now - reviewCaptureLastTapTs < 210;
 
     if (isSecondTap) {
         reviewCaptureLastTapTs = 0;
         reviewCaptureAwaitingSecondTap = false;
         cancelPendingReviewCaptureSingleTap();
-        reviewPlayLockUntil = now + 700;
+        reviewPlayLockUntil = now + 560;
         exitCommentReviewTapMode();
-        suppressOverlayRevealUntil = now + 700;
-        suppressClickUntil = now + 360;
+        suppressOverlayRevealUntil = now + 560;
+        suppressClickUntil = now + 260;
         hideOverlayQuick();
         debugReviewTap('capture doubleTap -> togglePlay');
         togglePlay();
@@ -872,8 +872,8 @@ function onReviewHiddenCaptureTap(event: Event) {
         if (isReviewPlayLocked() || !isInCommentReviewTapMode() || overlayVisible) return;
         debugReviewTap('capture singleTap -> reveal');
         revealOverlayFromHidden('review-capture-single');
-        suppressClickUntil = Date.now() + 220;
-    }, 150);
+        suppressClickUntil = Date.now() + 180;
+    }, 120);
 }
 
 function onRootRevealTap(event: Event) {
