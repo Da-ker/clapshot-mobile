@@ -152,14 +152,7 @@ function showOverlay(autoHide: boolean = true) {
     }
 }
 
-function debugReviewTap(message: string) {
-    if (Date.now() < reviewDebugWindowUntil) {
-        const line = `[review-tap] ${message}`;
-        console.log(line);
-        reviewHudVisible = true;
-        reviewHudLines = [...reviewHudLines.slice(-5), line];
-    }
-}
+function debugReviewTap(_message: string) {}
 
 function revealOverlayFromHidden(source: string = 'unknown') {
     // Hard isolation window: never reveal controls while blocked by double-tap chain.
@@ -1027,9 +1020,6 @@ let reviewPlayLockUntil = 0;
 let reviewFirstTapGuard = $state(false);
 let isDesktopViewport = $state(false);
 let blockOverlayShowUntil = 0;
-let reviewDebugWindowUntil = 0;
-let reviewHudVisible = $state(false);
-let reviewHudLines = $state<string[]>([]);
 let reviewCaptureLastTapTs = 0;
 let reviewCaptureSingleTapTimer: ReturnType<typeof setTimeout> | null = null;
 let reviewCaptureAwaitingSecondTap = false;
@@ -1070,9 +1060,6 @@ function exitCommentReviewTapMode() {
 
 export function enterCommentReviewTapMode(durationMs: number = 60000) {
     forceRevealOverlayUntil = Date.now() + durationMs;
-    reviewDebugWindowUntil = Date.now() + 8000;
-    reviewHudVisible = true;
-    reviewHudLines = ['[review-tap] enter comment review mode'];
     firstReviewDoubleTapGuardUntil = Date.now() + 1200;
     reviewPlayLockUntil = 0;
     lastReviewHiddenTapTs = 0;
@@ -2009,14 +1996,6 @@ function handlePinClick(id: string) {
 			{#if volumeHudVisible}
 				<div class="pointer-events-none absolute right-3 top-3 z-[120] rounded-md bg-black/70 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm">
 					<i class="fa-solid fa-volume-high mr-1 text-cyan-300"></i>{volumeHudText}
-				</div>
-			{/if}
-
-			{#if reviewHudVisible && reviewHudLines.length > 0}
-				<div class="pointer-events-none absolute left-2 top-2 z-[160] max-w-[82vw] rounded-md bg-black/78 px-2 py-1.5 text-[11px] leading-4 text-lime-300 shadow-[0_4px_16px_rgba(0,0,0,0.4)] backdrop-blur-sm md:hidden whitespace-pre-wrap break-words">
-					{#each reviewHudLines as line}
-						<div>{line}</div>
-					{/each}
 				</div>
 			{/if}
 
