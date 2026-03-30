@@ -1973,7 +1973,7 @@ function handlePinClick(id: string) {
 				crossOrigin="anonymous"
 				preload="auto"
 				playsinline
-				class="absolute inset-0 w-full h-full object-contain bg-black touch-none select-none"
+				class="absolute inset-0 w-full h-full object-cover bg-black touch-none select-none"
 				style="opacity: 1; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;"
 				bind:this={videoElem}
 				onloadedmetadata={prepare_drawing}
