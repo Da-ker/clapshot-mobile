@@ -835,6 +835,17 @@ function onReviewHiddenCaptureTap(event: Event) {
     cancelPendingHiddenOverlayReveal();
 
     const now = Date.now();
+
+    if (reviewImmediateRevealAvailable) {
+        reviewImmediateRevealAvailable = false;
+        reviewCaptureLastTapTs = 0;
+        cancelPendingReviewCaptureSingleTap();
+        debugReviewTap('capture immediate singleTap -> reveal');
+        revealOverlayFromHidden('review-capture-immediate-single');
+        suppressClickUntil = Date.now() + 220;
+        return;
+    }
+
     const isSecondTap = now - reviewCaptureLastTapTs < 280;
 
     if (isSecondTap) {
@@ -859,7 +870,7 @@ function onReviewHiddenCaptureTap(event: Event) {
         debugReviewTap('capture singleTap -> reveal');
         revealOverlayFromHidden('review-capture-single');
         suppressClickUntil = Date.now() + 260;
-    }, 260);
+    }, 220);
 }
 
 function onRootRevealTap(event: Event) {
@@ -1016,6 +1027,7 @@ let reviewHudVisible = $state(false);
 let reviewHudLines = $state<string[]>([]);
 let reviewCaptureLastTapTs = 0;
 let reviewCaptureSingleTapTimer: ReturnType<typeof setTimeout> | null = null;
+let reviewImmediateRevealAvailable = false;
 
 function startOverlayShowBlock(durationMs: number = 450) {
     blockOverlayShowUntil = Date.now() + durationMs;
@@ -1048,6 +1060,7 @@ function shouldBlockFirstReviewDoubleTapReveal() {
 function exitCommentReviewTapMode() {
     forceRevealOverlayUntil = 0;
     consumeReviewTapUntil = 0;
+    reviewImmediateRevealAvailable = false;
 }
 
 export function enterCommentReviewTapMode(durationMs: number = 60000) {
@@ -1059,6 +1072,7 @@ export function enterCommentReviewTapMode(durationMs: number = 60000) {
     reviewPlayLockUntil = 0;
     lastReviewHiddenTapTs = 0;
     reviewCaptureLastTapTs = 0;
+    reviewImmediateRevealAvailable = true;
     cancelPendingReviewHiddenSingleTap();
     cancelPendingReviewCaptureSingleTap();
     // First tap in review mode should only reveal controls, never trigger playback.
