@@ -870,6 +870,7 @@ function onReviewHiddenCaptureTap(event: Event) {
         reviewCaptureLastTapTs = 0;
         reviewCaptureAwaitingSecondTap = false;
         if (isReviewPlayLocked() || !isInCommentReviewTapMode() || overlayVisible) return;
+        consumeReviewTapUntil = 0;
         debugReviewTap('capture singleTap -> reveal');
         revealOverlayFromHidden('review-capture-single');
         suppressClickUntil = Date.now() + 180;
