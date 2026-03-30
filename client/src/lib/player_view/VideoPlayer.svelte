@@ -916,11 +916,12 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     event.stopPropagation();
     cancelPendingSingleSurfaceTap();
     cancelPendingHiddenOverlayReveal();
+    const now = Date.now();
     // Hard isolation window after double tap:
     // even if delayed single-click callback fires, controls are not allowed to re-show.
     startOverlayShowBlock(520);
     // Swallow follow-up synthetic/single click chain to avoid overlay flicker.
-    suppressClickUntil = Date.now() + 520;
+    suppressClickUntil = now + 520;
 
     // Desktop-only behavior: double click toggles fullscreen.
     if (isDesktopPointerClick(event)) {
@@ -939,6 +940,10 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
     // Mobile: double tap play/pause should not flash controls.
     hideOverlayQuick();
     reviewFirstTapGuard = false;
+    // Exit the short review-tap consume window once user intentionally used double tap
+    // for playback, so trailing touchend/click events cannot re-open controls.
+    consumeReviewTapUntil = 0;
+    forceRevealOverlayUntil = now;
     togglePlay();
 
     overlayVisibilityBeforeMultiClick = null;
@@ -1115,6 +1120,12 @@ function onVideoTouchEnd(e: TouchEvent) {
 
     // Prevent synthetic click from immediately toggling twice after touchend.
     suppressClickUntil = now + 350;
+
+    // During comment review, touchend from a double-tap sequence must not force-reveal
+    // controls after onVideoSurfaceDoubleClick already handled play/pause.
+    if (Date.now() < suppressClickUntil && isInCommentReviewTapMode() && !overlayVisible) {
+        return;
+    }
 
     if (isInCommentReviewTapMode()) {
         revealOverlayFromHidden();
