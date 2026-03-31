@@ -4,6 +4,10 @@
 @source "../node_modules/flowbite-svelte/dist";
 @source "../node_modules/flowbite-svelte-icons/dist";
 
+@theme {
+	--breakpoint-md: 1025px;
+}
+
 :root {
 	font-family: "Roboto Condensed", Inter, "Segoe UI", Helvetica, Arial, sans-serif;
 	font-size: 16px;
