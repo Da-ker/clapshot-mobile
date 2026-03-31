@@ -260,13 +260,29 @@ $effect(() => {
     }
 
     const media = window.matchMedia('(min-width: 768px)');
+    const isIPadLike = () => {
+        if (typeof navigator === 'undefined') return false;
+        const ua = navigator.userAgent || '';
+        return /iPad/.test(ua)
+            || (/Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1);
+    };
     const apply = () => {
+        if (isIPadLike()) {
+            isDesktopViewport = window.innerWidth > window.innerHeight;
+            return;
+        }
         isDesktopViewport = media.matches;
     };
 
     apply();
     media.addEventListener('change', apply);
-    return () => media.removeEventListener('change', apply);
+    window.addEventListener('resize', apply);
+    window.visualViewport?.addEventListener('resize', apply);
+    return () => {
+        media.removeEventListener('change', apply);
+        window.removeEventListener('resize', apply);
+        window.visualViewport?.removeEventListener('resize', apply);
+    };
 });
 
 $effect(() => {
