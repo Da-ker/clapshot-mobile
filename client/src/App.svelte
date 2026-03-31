@@ -1515,7 +1515,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                             />
                         </div>
 
-                        <div class="hidden md:block mt-2 shrink-0">
+                        <div class="hidden md:block mt-2 shrink-0 md:min-w-[672px]">
                             <div class="rounded-xl bg-slate-900/35 px-2.5 py-[6px] backdrop-blur-sm">
                                 <div class="top-info-row flex flex-nowrap items-center gap-1.5 text-sm min-w-0">
                                     <span class="top-left-controls inline-flex flex-1 items-center rounded-lg bg-slate-800/45 px-2 py-[2px] text-slate-100 font-mono text-sm min-w-0">
@@ -1555,7 +1555,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                             </div>
                         </div>
 
-                        <div bind:this={commentInputDockEl} class="fixed inset-x-0 bottom-[max(0px,env(safe-area-inset-bottom))] md:static md:mt-2 md:w-full md:max-w-none md:mx-auto md:left-auto md:right-auto md:bottom-0 md:shrink-0 md:pb-3 md:shadow-[0_-10px_24px_rgba(0,0,0,0.28)] z-30 pt-0 pb-2 rounded-t-xl md:rounded-xl bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)]">
+                        <div bind:this={commentInputDockEl} class="fixed inset-x-0 bottom-[max(0px,env(safe-area-inset-bottom))] md:static md:mt-2 md:w-full md:max-w-none md:min-w-[672px] md:mx-auto md:left-auto md:right-auto md:bottom-0 md:shrink-0 md:pb-3 md:shadow-[0_-10px_24px_rgba(0,0,0,0.28)] z-30 pt-0 pb-2 rounded-t-xl md:rounded-xl bg-[#0f1728]/92 backdrop-blur-md shadow-[0_-10px_24px_rgba(0,0,0,0.28)]">
                             <CommentInput bind:this={commentInput} onbuttonclicked={onCommentInputButton} />
                         </div>
                     </div>
