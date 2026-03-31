@@ -1966,7 +1966,7 @@ function handlePinClick(id: string) {
 
 	<div  class="flex-1 flex items-start md:items-center justify-center relative min-h-[9em] md:min-h-[12em]"
 			 style="{debug_layout?'border: 2px solid orange;':''}">
-		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden md:min-w-[672px] md:min-h-[378px] md:max-w-[1600px] md:max-h-[900px] {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap} onmouseenter={onVideoRegionMouseMove} onmousemove={onVideoRegionMouseMove} onmouseleave={onVideoRegionMouseLeave}>
+		<div bind:this={videoCanvasContainer} class="relative w-full max-w-full max-h-full aspect-video rounded-xl bg-black overflow-hidden md:min-w-[672px] md:min-h-[378px] md:max-w-[1472px] md:max-h-[828px] {debug_layout?'border-4 border-x-zinc-50':''}" onclick={onPlayerSurfaceTap} onmouseenter={onVideoRegionMouseMove} onmousemove={onVideoRegionMouseMove} onmouseleave={onVideoRegionMouseLeave}>
 			<video
 				transition:scale
 				src="{src}"
