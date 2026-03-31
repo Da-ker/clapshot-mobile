@@ -259,7 +259,7 @@ $effect(() => {
         return;
     }
 
-    const media = window.matchMedia('(min-width: 768px)');
+    const media = window.matchMedia('(min-width: 1025px)');
     const isIPadLike = () => {
         if (typeof navigator === 'undefined') return false;
         const ua = navigator.userAgent || '';
@@ -267,8 +267,9 @@ $effect(() => {
             || (/Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1);
     };
     const apply = () => {
+        const narrowViewport = window.innerWidth <= 1024;
         if (isIPadLike()) {
-            isDesktopViewport = window.innerWidth > window.innerHeight;
+            isDesktopViewport = !narrowViewport && window.innerWidth > window.innerHeight;
             return;
         }
         isDesktopViewport = media.matches;
@@ -965,7 +966,7 @@ function clickOnVideo(event: MouseEvent ) {
             return;
         }
 
-        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
+        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1025px)').matches;
         if (isDesktop) {
             // Drawing mode should consume clicks for strokes only; never toggle play/pause.
             if (hasDrawing()) {
