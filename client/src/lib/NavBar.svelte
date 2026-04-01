@@ -189,7 +189,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 				</button>
 			</span>
 
-			{#if $userMenuItems != undefined && $userMenuItems.length > 0}
+			{#if $userMenuItems != undefined && $userMenuItems.filter((item) => item.label !== 'My Videos').length > 0}
 				<Dropdown class="w-56 text-sm clapshot-dropdown user-dropdown z-50" triggeredBy="#user-menu-button">
 					<div class="px-3 py-2">
 						<div class="flex items-center justify-between gap-3 rounded-lg bg-slate-700/60 px-3 py-2">
@@ -202,7 +202,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 						</div>
 					</div>
 					<DropdownDivider />
-					{#each $userMenuItems as item, index}
+					{#each $userMenuItems.filter((item) => item.label !== 'My Videos') as item, index}
 						{#if item.type === "logout-basic-auth"}
 							<DropdownItem onclick={() => logoutBasicAuth()}>{$t('nav.logout')}</DropdownItem>
 						{:else if item.type === "about"}
