@@ -192,7 +192,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 			{#if $userMenuItems != undefined && $userMenuItems.filter((item) => item.label !== 'My Videos').length > 0}
 				<Dropdown class="w-56 text-sm clapshot-dropdown user-dropdown z-50" triggeredBy="#user-menu-button">
 					<div class="px-3 py-2">
-						<div class="flex items-center justify-between gap-3 rounded-lg bg-slate-700/60 py-2 ps-4 pe-3">
+						<div class="clapshot-user-language-row flex items-center justify-between gap-3 rounded-lg bg-slate-700/60 py-2 px-4">
 							<span class="text-gray-200">{$t('nav.language')}</span>
 							<select class="min-w-24 rounded-md border border-slate-500 bg-slate-800 px-2 py-1 text-sm text-gray-100" value={$locale} onchange={onLocaleChange} aria-label={$t('nav.language')}>
 								{#each localeOptions as loc}
@@ -206,7 +206,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 						{#if item.type === "logout-basic-auth"}
 							<DropdownItem onclick={() => logoutBasicAuth()}>{$t('nav.logout')}</DropdownItem>
 						{:else if item.type === "about"}
-							<DropdownItem onclick={showAbout}>{$t('nav.about')}</DropdownItem>
+							<DropdownItem class="clapshot-user-about-item" onclick={showAbout}>{$t('nav.about')}</DropdownItem>
 						{:else if item.type === "divider"}
 							{#if index !== 0}
 								<DropdownDivider />
