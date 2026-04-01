@@ -158,6 +158,9 @@ textarea {
 .user-dropdown .clapshot-user-about-item,
 .user-dropdown .clapshot-user-about-item > a,
 .user-dropdown .clapshot-user-about-item > button {
-	padding-left: 1rem !important;
+	justify-content: center !important;
+	text-align: center !important;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
 }
 
