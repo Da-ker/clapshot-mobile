@@ -1568,20 +1568,20 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     >
                         <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                             <div class="hidden md:flex justify-start items-center gap-3">
-                                <button class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" onclick={async () => { await navigator.clipboard.writeText(window.location.href); acts.add({ mode: 'info', message: 'Link copied to clipboard', lifetime: 3 }); }} aria-label="Share to logged in users" title="Share to logged in users">
+                                <button class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" onclick={async () => { await navigator.clipboard.writeText(window.location.href); acts.add({ mode: 'info', message: $t('comments.linkCopied'), lifetime: 3 }); }} aria-label={$t('nav.shareToLoggedInUsers')} title={$t('nav.shareToLoggedInUsers')}>
                                     <i class="fas fa-share-square text-[16px]"></i>
                                 </button>
                                 {#if $curVideo?.origUrl}
-                                    <a class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" href={$curVideo?.origUrl} download aria-label="Download original" title="Download original">
+                                    <a class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" href={$curVideo?.origUrl} download aria-label={$t('nav.downloadOriginal')} title={$t('nav.downloadOriginal')}>
                                         <i class="fas fa-download text-[16px]"></i>
                                     </a>
                                 {/if}
                                 {#if $collabId}
-                                    <a class="h-8 w-8 inline-flex items-center justify-center text-green-300 transition-colors hover:text-white shrink-0" href={"?vid=" + $mediaFileId} aria-label="Leave collaborative session" title="Leave collaborative session">
+                                    <a class="h-8 w-8 inline-flex items-center justify-center text-green-300 transition-colors hover:text-white shrink-0" href={"?vid=" + $mediaFileId} aria-label={$t('nav.leaveCollab')} title={$t('nav.leaveCollab')}>
                                         <i class="fas fa-users text-[16px]"></i>
                                     </a>
                                 {:else}
-                                    <a class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" href={"?vid=" + $mediaFileId + "&collab=" + randomSessionId} aria-label="Start collaborative session" title="Start collaborative session">
+                                    <a class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" href={"?vid=" + $mediaFileId + "&collab=" + randomSessionId} aria-label={$t('nav.startCollab')} title={$t('nav.startCollab')}>
                                         <i class="fas fa-user-plus text-[16px]"></i>
                                     </a>
                                 {/if}
@@ -1601,7 +1601,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                                     />
                                 {/each}
                             {:else}
-                                <div class="text-sm text-slate-400 px-2 py-4">No comments yet</div>
+                                <div class="text-sm text-slate-400 px-2 py-4">{$t('comments.noneYet')}</div>
                             {/if}
 
                         </div>

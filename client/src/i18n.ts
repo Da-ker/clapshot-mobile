@@ -36,11 +36,11 @@ const translations = {
 
         'nav.shareToLoggedInUsers': 'Share to logged in users',
         'nav.downloadOriginal': 'Download original',
-        'nav.leaveCollab': 'Leave collaborative Session',
-        'nav.startCollab': 'Start Collaborative Session',
+        'nav.leaveCollab': 'Leave collaborative session',
+        'nav.startCollab': 'Start collaborative session',
         'nav.experimentalTools': 'Experimental tools',
-        'nav.importEdl': 'Import EDL as Comments',
-        'nav.exportComments': 'Export Comments',
+        'nav.importEdl': 'Import EDL as comments',
+        'nav.exportComments': 'Export comments',
         'nav.about': 'About',
         'nav.logout': 'Logout',
         'nav.language': 'Language',
@@ -67,17 +67,19 @@ const translations = {
         'comments.deleteShort': 'Del',
         'comments.yourReply': 'Your reply...',
         'comments.editedSuffix': '(edited)',
+        'comments.noneYet': 'No comments yet',
 
         'subtitles.edit': 'Edit subtitle',
         'subtitles.label': 'Title',
         'subtitles.languageCode': 'Language code',
         'subtitles.timeOffset': 'Time offset (sec)',
-        'subtitles.defaultSubtitle': 'Default Subtitle',
+        'subtitles.defaultSubtitle': 'Default subtitle',
         'subtitles.save': 'Save',
         'subtitles.download': 'Download',
         'subtitles.delete': 'Del',
 
         'general.ok': 'OK',
+        'general.guest': 'Guest',
     },
     zh: {
         'status.connecting': '正在连接服务器...',
@@ -87,7 +89,7 @@ const translations = {
         'status.collabSessionId': '会话 ID：{id}',
         'status.collabActionsMirrored': '寻址、播放、绘图等操作会同步给所有参与者。',
         'status.collabInvite': '邀请他人时，复制浏览器链接并发送给他们。',
-        'status.collabExit': '点击标题栏中的绿色图标退出。',
+        'status.collabExit': '点击顶部绿色图标即可退出。',
         'status.collabUnderstood': '知道了',
         'status.reloadToLogin': '请重新加载页面以再次登录。',
         'status.subtitles': '字幕',
@@ -105,13 +107,13 @@ const translations = {
         'nav.language': '语言',
 
         'upload.uploading': '正在上传：{filename}...',
-        'upload.progress': '已上传 {percent}% ... 请稍候',
+        'upload.progress': '已上传 {percent}% ，请稍候',
         'upload.failed': '上传失败',
         'upload.aborted': '上传已中止',
-        'upload.rejected': '不支持此文件类型。仅支持视频、音频和图片。',
+        'upload.rejected': '拖放被拒绝。仅允许视频文件。',
         'upload.complete': '上传完成',
 
-        'comments.placeholderTimed': '添加评论 —— 使用当前时间点...',
+        'comments.placeholderTimed': '添加评论 - 使用当前时间...',
         'comments.placeholderUntimed': '添加评论...',
         'comments.timedToggleTitle': '这条评论包含时间码？',
         'comments.drawOnVideo': '在视频上绘制',
@@ -120,12 +122,13 @@ const translations = {
         'comments.redo': '重做',
         'comments.deleteConfirm': '删除评论？',
         'comments.copyLink': '复制链接',
-        'comments.linkCopied': '链接已复制',
+        'comments.linkCopied': '链接已复制到剪贴板',
         'comments.reply': '回复',
         'comments.edit': '编辑',
         'comments.deleteShort': '删除',
         'comments.yourReply': '请输入回复...',
         'comments.editedSuffix': '（已编辑）',
+        'comments.noneYet': '暂无评论',
 
         'subtitles.edit': '编辑字幕',
         'subtitles.label': '标题',
@@ -137,6 +140,7 @@ const translations = {
         'subtitles.delete': '删除',
 
         'general.ok': '确定',
+        'general.guest': 'Guest',
     },
     fi: {
         'status.connecting': 'Yhdistetään palvelimeen...',
@@ -185,6 +189,7 @@ const translations = {
         'comments.deleteShort': 'Poista',
         'comments.yourReply': 'Vastauksesi...',
         'comments.editedSuffix': '(muokattu)',
+        'comments.noneYet': 'Ei vielä kommentteja',
 
         'subtitles.edit': 'Muokkaa tekstitystä',
         'subtitles.label': 'Otsikko',
@@ -196,6 +201,7 @@ const translations = {
         'subtitles.delete': 'Poista',
 
         'general.ok': 'OK',
+        'general.guest': 'Guest',
     },
 };
 
@@ -240,10 +246,6 @@ export function initLocale(configDefault?: string | null, allowed?: string[] | n
     const browser = typeof navigator !== 'undefined' ? navigator.language : 'en';
     const normalizedAllowed = allowed && allowed.length > 0 ? allowed : SUPPORTED_LOCALES;
 
-    // Check candidates in priority order: stored > configDefault > browser
-    // stored: user's previously saved choice from localStorage
-    // configDefault: server-provided default_locale from config file
-    // browser: browser's language setting
     const checkMatch = (candidate: string | null | undefined): string | null => {
         if (!candidate) return null;
         const matched = normalizedAllowed.find((allowedLocale) =>
@@ -261,6 +263,6 @@ export function initLocale(configDefault?: string | null, allowed?: string[] | n
     setLocale(selected);
 }
 
-export function currentLocale(): Locale {
+export function getCurrentLocale(): Locale {
     return get(locale);
 }

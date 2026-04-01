@@ -5,10 +5,11 @@
 import { scale } from "svelte/transition";
 import Avatar from '@/lib/Avatar.svelte';
 import { curUserId, curUserIsAdmin, allComments, curSubtitle, curVideo } from '@/stores';
-
-const displayUsername = (name?: string | null) => ((name || '').trim().toLowerCase() === 'docker' ? 'Guest' : (name || ''));
 import * as Proto3 from '@clapshot_protobuf/typescript';
 import { t } from '@/i18n';
+import { get } from 'svelte/store';
+
+const displayUsername = (name?: string | null) => ((name || '').trim().toLowerCase() === 'docker' ? get(t)('general.guest') : (name || ''));
 
 
     interface Props {

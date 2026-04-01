@@ -30,6 +30,8 @@ export function hexColorForUsername(name: string): string {
 
 <script lang="ts">
 import { onMount } from "svelte";
+import { get } from 'svelte/store';
+import { t } from '@/i18n';
 import dockerAvatar from '@/lib/assets/docker-avatar.png';
 
     interface Props {
@@ -46,7 +48,7 @@ import dockerAvatar from '@/lib/assets/docker-avatar.png';
         src = null
     }: Props = $props();
 
-const displayUsername = ((username || '').trim().toLowerCase() === 'docker') ? 'Guest' : (username || '');
+const displayUsername = ((username || '').trim().toLowerCase() === 'docker') ? get(t)('general.guest') : (username || '');
 
 /*
     * LetterAvatar. Based on https://codepen.io/arturheinze/pen/ZGvOMw, which is based on https://gist.github.com/leecrossley/6027780

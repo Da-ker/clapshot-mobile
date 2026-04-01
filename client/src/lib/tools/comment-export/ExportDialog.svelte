@@ -2,6 +2,7 @@
 import { curVideo, allComments } from "@/stores";
 import { Modal, Button, Input, Label, Select } from 'flowbite-svelte';
 import { onMount } from "svelte";
+import { t } from '@/i18n';
 import { exporters, groupComments, downloadFile, type ExportContext } from './index';
 
 interface Props {
@@ -81,7 +82,7 @@ $effect(() => {
 });
 </script>
 
-<Modal title="Export Comments" bind:open={isOpen} class="w-96">
+<Modal title={$t('nav.exportComments')} bind:open={isOpen} class="w-96">
     <div bind:this={modalFocusAnchor} tabindex="-1" aria-hidden="true" class="sr-only"></div>
     <div class="flex flex-col space-y-4">
         <!-- Format selection -->

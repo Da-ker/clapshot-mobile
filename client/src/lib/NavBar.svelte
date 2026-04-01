@@ -1,11 +1,12 @@
 <script lang="ts">
 
 import { onMount, onDestroy } from 'svelte';
-import { curUsername, curUserPic, curVideo, mediaFileId, collabId, userMenuItems } from "@/stores";
+import { curUsername, curUserPic, curVideo, mediaFileId, collabId, userMenuItems, latestProgressReports, clientConfig } from "@/stores";
+import { t, availableLocales, locale, setLocale } from '@/i18n';
+import { get } from 'svelte/store';
 
-const displayUsername = (name?: string | null) => ((name || '').trim().toLowerCase() === 'docker' ? 'Guest' : (name || ''));
+const displayUsername = (name?: string | null) => ((name || '').trim().toLowerCase() === 'docker' ? get(t)('general.guest') : (name || ''));
 import Avatar from '@/lib/Avatar.svelte';
-import {latestProgressReports, clientConfig} from '@/stores';
 import type { MediaProgressReport } from '@/types';
 import { Dropdown, DropdownItem, DropdownDivider, DropdownHeader } from 'flowbite-svelte';
 import EDLImport from './tools/EDLImport.svelte';
@@ -13,7 +14,6 @@ import ExportDialog from './tools/comment-export/ExportDialog.svelte';
 import { ChevronRightOutline } from 'flowbite-svelte-icons';
 import { Modal } from 'flowbite-svelte';
 import * as Proto3 from '@clapshot_protobuf/typescript';
-import { t, availableLocales, locale, setLocale } from '@/i18n';
 
 interface Props {
     onbasicauthlogout?: () => void;
@@ -78,9 +78,11 @@ function logoutBasicAuth() {
 }
 
 function showAbout() {
-	alert("Clapshot Client version " + process.env.CLAPSHOT_CLIENT_VERSION + "\n" +
+	const title = get(locale) === 'zh' ? 'Clapshot 客户端版本 ' : 'Clapshot Client version ';
+	const visitText = get(locale) === 'zh' ? '项目地址：\n' : 'Visit the project page at:\n';
+	alert(title + process.env.CLAPSHOT_CLIENT_VERSION + "\n" +
 		"\n" +
-		"Visit the project page at:\n" +
+		visitText +
 		"https://github.com/elonen/clapshot\n");
 }
 
@@ -90,7 +92,10 @@ async function copyToClipboard() {
 	const fullUrl = currentUrl + urlParams;
 	try {
 		await navigator.clipboard.writeText(fullUrl);
-		alert('Link copied to clipboard.\nSend it to reviewers who have user accounts here.');
+		const copiedText = get(locale) === 'zh'
+			? '链接已复制到剪贴板。\n请发送给已在此站点登录的审阅者。'
+			: 'Link copied to clipboard.\nSend it to reviewers who have user accounts here.';
+		alert(copiedText);
 	} catch (err) {
 		console.error('Failed to copy link: ', err);
 	}

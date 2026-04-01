@@ -2,6 +2,7 @@
 import { curVideo } from "@/stores";
 import { Modal, Button, Input, Fileupload, Label, Helper } from 'flowbite-svelte';
 import { onMount } from "svelte";
+import { t } from '@/i18n';
 import * as Proto3 from '@clapshot_protobuf/typescript';
 
 
@@ -103,7 +104,7 @@ const handleAccept = () => {
 };
 </script>
 
-<Modal title="Import EDL as Comments" bind:open={isOpen} class="w-96">
+<Modal title={$t('nav.importEdl')} bind:open={isOpen} class="w-96">
     <form bind:this={edlForm} class="flex flex-col space-y-1" action="#">
         <Label for="file_up">Upload EDL</Label>
         <Fileupload id="file_up" class="!ring-0 focus:!ring-0 focus:!outline-none focus:!border-slate-500" accept=".edl" onchange={handleFileUpload} />
