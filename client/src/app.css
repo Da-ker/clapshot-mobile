@@ -91,6 +91,11 @@ textarea {
 }
 
 /* Fix Flowbite dropdown button width - make buttons behave like divs/anchors */
+.clapshot-dropdown {
+	overflow: hidden;
+	border-radius: 0.9rem;
+}
+
 .clapshot-dropdown button.block {
 	width: 100%;
 	text-align: left;
@@ -104,8 +109,25 @@ textarea {
 	padding-left: 0;
 }
 
+.clapshot-dropdown ul {
+	padding-top: 0.35rem;
+	padding-bottom: 0.35rem;
+}
+
 .clapshot-dropdown li::marker {
 	content: '';
+}
+
+.clapshot-dropdown li:first-child > a,
+.clapshot-dropdown li:first-child > button {
+	border-top-left-radius: 0.75rem;
+	border-top-right-radius: 0.75rem;
+}
+
+.clapshot-dropdown li:last-child > a,
+.clapshot-dropdown li:last-child > button {
+	border-bottom-left-radius: 0.75rem;
+	border-bottom-right-radius: 0.75rem;
 }
 
 /* Center align dropdown options only in media (hamburger) menu */
