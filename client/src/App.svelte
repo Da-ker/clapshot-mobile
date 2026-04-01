@@ -1568,7 +1568,7 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                     >
                         <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
                             <div class="hidden md:flex justify-start items-center gap-3">
-                                <button class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" onclick={async () => { await navigator.clipboard.writeText(window.location.href); acts.add({ text: 'Link copied', status: 'success' }); }} aria-label="Share to logged in users" title="Share to logged in users">
+                                <button class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" onclick={async () => { await navigator.clipboard.writeText(window.location.href); acts.add({ mode: 'info', message: 'Link copied to clipboard', lifetime: 3 }); }} aria-label="Share to logged in users" title="Share to logged in users">
                                     <i class="fas fa-share-square text-[16px]"></i>
                                 </button>
                                 {#if $curVideo?.origUrl}
