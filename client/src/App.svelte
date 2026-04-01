@@ -1567,22 +1567,22 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                         oncontextmenu={(e) => e.preventDefault()}
                     >
                         <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
-                            <div class="hidden md:flex justify-end items-center gap-2">
-                                <button class="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-slate-800/45 text-slate-200 border border-slate-500/45 transition-colors hover:bg-slate-600/55 hover:text-white shrink-0" onclick={async () => { await navigator.clipboard.writeText(window.location.href); acts.add({ text: 'Link copied', status: 'success' }); }} aria-label="Share to logged in users" title="Share to logged in users">
-                                    <i class="fas fa-share-square text-[13px]"></i>
+                            <div class="hidden md:flex justify-start items-center gap-3">
+                                <button class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" onclick={async () => { await navigator.clipboard.writeText(window.location.href); acts.add({ text: 'Link copied', status: 'success' }); }} aria-label="Share to logged in users" title="Share to logged in users">
+                                    <i class="fas fa-share-square text-[16px]"></i>
                                 </button>
                                 {#if $curVideo?.origUrl}
-                                    <a class="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-slate-800/45 text-slate-200 border border-slate-500/45 transition-colors hover:bg-slate-600/55 hover:text-white shrink-0" href={$curVideo?.origUrl} download aria-label="Download original" title="Download original">
-                                        <i class="fas fa-download text-[13px]"></i>
+                                    <a class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" href={$curVideo?.origUrl} download aria-label="Download original" title="Download original">
+                                        <i class="fas fa-download text-[16px]"></i>
                                     </a>
                                 {/if}
                                 {#if $collabId}
-                                    <a class="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-green-500/20 text-green-300 border border-green-500/35 transition-colors hover:bg-green-500/30 hover:text-white shrink-0" href={"?vid=" + $mediaFileId} aria-label="Leave collaborative session" title="Leave collaborative session">
-                                        <i class="fas fa-users text-[13px]"></i>
+                                    <a class="h-8 w-8 inline-flex items-center justify-center text-green-300 transition-colors hover:text-white shrink-0" href={"?vid=" + $mediaFileId} aria-label="Leave collaborative session" title="Leave collaborative session">
+                                        <i class="fas fa-users text-[16px]"></i>
                                     </a>
                                 {:else}
-                                    <a class="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-slate-800/45 text-slate-200 border border-slate-500/45 transition-colors hover:bg-slate-600/55 hover:text-white shrink-0" href={"?vid=" + $mediaFileId + "&collab=" + randomSessionId} aria-label="Start collaborative session" title="Start collaborative session">
-                                        <i class="fas fa-user-plus text-[13px]"></i>
+                                    <a class="h-8 w-8 inline-flex items-center justify-center text-slate-300 transition-colors hover:text-white shrink-0" href={"?vid=" + $mediaFileId + "&collab=" + randomSessionId} aria-label="Start collaborative session" title="Start collaborative session">
+                                        <i class="fas fa-user-plus text-[16px]"></i>
                                     </a>
                                 {/if}
                             </div>
