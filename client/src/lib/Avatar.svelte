@@ -31,6 +31,8 @@ export function hexColorForUsername(name: string): string {
 <script lang="ts">
 import { onMount } from "svelte";
 
+const DOCKER_AVATAR_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAABZ0lEQVR4nO3RQQ0AIBDAMMC/58MCP7KkVbDX1pk5A6ft2wG8y0AIEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIQQQwgAhBBBCACEEEIAIYQTe4MCEQx2oycAAAAASUVORK5CYII=';
+
     interface Props {
         username?: string | null;
         width?: string;
@@ -78,11 +80,15 @@ function MakeLetterAvatar(name: string | null, size: number): string {
     return canvas.toDataURL();  // Base64 encoded data url string + colour hex
 }
 
+const normalizedUsername = (username || '').trim().toLowerCase();
 const letterAvatar = MakeLetterAvatar(username, parseFloat(width));
+const resolvedAvatarSrc = (src && (src !== ""))
+    ? src
+    : (normalizedUsername === 'docker' ? DOCKER_AVATAR_DATA_URL : letterAvatar);
 let avatarImage: HTMLImageElement | undefined = $state();
 onMount(() => {
     if (avatarImage) {
-        avatarImage.src = (src && (src!=="")) ? src : letterAvatar;
+        avatarImage.src = resolvedAvatarSrc;
     }
 });
 </script>
