@@ -2,6 +2,8 @@
 
 import { onMount, onDestroy } from 'svelte';
 import { curUsername, curUserPic, curVideo, mediaFileId, collabId, userMenuItems } from "@/stores";
+
+const displayUsername = (name?: string | null) => ((name || '').trim().toLowerCase() === 'docker' ? 'Guest' : (name || ''));
 import Avatar from '@/lib/Avatar.svelte';
 import {latestProgressReports, clientConfig} from '@/stores';
 import type { MediaProgressReport } from '@/types';
@@ -181,7 +183,7 @@ function addEDLComments(comments: Proto3.Comment[]) {
 		<!-- Username & avatar-->
 		<div class="shrink-0" style="visibility: {$curUsername ? 'visible': 'hidden'}">
 			<span class="flex w-auto items-center gap-2">
-				<h6 class="hidden sm:block flex-1 mx-2 sm:mx-4 text-gray-400 font-semibold max-w-40 truncate">{$curUsername}</h6>
+				<h6 class="hidden sm:block flex-1 mx-2 sm:mx-4 text-gray-400 font-semibold max-w-40 truncate">{displayUsername($curUsername)}</h6>
 				<button id="user-menu-button" class="flex-0 ring-4 ring-slate-800 text-sm rounded-full" aria-haspopup="true" aria-expanded="false">
 					{#if $curUserPic || $curUsername}
 					<div class="w-10 block"><Avatar username={$curUsername} /></div>

@@ -5,6 +5,8 @@
 import { scale } from "svelte/transition";
 import Avatar from '@/lib/Avatar.svelte';
 import { curUserId, curUserIsAdmin, allComments, curSubtitle, curVideo } from '@/stores';
+
+const displayUsername = (name?: string | null) => ((name || '').trim().toLowerCase() === 'docker' ? 'Guest' : (name || ''));
 import * as Proto3 from '@clapshot_protobuf/typescript';
 import { t } from '@/i18n';
 
@@ -466,7 +468,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
                 </div>
             {:else}
                 <p class="flex-1 min-w-0 text-sm leading-5 whitespace-normal break-words">
-                    <span class="text-slate-400">{comment.usernameIfnull}</span>
+                    <span class="text-slate-400">{displayUsername(comment.usernameIfnull)}</span>
                     <span class="text-slate-500">：</span>
                     <span class="text-slate-200">{stripCompletedToken(comment.comment || '')}</span>
 

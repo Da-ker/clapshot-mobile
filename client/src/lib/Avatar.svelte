@@ -46,6 +46,8 @@ import dockerAvatar from '@/lib/assets/docker-avatar.png';
         src = null
     }: Props = $props();
 
+const displayUsername = ((username || '').trim().toLowerCase() === 'docker') ? 'Guest' : (username || '');
+
 /*
     * LetterAvatar. Based on https://codepen.io/arturheinze/pen/ZGvOMw, which is based on https://gist.github.com/leecrossley/6027780
     */
@@ -80,7 +82,7 @@ function MakeLetterAvatar(name: string | null, size: number): string {
 }
 
 const normalizedUsername = (username || '').trim().toLowerCase();
-const letterAvatar = MakeLetterAvatar(username, parseFloat(width));
+const letterAvatar = MakeLetterAvatar(displayUsername, parseFloat(width));
 const resolvedAvatarSrc = (src && (src !== ""))
     ? src
     : (normalizedUsername === 'docker' ? dockerAvatar : letterAvatar);
@@ -92,7 +94,7 @@ onMount(() => {
 });
 </script>
 
-<img bind:this={avatarImage} class:round={round} loading="lazy" alt={username} />
+<img bind:this={avatarImage} class:round={round} loading="lazy" alt={displayUsername} />
 
 <style>
     .round {
