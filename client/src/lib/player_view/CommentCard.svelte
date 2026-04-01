@@ -421,7 +421,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
         <button
             class="w-[74px] text-white text-sm font-semibold bg-teal-500 active:bg-teal-600"
             onclick={(e) => { e.stopPropagation(); onClickToggleComplete(); }}
-        >{isCompleted ? '取消' : '完成'}</button>
+        >{isCompleted ? $t('comments.uncomplete') : $t('comments.complete')}</button>
     </div>
     {/if}
 
@@ -522,7 +522,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
     onclick={(e) => e.stopPropagation()}
 >
     {#if canComplete}
-        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-teal-300" onclick={onContextComplete}>{isCompleted ? '取消完成' : '完成'}</button>
+        <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-teal-300" onclick={onContextComplete}>{isCompleted ? $t('comments.uncomplete') : $t('comments.complete')}</button>
     {/if}
     <button class="w-full text-left px-3 py-1.5 rounded hover:bg-slate-700 text-sm text-sky-300" onclick={onContextReply}>{$t('comments.reply')}</button>
     {#if canEdit}
