@@ -1567,8 +1567,24 @@ function onMediaFileListPopupAction(e: { detail: { action: Proto3.ActionDef, ite
                         oncontextmenu={(e) => e.preventDefault()}
                     >
                         <div class="px-3 pt-2 pb-1" ontouchstart={onDrawerTouchStart} ontouchend={onDrawerTouchEnd}>
-                            <div class="hidden md:flex justify-end">
-                                <button class="fa-solid {commentsPanelMode === 'half' ? 'fa-up-down' : 'fa-minimize'} text-slate-400 hover:text-slate-200 h-8 w-8" onclick={toggleCommentsPanelMode} aria-label="Toggle comments drawer size"></button>
+                            <div class="hidden md:flex justify-end items-center gap-2">
+                                <button class="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-slate-800/45 text-slate-200 border border-slate-500/45 transition-colors hover:bg-slate-600/55 hover:text-white shrink-0" onclick={async () => { await navigator.clipboard.writeText(window.location.href); acts.add({ text: 'Link copied', status: 'success' }); }} aria-label="Share to logged in users" title="Share to logged in users">
+                                    <i class="fas fa-share-square text-[13px]"></i>
+                                </button>
+                                {#if $curVideo?.origUrl}
+                                    <a class="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-slate-800/45 text-slate-200 border border-slate-500/45 transition-colors hover:bg-slate-600/55 hover:text-white shrink-0" href={$curVideo?.origUrl} download aria-label="Download original" title="Download original">
+                                        <i class="fas fa-download text-[13px]"></i>
+                                    </a>
+                                {/if}
+                                {#if $collabId}
+                                    <a class="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-green-500/20 text-green-300 border border-green-500/35 transition-colors hover:bg-green-500/30 hover:text-white shrink-0" href={"?vid=" + $mediaFileId} aria-label="Leave collaborative session" title="Leave collaborative session">
+                                        <i class="fas fa-users text-[13px]"></i>
+                                    </a>
+                                {:else}
+                                    <a class="h-8 w-8 rounded-lg inline-flex items-center justify-center bg-slate-800/45 text-slate-200 border border-slate-500/45 transition-colors hover:bg-slate-600/55 hover:text-white shrink-0" href={"?vid=" + $mediaFileId + "&collab=" + randomSessionId} aria-label="Start collaborative session" title="Start collaborative session">
+                                        <i class="fas fa-user-plus text-[13px]"></i>
+                                    </a>
+                                {/if}
                             </div>
                         </div>
 
