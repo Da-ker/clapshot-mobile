@@ -1151,8 +1151,6 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
 let volumeHudVisible = $state(false);
 let volumeHudText = $state('');
 let volumeHudTimer: ReturnType<typeof setTimeout> | null = null;
-let stepDebugHudVisible = $state(true);
-let stepDebugHudLines = $state<string[]>([]);
 
 let volumeAudioContext: AudioContext | null = null;
 let volumeGainNode: GainNode | null = null;
@@ -1419,7 +1417,6 @@ export async function step_video(frames: number, source: string = 'unknown') {
         ts: Date.now(),
     };
     console.log('[step-button]', stepPayload);
-    pushStepDebugHud(`step_video src=${source} frames=${frames} tok=${stepPayload.pressToken}/${stepPayload.handledToken}`);
 
     // Leaving the exact comment frame via step controls should clear timeline highlight.
     highlightedCommentId = undefined;
@@ -1514,14 +1511,9 @@ function startLongPressSeek(direction: -1 | 1) {
     }, LONG_PRESS_SEEK_DELAY_MS);
 }
 
-function pushStepDebugHud(line: string) {
-    stepDebugHudVisible = true;
-    stepDebugHudLines = [...stepDebugHudLines.slice(-7), line];
-}
-
 function stepDebugLog(phase: string, event: Event | null, direction: -1 | 1, extra: Record<string, unknown> = {}) {
     const evt = event as (MouseEvent & PointerEvent & { detail?: number }) | null;
-    const payload = {
+    console.log('[step-button]', {
         phase,
         direction,
         type: evt?.type,
@@ -1535,9 +1527,7 @@ function stepDebugLog(phase: string, event: Event | null, direction: -1 | 1, ext
         overlayVisible,
         ts: Date.now(),
         ...extra,
-    };
-    console.log('[step-button]', payload);
-    pushStepDebugHud(`${phase} dir=${direction} type=${payload.type ?? '-'} detail=${payload.detail ?? '-'} btn=${payload.button ?? '-'} tok=${payload.pressToken}/${payload.handledToken}`);
+    });
 }
 
 function onStepButtonPress(event: Event, direction: -1 | 1) {
@@ -1630,7 +1620,6 @@ function onWindowKeyPress(e: KeyboardEvent): void {
         ts: Date.now(),
     };
     console.log('[step-button]', keyPayload);
-    pushStepDebugHud(`window-keydown key=${keyPayload.key} code=${keyPayload.code} repeat=${keyPayload.repeat ? '1' : '0'} target=${keyPayload.targetTag ?? '-'}`);
 
     // Skip if the user is in a keyboard interactive element
     if (target.isContentEditable)
@@ -2094,15 +2083,6 @@ function handlePinClick(id: string) {
 			{#if volumeHudVisible}
 				<div class="pointer-events-none absolute right-3 top-3 z-[120] rounded-md bg-black/70 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm">
 					<i class="fa-solid fa-volume-high mr-1 text-cyan-300"></i>{volumeHudText}
-				</div>
-			{/if}
-
-			{#if stepDebugHudVisible}
-				<div class="pointer-events-none absolute left-3 top-3 z-[121] max-w-[min(78vw,560px)] rounded-md border border-amber-400/35 bg-black/78 px-3 py-2 text-[11px] leading-4 text-amber-100 backdrop-blur-sm whitespace-pre-wrap">
-					<div class="mb-1 font-semibold text-amber-300">STEP DEBUG HUD</div>
-					{#each stepDebugHudLines as line}
-						<div>{line}</div>
-					{/each}
 				</div>
 			{/if}
 
