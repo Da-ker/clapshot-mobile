@@ -1408,6 +1408,14 @@ export function getCurFrame() {
 export async function step_video(frames: number) {
     if (!videoDecoder) return;
 
+    console.log('[step-button]', {
+        phase: 'step_video',
+        frames,
+        pressToken: stepButtonPressToken,
+        handledToken: stepButtonHandledToken,
+        ts: Date.now(),
+    });
+
     // Leaving the exact comment frame via step controls should clear timeline highlight.
     highlightedCommentId = undefined;
 
@@ -1501,42 +1509,80 @@ function startLongPressSeek(direction: -1 | 1) {
     }, LONG_PRESS_SEEK_DELAY_MS);
 }
 
+function stepDebugLog(phase: string, event: Event | null, direction: -1 | 1, extra: Record<string, unknown> = {}) {
+    const evt = event as (MouseEvent & PointerEvent & { detail?: number }) | null;
+    console.log('[step-button]', {
+        phase,
+        direction,
+        type: evt?.type,
+        detail: evt?.detail,
+        button: typeof evt?.button === 'number' ? evt.button : undefined,
+        buttons: typeof evt?.buttons === 'number' ? evt.buttons : undefined,
+        pressToken: stepButtonPressToken,
+        handledToken: stepButtonHandledToken,
+        longPressSeekActive,
+        longPressSeekDirection,
+        overlayVisible,
+        ts: Date.now(),
+        ...extra,
+    });
+}
+
 function onStepButtonPress(event: Event, direction: -1 | 1) {
+    stepDebugLog('press:before', event, direction);
     event.stopPropagation();
-    if (!overlayVisible) return;
-    if (event instanceof MouseEvent && event.button !== 0) return;
+    if (!overlayVisible) {
+        stepDebugLog('press:skip-overlay-hidden', event, direction);
+        return;
+    }
+    if (event instanceof MouseEvent && event.button !== 0) {
+        stepDebugLog('press:skip-non-primary-button', event, direction);
+        return;
+    }
     stepButtonPressToken += 1;
     // Pressing step controls means user has left the exact comment focus interaction.
     // Clear timeline highlight immediately so long-press and repeated stepping no longer
     // keep the yellow tick style visible.
     highlightedCommentId = undefined;
+    stepDebugLog('press:start-long-press', event, direction, { nextPressToken: stepButtonPressToken });
     startLongPressSeek(direction);
 }
 
 function onStepButtonRelease(event: Event, direction: -1 | 1) {
+    stepDebugLog('release:before', event, direction);
     event.stopPropagation();
-    if (!overlayVisible && !longPressSeekActive) return;
+    if (!overlayVisible && !longPressSeekActive) {
+        stepDebugLog('release:skip-overlay-hidden', event, direction);
+        return;
+    }
     const releaseToken = stepButtonPressToken;
     const wasLongPress = longPressSeekActive;
     const pressedDirection = longPressSeekDirection;
     stopLongPressSeek();
+    stepDebugLog('release:after-stop', event, direction, { releaseToken, wasLongPress, pressedDirection });
     if (!wasLongPress && pressedDirection === direction && overlayVisible && stepButtonHandledToken !== releaseToken) {
         stepButtonHandledToken = releaseToken;
+        stepDebugLog('release:step', event, direction, { releaseToken });
         void step_video(direction);
+        return;
     }
+    stepDebugLog('release:no-step', event, direction, { releaseToken, wasLongPress, pressedDirection });
 }
 
 function onStepButtonMouseDown(event: MouseEvent, direction: -1 | 1) {
+    stepDebugLog('mousedown', event, direction);
     event.preventDefault();
     onStepButtonPress(event, direction);
 }
 
 function onStepButtonMouseUp(event: MouseEvent, direction: -1 | 1) {
+    stepDebugLog('mouseup', event, direction);
     event.preventDefault();
     onStepButtonRelease(event, direction);
 }
 
 function onStepButtonCancel(event: Event) {
+    stepDebugLog('cancel', event, longPressSeekDirection === 0 ? 1 : longPressSeekDirection);
     event.stopPropagation();
     stopLongPressSeek();
 }
