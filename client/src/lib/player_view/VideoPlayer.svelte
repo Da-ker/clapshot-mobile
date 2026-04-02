@@ -1151,6 +1151,8 @@ function onVideoSurfaceDoubleClick(event: MouseEvent) {
 let volumeHudVisible = $state(false);
 let volumeHudText = $state('');
 let volumeHudTimer: ReturnType<typeof setTimeout> | null = null;
+let stepDebugHudVisible = $state(true);
+let stepDebugHudLines = $state<string[]>([]);
 
 let volumeAudioContext: AudioContext | null = null;
 let volumeGainNode: GainNode | null = null;
@@ -1405,16 +1407,19 @@ export function getCurFrame() {
 }
 
 
-export async function step_video(frames: number) {
+export async function step_video(frames: number, source: string = 'unknown') {
     if (!videoDecoder) return;
 
-    console.log('[step-button]', {
+    const stepPayload = {
         phase: 'step_video',
+        source,
         frames,
         pressToken: stepButtonPressToken,
         handledToken: stepButtonHandledToken,
         ts: Date.now(),
-    });
+    };
+    console.log('[step-button]', stepPayload);
+    pushStepDebugHud(`step_video src=${source} frames=${frames} tok=${stepPayload.pressToken}/${stepPayload.handledToken}`);
 
     // Leaving the exact comment frame via step controls should clear timeline highlight.
     highlightedCommentId = undefined;
@@ -1436,7 +1441,7 @@ export function endStepButtonLongPress(direction: -1 | 1) {
     const pressedDirection = longPressSeekDirection;
     stopLongPressSeek();
     if (!wasLongPress && pressedDirection === direction) {
-        void step_video(direction);
+        void step_video(direction, 'endStepButtonLongPress');
     }
 }
 
@@ -1509,9 +1514,14 @@ function startLongPressSeek(direction: -1 | 1) {
     }, LONG_PRESS_SEEK_DELAY_MS);
 }
 
+function pushStepDebugHud(line: string) {
+    stepDebugHudVisible = true;
+    stepDebugHudLines = [...stepDebugHudLines.slice(-7), line];
+}
+
 function stepDebugLog(phase: string, event: Event | null, direction: -1 | 1, extra: Record<string, unknown> = {}) {
     const evt = event as (MouseEvent & PointerEvent & { detail?: number }) | null;
-    console.log('[step-button]', {
+    const payload = {
         phase,
         direction,
         type: evt?.type,
@@ -1525,7 +1535,9 @@ function stepDebugLog(phase: string, event: Event | null, direction: -1 | 1, ext
         overlayVisible,
         ts: Date.now(),
         ...extra,
-    });
+    };
+    console.log('[step-button]', payload);
+    pushStepDebugHud(`${phase} dir=${direction} type=${payload.type ?? '-'} detail=${payload.detail ?? '-'} btn=${payload.button ?? '-'} tok=${payload.pressToken}/${payload.handledToken}`);
 }
 
 function onStepButtonPress(event: Event, direction: -1 | 1) {
@@ -1563,7 +1575,7 @@ function onStepButtonRelease(event: Event, direction: -1 | 1) {
     if (!wasLongPress && pressedDirection === direction && overlayVisible && stepButtonHandledToken !== releaseToken) {
         stepButtonHandledToken = releaseToken;
         stepDebugLog('release:step', event, direction, { releaseToken });
-        void step_video(direction);
+        void step_video(direction, 'onStepButtonRelease');
         return;
     }
     stepDebugLog('release:no-step', event, direction, { releaseToken, wasLongPress, pressedDirection });
@@ -1591,10 +1603,10 @@ const INTERACTIVE_ELEMS = ['input', 'textarea', 'select', 'option', 'button'];
 const INTERACTIVE_ROLES = ['textbox', 'combobox', 'listbox', 'menu', 'menubar', 'grid', 'dialog', 'alertdialog'];
 const WINDOW_KEY_ACTIONS: {[key: string]: (e: KeyboardEvent)=>any} = {
         ' ':  () => togglePlay(),
-        'ArrowLeft': () => step_video(-1),
-        'ArrowRight': () => step_video(1),
-        'ArrowUp': () => step_video(1),
-        'ArrowDown': () => step_video(-1),
+        'ArrowLeft': () => step_video(-1, 'window:ArrowLeft'),
+        'ArrowRight': () => step_video(1, 'window:ArrowRight'),
+        'ArrowUp': () => step_video(1, 'window:ArrowUp'),
+        'ArrowDown': () => step_video(-1, 'window:ArrowDown'),
         'z': (e) => { if (e.ctrlKey) onDrawUndo(); },
         'y': (e) => { if (e.ctrlKey) onDrawRedo(); },
         'i': () => setLoopPoint(true),
@@ -1607,6 +1619,18 @@ const WINDOW_KEY_ACTIONS: {[key: string]: (e: KeyboardEvent)=>any} = {
 
 function onWindowKeyPress(e: KeyboardEvent): void {
     let target = e.target as HTMLElement;
+
+    const keyPayload = {
+        phase: 'window-keydown',
+        key: e.key,
+        code: e.code,
+        repeat: e.repeat,
+        targetTag: target?.tagName,
+        targetRole: target?.getAttribute?.('role'),
+        ts: Date.now(),
+    };
+    console.log('[step-button]', keyPayload);
+    pushStepDebugHud(`window-keydown key=${keyPayload.key} code=${keyPayload.code} repeat=${keyPayload.repeat ? '1' : '0'} target=${keyPayload.targetTag ?? '-'}`);
 
     // Skip if the user is in a keyboard interactive element
     if (target.isContentEditable)
@@ -2073,6 +2097,15 @@ function handlePinClick(id: string) {
 				</div>
 			{/if}
 
+			{#if stepDebugHudVisible}
+				<div class="pointer-events-none absolute left-3 top-3 z-[121] max-w-[min(78vw,560px)] rounded-md border border-amber-400/35 bg-black/78 px-3 py-2 text-[11px] leading-4 text-amber-100 backdrop-blur-sm whitespace-pre-wrap">
+					<div class="mb-1 font-semibold text-amber-300">STEP DEBUG HUD</div>
+					{#each stepDebugHudLines as line}
+						<div>{line}</div>
+					{/each}
+				</div>
+			{/if}
+
 			{#if !overlayVisible && !isDesktopViewport}
 				<button
 					type="button"
@@ -2097,9 +2130,9 @@ function handlePinClick(id: string) {
 			<div class="absolute inset-0 z-[180] transition-opacity duration-700 ease-out {overlayVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto md:hidden">
-					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" onclick={preventDefault((e)=>{ if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); })} onmousedown={(e) => onStepButtonMouseDown(e, -1)} onmouseup={(e) => onStepButtonMouseUp(e, -1)} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onmouseleave={onStepButtonCancel} aria-label="Step backwards"></button>
+					<button type="button" class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" onclick={preventDefault((e)=>{ if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); })} onmousedown={(e) => onStepButtonMouseDown(e, -1)} onmouseup={(e) => onStepButtonMouseUp(e, -1)} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onmouseleave={onStepButtonCancel} aria-label="Step backwards"></button>
 					<button class="fa-solid {(paused || longPressSeekActive) ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center w-[4.62rem] h-[4.62rem] md:w-[5.04rem] md:h-[5.04rem] min-w-[4.62rem] min-h-[4.62rem] md:min-w-[5.04rem] md:min-h-[5.04rem] rounded-full bg-white/28 text-white text-[2.45rem] md:text-[2.7rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)] select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); const willPlay = paused; suppressClickUntil = Date.now() + 700; togglePlay(); if (!willPlay) showOverlay(false); }} title="Play/Pause" aria-label="Play/Pause"></button>
-					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" onclick={preventDefault((e)=>{ if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); })} onmousedown={(e) => onStepButtonMouseDown(e, 1)} onmouseup={(e) => onStepButtonMouseUp(e, 1)} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onmouseleave={onStepButtonCancel} aria-label="Step forwards"></button>
+					<button type="button" class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" onclick={preventDefault((e)=>{ if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); })} onmousedown={(e) => onStepButtonMouseDown(e, 1)} onmouseup={(e) => onStepButtonMouseUp(e, 1)} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onmouseleave={onStepButtonCancel} aria-label="Step forwards"></button>
 				</div>
 
 				<button
