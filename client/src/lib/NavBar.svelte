@@ -18,9 +18,10 @@ import * as Proto3 from '@clapshot_protobuf/typescript';
 interface Props {
     onbasicauthlogout?: () => void;
     onaddcomments?: (comments: Proto3.Comment[]) => void;
+    showHomeLink?: boolean;
 }
 
-let { onbasicauthlogout, onaddcomments }: Props = $props();
+let { onbasicauthlogout, onaddcomments, showHomeLink = true }: Props = $props();
 
 let loggedOut = $state(false);
 let localeOptions = $state(availableLocales);
@@ -147,9 +148,15 @@ function addEDLComments(comments: Proto3.Comment[]) {
 
 		<!-- logo with "home" link -->
 		<span class="shrink-0">
-			<a href="/" class="flex items-baseline cursor-pointer">
-				<img src="{$clientConfig ? ($clientConfig?.logo_url || "clapshot-logo.svg") : ""}" class="h-6 sm:h-8 filter brightness-75" alt="{$clientConfig ? ($clientConfig.app_title || "Clapshot") : ""}" />
-			</a>
+			{#if showHomeLink}
+				<a href="/" class="flex items-baseline cursor-pointer">
+					<img src="{$clientConfig ? ($clientConfig?.logo_url || "clapshot-logo.svg") : ""}" class="h-6 sm:h-8 filter brightness-75" alt="{$clientConfig ? ($clientConfig.app_title || "Clapshot") : ""}" />
+				</a>
+			{:else}
+				<span class="flex items-baseline">
+					<img src="{$clientConfig ? ($clientConfig?.logo_url || "clapshot-logo.svg") : ""}" class="h-6 sm:h-8 filter brightness-75" alt="{$clientConfig ? ($clientConfig.app_title || "Clapshot") : ""}" />
+				</span>
+			{/if}
 		</span>
 
 		<!-- video info -->
