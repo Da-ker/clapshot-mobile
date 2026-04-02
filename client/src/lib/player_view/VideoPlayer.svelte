@@ -1442,6 +1442,8 @@ let longPressSeekDirection: -1 | 1 | 0 = 0;
 let longPressSeekActive = $state(false);
 let longPressSavedMuted: boolean | null = null;
 let longPressSavedVolume: number | null = null;
+let stepButtonPressToken = 0;
+let stepButtonHandledToken = 0;
 const LONG_PRESS_SEEK_DELAY_MS = 500;
 const LONG_PRESS_SEEK_INTERVAL_MS = 80;
 const LONG_PRESS_SEEK_STEP_FRAMES = 1;
@@ -1503,6 +1505,7 @@ function onStepButtonPress(event: Event, direction: -1 | 1) {
     event.stopPropagation();
     if (!overlayVisible) return;
     if (event instanceof MouseEvent && event.button !== 0) return;
+    stepButtonPressToken += 1;
     // Pressing step controls means user has left the exact comment focus interaction.
     // Clear timeline highlight immediately so long-press and repeated stepping no longer
     // keep the yellow tick style visible.
@@ -1513,10 +1516,12 @@ function onStepButtonPress(event: Event, direction: -1 | 1) {
 function onStepButtonRelease(event: Event, direction: -1 | 1) {
     event.stopPropagation();
     if (!overlayVisible && !longPressSeekActive) return;
+    const releaseToken = stepButtonPressToken;
     const wasLongPress = longPressSeekActive;
     const pressedDirection = longPressSeekDirection;
     stopLongPressSeek();
-    if (!wasLongPress && pressedDirection === direction && overlayVisible) {
+    if (!wasLongPress && pressedDirection === direction && overlayVisible && stepButtonHandledToken !== releaseToken) {
+        stepButtonHandledToken = releaseToken;
         void step_video(direction);
     }
 }
@@ -2046,9 +2051,9 @@ function handlePinClick(id: string) {
 			<div class="absolute inset-0 z-[180] transition-opacity duration-700 ease-out {overlayVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}" onclick={onOverlaySurfaceTap} ondblclick={(e) => { const t = e.target as HTMLElement | null; if (t?.closest('button') || t?.closest('[role="slider"]')) return; onVideoSurfaceDoubleClick(e); }}>
 
 				<div class="absolute inset-0 flex items-center justify-center gap-12 md:gap-16 pointer-events-auto md:hidden">
-					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); }} onpointerdown={(e) => { onStepButtonPress(e, -1); }} onpointerup={(e) => { onStepButtonRelease(e, -1); }} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onpointercancel={onStepButtonCancel} onpointerleave={onStepButtonCancel} aria-label="Step backwards"></button>
+					<button class="fa-solid fa-backward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" onclick={preventDefault((e)=>{ if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); })} onmousedown={(e) => onStepButtonMouseDown(e, -1)} onmouseup={(e) => onStepButtonMouseUp(e, -1)} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onmouseleave={onStepButtonCancel} aria-label="Step backwards"></button>
 					<button class="fa-solid {(paused || longPressSeekActive) ? (loop ? 'fa-arrows-rotate' : 'fa-play') : 'fa-pause'} inline-flex items-center justify-center w-[4.62rem] h-[4.62rem] md:w-[5.04rem] md:h-[5.04rem] min-w-[4.62rem] min-h-[4.62rem] md:min-w-[5.04rem] md:min-h-[5.04rem] rounded-full bg-white/28 text-white text-[2.45rem] md:text-[2.7rem] shadow-[0_8px_28px_rgba(0,0,0,0.45)] select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" id="playbutton" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); const willPlay = paused; suppressClickUntil = Date.now() + 700; togglePlay(); if (!willPlay) showOverlay(false); }} title="Play/Pause" aria-label="Play/Pause"></button>
-					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" onclick={(e) => { if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); }} onpointerdown={(e) => { onStepButtonPress(e, 1); }} onpointerup={(e) => { onStepButtonRelease(e, 1); }} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onpointercancel={onStepButtonCancel} onpointerleave={onStepButtonCancel} aria-label="Step forwards"></button>
+					<button class="fa-solid fa-forward text-white/90 text-4xl md:text-5xl h-14 w-14 inline-flex items-center justify-center select-none touch-none" style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; pointer-events: {overlayVisible ? 'auto' : 'none'};" onclick={preventDefault((e)=>{ if (swallowIfHiddenFirstTap(e)) return; e.stopPropagation(); })} onmousedown={(e) => onStepButtonMouseDown(e, 1)} onmouseup={(e) => onStepButtonMouseUp(e, 1)} oncontextmenu={preventDefault((e)=>e.stopPropagation())} ondragstart={preventDefault((e)=>e.stopPropagation())} onmouseleave={onStepButtonCancel} aria-label="Step forwards"></button>
 				</div>
 
 				<button
