@@ -525,6 +525,11 @@ async function onCommentInputButton(e: any) {
     }
 }
 
+function isDesktopUi(): boolean {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(min-width: 768px)').matches;
+}
+
 function onDisplayComment(e: any) {
     if (!$curVideo) { throw Error("No video loaded"); }
     if (videoPlayer && e.id) {
@@ -536,9 +541,8 @@ function onDisplayComment(e: any) {
     }
     if (videoPlayer) {
         videoPlayer.seekToSMPTE(e.timecode);
-        if (e.timecode) {
-            // Enter review mode for all comment-review entry paths (pin/card/hash)
-            // so first tap in hidden state always reveals controls.
+        if (e.timecode && !isDesktopUi()) {
+            // Only mobile review mode should require first tap to reveal controls.
             videoPlayer.enterCommentReviewTapMode();
         }
     }
@@ -650,7 +654,9 @@ function activateComment(e: any) {
     // If comment has a timecode, activate it on the timeline (seek, set loop points)
     if (c.comment.timecode && videoPlayer) {
         videoPlayer.activateCommentOnTimeline(commentId);
-        videoPlayer.enterCommentReviewTapMode();
+        if (!isDesktopUi()) {
+            videoPlayer.enterCommentReviewTapMode();
+        }
     }
 
     // Handle all the display logic (drawing, subtitle, collab, etc.)
