@@ -426,7 +426,7 @@ function onGlobalPointerDownForContextMenu(e: MouseEvent) {
 <svelte:window onmousedown={onGlobalPointerDownForContextMenu} />
 
 <div transition:scale class="comment-indent-shell w-full min-w-0 box-border" style="padding-left: {indent*1.25}em;">
-<div class="relative w-full min-w-0 rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] overflow-hidden {isCompleted || hasCompletedAncestor ? 'border-slate-900/85 bg-slate-950/82' : (indent > 0 ? 'border-slate-700/80 bg-slate-900/35 border-l-[3px] border-l-slate-500/80' : 'border-slate-700/60')}">
+<div class="relative w-full min-w-0 rounded-xl border shadow-[0_2px_10px_rgba(0,0,0,0.18)] overflow-hidden {isCompleted || hasCompletedAncestor ? (indent > 0 ? 'border-slate-900/85 bg-slate-950/82 border-l-[3px] border-l-slate-800/95' : 'border-slate-900/85 bg-slate-950/82') : (indent > 0 ? 'border-slate-700/80 bg-slate-900/35 border-l-[3px] border-l-slate-500/80' : 'border-slate-700/60')}">
     {#if canComplete}
     <div class="absolute inset-y-0 left-0 z-0 flex items-stretch transition-opacity {swipeOffsetPx > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}">
         <button
