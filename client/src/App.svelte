@@ -675,9 +675,12 @@ function activateComment(e: any) {
 
         let pinCard = document.getElementById("comment_card_" + commentId);
         if (pinCard) {
+            pinCard.classList.remove("highlighted_comment");
             pinCard.scrollIntoView({behavior: "smooth", block: "center", inline: "nearest"});
-            setTimeout(() => { pinCard?.classList.add("highlighted_comment"); }, 500);
-            setTimeout(() => { pinCard?.classList.remove("highlighted_comment"); }, 3000);
+            requestAnimationFrame(() => {
+                pinCard?.classList.add("highlighted_comment");
+                setTimeout(() => { pinCard?.classList.remove("highlighted_comment"); }, 3000);
+            });
         }
         return;
     }
@@ -701,9 +704,12 @@ function activateComment(e: any) {
     // Scroll to comment card and highlight it
     let card = document.getElementById("comment_card_" + commentId);
     if (card) {
+        card.classList.remove("highlighted_comment");
         card.scrollIntoView({behavior: "smooth", block: "center", inline: "nearest"});
-        setTimeout(() => { card?.classList.add("highlighted_comment"); }, 500);
-        setTimeout(() => { card?.classList.remove("highlighted_comment"); }, 3000);
+        requestAnimationFrame(() => {
+            card?.classList.add("highlighted_comment");
+            setTimeout(() => { card?.classList.remove("highlighted_comment"); }, 3000);
+        });
     }
 }
 
