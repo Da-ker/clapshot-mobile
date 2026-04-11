@@ -268,6 +268,7 @@ function onDesktopStepBackwardPress(e: PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
     if (e.button !== 0) return;
+    if (e.pointerType === 'mouse' && e.buttons === 0) return;
     desktopLongPressSeeking = true;
     videoPlayer?.beginStepButtonLongPress?.(-1);
 }
@@ -283,8 +284,14 @@ function onDesktopStepBackwardRelease(e: PointerEvent) {
 function onDesktopStepBackwardCancel(e: PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+        desktopLongPressSeeking = false;
+        refreshTopVideoMeta();
+        return;
+    }
     desktopLongPressSeeking = false;
     videoPlayer?.cancelStepButtonLongPress?.();
+    refreshTopVideoMeta();
 }
 
 function onDesktopTogglePlayPause() {
@@ -296,6 +303,7 @@ function onDesktopStepForwardPress(e: PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
     if (e.button !== 0) return;
+    if (e.pointerType === 'mouse' && e.buttons === 0) return;
     desktopLongPressSeeking = true;
     videoPlayer?.beginStepButtonLongPress?.(1);
 }
@@ -311,8 +319,14 @@ function onDesktopStepForwardRelease(e: PointerEvent) {
 function onDesktopStepForwardCancel(e: PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+        desktopLongPressSeeking = false;
+        refreshTopVideoMeta();
+        return;
+    }
     desktopLongPressSeeking = false;
     videoPlayer?.cancelStepButtonLongPress?.();
+    refreshTopVideoMeta();
 }
 
 function onDesktopToggleMute() {
