@@ -1458,7 +1458,8 @@ const LONG_PRESS_SEEK_DELAY_MS = 500;
 const LONG_PRESS_SEEK_INTERVAL_MS = 80;
 const LONG_PRESS_SEEK_STEP_FRAMES = 1;
 
-function stopLongPressSeek() {
+function stopLongPressSeek(options: { keepPlaybackState?: boolean } = {}) {
+    const { keepPlaybackState = false } = options;
     if (longPressSeekTimer) {
         clearTimeout(longPressSeekTimer);
         longPressSeekTimer = null;
@@ -1468,7 +1469,9 @@ function stopLongPressSeek() {
         longPressSeekInterval = null;
     }
     if (videoElem) {
-        videoElem.pause();
+        if (!keepPlaybackState) {
+            videoElem.pause();
+        }
         videoElem.playbackRate = 1;
         if (longPressSavedMuted !== null) videoElem.muted = longPressSavedMuted;
         if (longPressSavedVolume !== null) videoElem.volume = longPressSavedVolume;
@@ -1541,6 +1544,10 @@ function onStepButtonPress(event: Event, direction: -1 | 1) {
         stepDebugLog('press:skip-non-primary-button', event, direction);
         return;
     }
+    if (event instanceof PointerEvent && event.pointerType === 'mouse' && event.buttons === 0) {
+        stepDebugLog('press:skip-hover-mouse-pointer', event, direction);
+        return;
+    }
     stepButtonPressToken += 1;
     // Pressing step controls means user has left the exact comment focus interaction.
     // Clear timeline highlight immediately so long-press and repeated stepping no longer
@@ -1586,7 +1593,7 @@ function onStepButtonMouseUp(event: MouseEvent, direction: -1 | 1) {
 function onStepButtonCancel(event: Event) {
     stepDebugLog('cancel', event, longPressSeekDirection === 0 ? 1 : longPressSeekDirection);
     event.stopPropagation();
-    stopLongPressSeek();
+    stopLongPressSeek({ keepPlaybackState: !longPressSeekActive });
 }
 
 const INTERACTIVE_ELEMS = ['input', 'textarea', 'select', 'option', 'button'];

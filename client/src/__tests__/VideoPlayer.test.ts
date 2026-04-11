@@ -103,7 +103,10 @@ vi.mock('@/stores', () => {
     }),
     curSubtitle: createMockStore(null),
     allComments: createMockStore([]),
-    collabId: createMockStore(null)
+    collabId: createMockStore(null),
+    clientConfig: createMockStore({
+      enable_mediabunny: true
+    })
   };
 });
 
@@ -749,6 +752,35 @@ describe('VideoPlayer.svelte - Elementary Tests', () => {
       expect(() => {
         fireEvent.click(stepForward);
       }).not.toThrow();
+    });
+
+    it('should not pause playback when hovering desktop step buttons', async () => {
+      render(VideoPlayer, { props: { src: 'test-video.mp4' } });
+
+      const video = document.querySelector('video') as HTMLVideoElement;
+      const pauseSpy = vi.spyOn(video, 'pause');
+      const stepForward = screen.getByTitle('Step forwards');
+
+      Object.defineProperty(video, 'paused', {
+        get() { return false; },
+        set(_value) {},
+        configurable: true
+      });
+
+      const hoverEvent = new MouseEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        buttons: 0,
+      });
+      Object.defineProperty(hoverEvent, 'pointerType', {
+        value: 'mouse',
+        configurable: true,
+      });
+
+      await fireEvent(stepForward, hoverEvent);
+
+      expect(pauseSpy).not.toHaveBeenCalled();
     });
   });
 
