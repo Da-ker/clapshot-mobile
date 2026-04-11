@@ -651,6 +651,23 @@ function activateComment(e: any) {
         return;
     }
 
+    if (e?.source === 'comment_like_pin' && isDesktopUi()) {
+        onDisplayComment({
+            id: commentId,
+            timecode: c.comment.timecode,
+            drawing: c.comment.drawing,
+            subtitleId: c.comment.subtitleId
+        });
+
+        let pinCard = document.getElementById("comment_card_" + commentId);
+        if (pinCard) {
+            pinCard.scrollIntoView({behavior: "smooth", block: "center", inline: "nearest"});
+            setTimeout(() => { pinCard?.classList.add("highlighted_comment"); }, 500);
+            setTimeout(() => { pinCard?.classList.remove("highlighted_comment"); }, 3000);
+        }
+        return;
+    }
+
     // If comment has a timecode, activate it on the timeline (seek, set loop points)
     if (c.comment.timecode && videoPlayer) {
         videoPlayer.activateCommentOnTimeline(commentId);

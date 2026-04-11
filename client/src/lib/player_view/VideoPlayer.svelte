@@ -19,7 +19,7 @@ import LocalStorageCookies from '@/cookies';
         oncollabreport?: (event: {report: Proto3.client.ClientToServerCmd_CollabReport}) => void;
         onseeked?: () => void;
         onchangesubtitle?: (event: {id: string | null}) => void;
-        oncommentpinclicked?: (event: {id: string}) => void;
+        oncommentpinclicked?: (event: {id: string, source?: string}) => void;
         onuploadsubtitles?: () => void;
     }
 
@@ -2010,9 +2010,12 @@ export function activateCommentOnTimeline(commentId: string) {
 
 // Internal handler for pin clicks - bubbles event up to App
 function handlePinClick(id: string) {
-    // Enter comment review tap mode so single-tap always reveals controls during review.
-    enterCommentReviewTapMode();
-    if (oncommentpinclicked) oncommentpinclicked({id});
+    // Desktop should treat pin clicks the same as clicking the comment card.
+    // Mobile keeps the existing comment-review tap mode behavior.
+    if (!isDesktopViewport) {
+        enterCommentReviewTapMode();
+    }
+    if (oncommentpinclicked) oncommentpinclicked({id, source: isDesktopViewport ? 'comment_like_pin' : undefined});
 }
 
 </script>
